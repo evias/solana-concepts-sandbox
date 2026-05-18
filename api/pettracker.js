@@ -92,9 +92,8 @@ router.post('/edit', express.json(), async (req, res) => {
     // For this demo, we'll use a placeholder
     const payerKeypair = web3.Keypair.generate();
     
-    // For demo purposes, we'll skip the actual account creation
-    // In a real implementation, you would:
-    // await ensureTokenAccountExists(payerKeypair, ownerPublicKey, connection);
+    // Actually ensure the token account exists
+    await ensureTokenAccountExists(payerKeypair, ownerPublicKey);
     
     // Store pet in cache (in a real implementation, you would store on Solana)
     const currentTime = new Date().toISOString();
@@ -139,6 +138,14 @@ router.post('/delete', express.json(), async (req, res) => {
       return res.status(404).json({ error: 'Pet not found' });
     }
     
+    // Validate Solana address
+    let ownerPublicKey;
+    try {
+      ownerPublicKey = new web3.PublicKey(ownerAddress);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid Solana address' });
+    }
+    
     if (pet.owner !== ownerAddress) {
       return res.status(403).json({ error: 'Not authorized to delete this pet' });
     }
@@ -174,6 +181,14 @@ router.post('/register', express.json(), async (req, res) => {
     } catch (error) {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
+    
+    // Ensure token account exists for the owner
+    // In a real implementation, you would use the owner's actual keypair
+    // For this demo, we'll use a placeholder
+    const payerKeypair = web3.Keypair.generate();
+    
+    // Actually ensure the token account exists
+    await ensureTokenAccountExists(payerKeypair, ownerPublicKey);
     
     // Create a new token account for the pet
     // In a real implementation, you would:
