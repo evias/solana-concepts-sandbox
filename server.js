@@ -11,6 +11,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// PetTracker API routes
+const pettrackerApi = require('./api/pettracker');
+app.use('/api/v1/pettracker', pettrackerApi);
+
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));

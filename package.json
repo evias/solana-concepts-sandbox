@@ -6,12 +6,18 @@
   "scripts": {
     "start": "node server.js",
     "build": "npx @tailwindcss/cli -i ./assets/base.css -o ./assets/base.min.css",
-    "watch": "npx @tailwindcss/cli -i ./assets/base.css -o ./assets/base.min.css --watch"
+    "watch": "npx @tailwindcss/cli -i ./assets/base.css -o ./assets/base.min.css --watch",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
     "express": "^4.22.2"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.3.0"
+    "@tailwindcss/cli": "^4.3.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "jest": "^30.4.2"
   }
 }
