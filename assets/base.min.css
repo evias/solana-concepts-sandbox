@@ -1,0 +1,14 @@
+/*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
+.mx-auto {
+  margin-inline: auto;
+}
+.list-disc {
+  list-style-type: disc;
+}
+.hover\:underline {
+  &:hover {
+    @media (hover: hover) {
+      text-decoration-line: underline;
+    }
+  }
+}
