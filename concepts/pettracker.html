@@ -107,8 +107,8 @@
         <div class="space-y-8">
             <!-- Registration Form -->
             <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Register a New Pet</h2>
-                <form @submit.prevent="registerPet" class="space-y-4">
+                <h2 class="text-2xl font-bold mb-4" x-text="isEditMode ? 'Edit Pet' : 'Register a New Pet'"></h2>
+                <form @submit.prevent="registerOrUpdatePet" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Pet Name</label>
@@ -133,25 +133,49 @@
                             <button 
                                 type="button"
                                 @click="showWalletModal = true"
-                                :class="ownerAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                                :disabled="isEditMode"
+                                :class="[
+                                    ownerAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700',
+                                    isEditMode ? 'opacity-50 cursor-not-allowed' : ''
+                                ]"
                                 class="text-white px-4 py-2 rounded-md transition-colors">
                                 <span x-show="!ownerAddress">Connect Wallet</span>
                                 <span x-show="ownerAddress" x-text="'Connected: ' + ownerAddress.substring(0, 6) + '...' + ownerAddress.substring(ownerAddress.length - 4)"></span>
                             </button>
                             <button 
                                 type="button"
-                                x-show="ownerAddress"
+                                x-show="ownerAddress && !isEditMode"
                                 @click="disconnectWallet"
                                 class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                                 Disconnect
                             </button>
                         </div>
                         <input x-model="ownerAddress" type="hidden">
-                        <p x-show="!ownerAddress" class="text-sm text-gray-500 mt-2">Please connect your wallet to register a pet</p>
+                        <p x-show="!ownerAddress && !isEditMode" class="text-sm text-gray-500 mt-2">Please connect your wallet to register a pet</p>
                         <p x-show="ownerAddress" class="text-sm text-gray-600 mt-2 font-mono break-all" x-text="'Wallet: ' + ownerAddress"></p>
                     </div>
-                    <div>
-                        <button type="submit" :disabled="!ownerAddress" :class="!ownerAddress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'" class="bg-indigo-600 text-white px-4 py-2 rounded-md">Register Pet</button>
+                    <div class="flex gap-2">
+                        <button 
+                            type="submit" 
+                            x-show="!isEditMode"
+                            :disabled="!ownerAddress" 
+                            :class="!ownerAddress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-700'" 
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md">
+                            Register Pet
+                        </button>
+                        <button 
+                            type="submit" 
+                            x-show="isEditMode"
+                            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                            Update Pet
+                        </button>
+                        <button 
+                            type="button"
+                            x-show="isEditMode"
+                            @click="cancelUpdate"
+                            class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                            Cancel Update
+                        </button>
                     </div>
                 </form>
             </section>
@@ -222,17 +246,31 @@
                 </div>
                 <div x-show="pets.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <template x-for="pet in pets" :key="pet.id">
-                        <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="border rounded-lg p-4 hover:shadow-md transition-shadow" :class="{ 'border-indigo-300 bg-indigo-50': pet.owner === ownerAddress }">
                             <h3 class="text-xl font-bold" x-text="pet.name"></h3>
                             <p class="text-gray-600" x-text="`${pet.species} - ${pet.breed || 'Unknown breed'}`"></p>
                             <p class="text-gray-500 text-sm" x-text="`Age: ${pet.age || 'Unknown'}`"></p>
                             <p class="text-gray-500 text-sm mt-2" x-text="`Owner: ${pet.owner.substring(0, 6)}...${pet.owner.substring(pet.owner.length - 4)}`"></p>
+                            <p x-show="pet.mandate_authority" class="text-amber-600 text-xs font-semibold mt-1">
+                                <span x-show="pet.mandate_authority === ownerAddress">You have management rights</span>
+                                <span x-show="pet.mandate_authority !== ownerAddress" x-text="`Managed by: ${pet.mandate_authority.substring(0, 6)}...${pet.mandate_authority.substring(pet.mandate_authority.length - 4)}`"></span>
+                            </p>
                             <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
                                 <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
                             </p>
-                            <div class="mt-4 flex space-x-2">
+                            <div class="mt-4 flex space-x-2 flex-wrap">
                                 <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
-                                <button @click="deletePet(pet.id)" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                                <button 
+                                    x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
+                                    @click="editPet(pet.id)" 
+                                    class="text-amber-600 hover:text-amber-800 text-sm font-semibold">Edit</button>
+                                <button 
+                                    x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
+                                    @click="deletePet(pet.id)" 
+                                    class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                                <span x-show="pet.owner !== ownerAddress && pet.mandate_authority !== ownerAddress" class="text-gray-400 text-sm italic">
+                                    (read-only)
+                                </span>
                             </div>
                         </div>
                     </template>
@@ -253,6 +291,8 @@
                     breed: '',
                     age: ''
                 },
+                editingPetId: null,
+                isEditMode: false,
                 ownerAddress: '',
                 showWalletModal: false,
                 showDocumentation: false,
@@ -399,47 +439,135 @@
                     }
                 },
                 
-                async registerPet() {
+                async registerOrUpdatePet() {
                     if (!this.ownerAddress) {
                         alert('Please connect your wallet first');
                         return;
                     }
                     
-                    // Generate a simple ID for demo purposes
-                    const petId = 'pet_' + Date.now();
-                    
-                    const petData = {
-                        ...this.newPet,
-                        id: petId
-                    };
-                    
-                    try {
-                        const response = await fetch('/api/v1/pettracker/register', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                petData: petData,
-                                ownerAddress: this.ownerAddress
-                            })
-                        });
+                    if (this.isEditMode) {
+                        // Update existing pet
+                        const petData = {
+                            name: this.newPet.name,
+                            species: this.newPet.species,
+                            breed: this.newPet.breed,
+                            age: this.newPet.age
+                        };
                         
+                        try {
+                            const response = await fetch('/api/v1/pettracker/edit', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    petData: {
+                                        id: this.editingPetId,
+                                        ...petData
+                                    },
+                                    ownerAddress: this.ownerAddress
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                console.log('Pet updated:', result);
+                                this.resetForm();
+                                this.loadPets();
+                                alert('Pet updated successfully!');
+                            } else {
+                                const error = await response.json();
+                                console.error('Failed to update pet:', error);
+                                if (response.status === 403) {
+                                    alert('You do not have permission to update this pet.');
+                                } else {
+                                    alert('Failed to update pet: ' + (error.reason || error.error));
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error updating pet:', error);
+                            alert('Error updating pet: ' + error.message);
+                        }
+                    } else {
+                        // Register new pet
+                        // Generate a simple ID for demo purposes
+                        const petId = 'pet_' + Date.now();
+                        
+                        const petData = {
+                            ...this.newPet,
+                            id: petId
+                        };
+                        
+                        try {
+                            const response = await fetch('/api/v1/pettracker/register', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    petData: petData,
+                                    ownerAddress: this.ownerAddress
+                                })
+                            });
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                console.log('Pet registered:', result);
+                                this.resetForm();
+                                this.loadPets();
+                                alert('Pet registered successfully!');
+                            } else {
+                                const error = await response.json();
+                                console.error('Failed to register pet:', error);
+                                alert('Failed to register pet: ' + error.error);
+                            }
+                        } catch (error) {
+                            console.error('Error registering pet:', error);
+                            alert('Error registering pet: ' + error.message);
+                        }
+                    }
+                },
+                
+                async editPet(id) {
+                    try {
+                        const response = await fetch(`/api/v1/pettracker/get?id=${id}`);
                         if (response.ok) {
-                            const result = await response.json();
-                            console.log('Pet registered:', result);
-                            this.resetForm();
-                            this.loadPets();
-                            alert('Pet registered successfully!');
+                            const pet = await response.json();
+                            
+                            // Check if user has management rights
+                            const hasMandate = pet.owner === this.ownerAddress || pet.mandate_authority === this.ownerAddress;
+                            if (!hasMandate) {
+                                alert('You do not have permission to edit this pet.');
+                                return;
+                            }
+                            
+                            // Pre-fill form with pet data
+                            this.newPet = {
+                                id: pet.id,
+                                name: pet.name,
+                                species: pet.species,
+                                breed: pet.breed || '',
+                                age: pet.age || ''
+                            };
+                            
+                            // Switch to edit mode
+                            this.editingPetId = id;
+                            this.isEditMode = true;
+                            
+                            // Scroll to form
+                            document.querySelector('form').scrollIntoView({ behavior: 'smooth' });
                         } else {
                             const error = await response.json();
-                            console.error('Failed to register pet:', error);
-                            alert('Failed to register pet: ' + error.error);
+                            alert('Failed to load pet: ' + error.error);
                         }
                     } catch (error) {
-                        console.error('Error registering pet:', error);
-                        alert('Error registering pet: ' + error.message);
+                        console.error('Error loading pet for editing:', error);
+                        alert('Error loading pet: ' + error.message);
                     }
+                },
+                
+                cancelUpdate() {
+                    this.resetForm();
                 },
                 
                 async loadPet(id) {
@@ -447,7 +575,11 @@
                         const response = await fetch(`/api/v1/pettracker/get?id=${id}`);
                         if (response.ok) {
                             const pet = await response.json();
-                            alert(`Pet Details:\nName: ${pet.name}\nSpecies: ${pet.species}\nBreed: ${pet.breed || 'N/A'}\nAge: ${pet.age || 'N/A'}`);
+                            const isOwner = pet.owner === this.ownerAddress;
+                            const hasMandate = pet.mandate_authority === this.ownerAddress;
+                            const mandateStatus = isOwner ? 'Owner (full control)' : hasMandate ? 'Authorized to manage' : 'View-only (not authorized)';
+                            
+                            alert(`Pet Details:\nName: ${pet.name}\nSpecies: ${pet.species}\nBreed: ${pet.breed || 'N/A'}\nAge: ${pet.age || 'N/A'}\n\nOwner: ${pet.owner}\nMandate Authority: ${pet.mandate_authority}\nYour Status: ${mandateStatus}`);
                         } else {
                             const error = await response.json();
                             alert('Failed to load pet: ' + error.error);
@@ -483,7 +615,11 @@
                         } else {
                             const error = await response.json();
                             console.error('Failed to delete pet:', error);
-                            alert('Failed to delete pet: ' + error.error);
+                            if (response.status === 403) {
+                                alert('You do not have permission to delete this pet. Only the owner or mandate authority can delete it.');
+                            } else {
+                                alert('Failed to delete pet: ' + (error.reason || error.error));
+                            }
                         }
                     } catch (error) {
                         console.error('Error deleting pet:', error);
@@ -499,6 +635,8 @@
                         breed: '',
                         age: ''
                     };
+                    this.editingPetId = null;
+                    this.isEditMode = false;
                 },
                 
                 async openDocumentation() {
