@@ -123,7 +123,9 @@
                             <p class="text-gray-600" x-text="`${pet.species} - ${pet.breed || 'Unknown breed'}`"></p>
                             <p class="text-gray-500 text-sm" x-text="`Age: ${pet.age || 'Unknown'}`"></p>
                             <p class="text-gray-500 text-sm mt-2" x-text="`Owner: ${pet.owner.substring(0, 6)}...${pet.owner.substring(pet.owner.length - 4)}`"></p>
-                            <p class="text-gray-500 text-sm" x-text="`Token ID: ${pet.tokenId}`"></p>
+                            <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
+                                <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
+                            </p>
                             <div class="mt-4 flex space-x-2">
                                 <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
                                 <button @click="deletePet(pet.id)" class="text-red-600 hover:text-red-800 text-sm">Delete</button>
