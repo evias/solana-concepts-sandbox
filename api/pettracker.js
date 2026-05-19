@@ -1,11 +1,9 @@
 const express = require('express');
 const web3 = require('@solana/web3.js');
-const splToken = require('@solana/spl-token');
+const { petDb } = require('./database');
+const { createPetTokenMint, createAssociatedTokenAccount, mintPetToken, getTokenInfo } = require('./solana-tokens');
 
 const router = express.Router();
-
-// In-memory cache for pets (in a real implementation, this would be on Solana)
-let petCache = new Map();
 
 // Solana connection
 const connection = new web3.Connection(
@@ -13,10 +11,9 @@ const connection = new web3.Connection(
   'confirmed'
 );
 
-// Function to ensure token account exists
-async function ensureTokenAccountExists(payerKeypair, ownerPublicKey) {
+// Function to ensure token account exists (airdrop SOL if needed)
+async function ensureTokenAccountExists(ownerPublicKey) {
   try {
-    // Check if account exists
     const accountInfo = await connection.getAccountInfo(ownerPublicKey);
     if (!accountInfo) {
       // Create account if it doesn't exist
@@ -31,12 +28,10 @@ async function ensureTokenAccountExists(payerKeypair, ownerPublicKey) {
   }
 }
 
-// GET /api/v1/pettracker/list - List all pets
+// GET /api/v1/pettracker/list - List all pets (from database)
 router.get('/list', async (req, res) => {
   try {
-    // In a real implementation, you would fetch from Solana
-    // For now, we'll return the cached data
-    const pets = Array.from(petCache.values());
+    const pets = petDb.getAllPets();
     res.json(pets);
   } catch (error) {
     console.error('Error listing pets:', error);
@@ -44,7 +39,7 @@ router.get('/list', async (req, res) => {
   }
 });
 
-// GET /api/v1/pettracker/get?id=<petId> - Get pet by ID
+// GET /api/v1/pettracker/get?id=<petId> - Get pet by ID (from database)
 router.get('/get', async (req, res) => {
   try {
     const petId = req.query.id;
@@ -52,14 +47,12 @@ router.get('/get', async (req, res) => {
       return res.status(400).json({ error: 'Pet ID is required' });
     }
     
-    // Check cache first
-    const pet = petCache.get(petId);
-    if (pet) {
-      return res.json(pet);
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return res.status(404).json({ error: 'Pet not found' });
     }
     
-    // In a real implementation, you would fetch from Solana
-    return res.status(404).json({ error: 'Pet not found' });
+    res.json(pet);
   } catch (error) {
     console.error('Error getting pet:', error);
     res.status(500).json({ error: 'Failed to get pet' });
@@ -87,32 +80,41 @@ router.post('/edit', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
-    // Ensure token account exists for the owner
-    // In a real implementation, you would use the owner's actual keypair
-    // For this demo, we'll use a placeholder
-    const payerKeypair = web3.Keypair.generate();
+    // Ensure the owner's account exists
+    await ensureTokenAccountExists(ownerPublicKey);
     
-    // Actually ensure the token account exists
-    await ensureTokenAccountExists(payerKeypair, ownerPublicKey);
-    
-    // Store pet in cache (in a real implementation, you would store on Solana)
-    const currentTime = new Date().toISOString();
-    petCache.set(petData.id, {
-      ...petData,
-      owner: ownerAddress,
-      createdAt: petData.createdAt || currentTime,
-      updatedAt: currentTime
-    });
-    
-    res.json({ 
-      success: true, 
-      pet: { 
-        ...petData, 
-        owner: ownerAddress,
-        createdAt: petData.createdAt || currentTime,
-        updatedAt: currentTime
-      } 
-    });
+    // Check if pet already exists
+    if (petDb.petExists(petData.id)) {
+      // Update existing pet
+      const updated = petDb.updatePet(petData.id, {
+        name: petData.name,
+        species: petData.species,
+        breed: petData.breed,
+        age: petData.age
+      });
+      
+      return res.json({ 
+        success: true, 
+        pet: updated,
+        message: 'Pet updated successfully'
+      });
+    } else {
+      // Create new pet (without on-chain token)
+      const newPet = petDb.createPet({
+        id: petData.id,
+        name: petData.name,
+        species: petData.species,
+        breed: petData.breed,
+        age: petData.age,
+        owner: ownerAddress
+      });
+      
+      return res.json({ 
+        success: true, 
+        pet: newPet,
+        message: 'Pet created successfully'
+      });
+    }
   } catch (error) {
     console.error('Error editing pet:', error);
     res.status(500).json({ error: 'Failed to edit pet' });
@@ -133,15 +135,14 @@ router.post('/delete', express.json(), async (req, res) => {
     }
     
     // Check if pet exists and belongs to owner
-    const pet = petCache.get(id);
+    const pet = petDb.getPetById(id);
     if (!pet) {
       return res.status(404).json({ error: 'Pet not found' });
     }
     
     // Validate Solana address
-    let ownerPublicKey;
     try {
-      ownerPublicKey = new web3.PublicKey(ownerAddress);
+      new web3.PublicKey(ownerAddress);
     } catch (error) {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
@@ -150,10 +151,12 @@ router.post('/delete', express.json(), async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to delete this pet' });
     }
     
-    // Remove from cache
-    petCache.delete(id);
+    // Delete from database
+    petDb.deletePet(id);
     
-    // In a real implementation, you would also remove from Solana
+    // Note: In a real implementation, you might also burn the token or transfer it
+    // For now, we'll just archive it in the database
+    
     res.json({ success: true, deletedId: id });
   } catch (error) {
     console.error('Error deleting pet:', error);
@@ -161,7 +164,7 @@ router.post('/delete', express.json(), async (req, res) => {
   }
 });
 
-// POST /api/v1/pettracker/register - Register a new pet with Solana token account
+// POST /api/v1/pettracker/register - Register a new pet with Solana SPL Token
 router.post('/register', express.json(), async (req, res) => {
   try {
     const { petData, ownerAddress } = req.body;
@@ -182,41 +185,67 @@ router.post('/register', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
-    // Ensure token account exists for the owner
-    // In a real implementation, you would use the owner's actual keypair
-    // For this demo, we'll use a placeholder
-    const payerKeypair = web3.Keypair.generate();
+    console.log(`Registering pet ${petData.id} for owner ${ownerAddress}...`);
     
-    // Actually ensure the token account exists
-    await ensureTokenAccountExists(payerKeypair, ownerPublicKey);
+    // Ensure the owner's account exists on-chain
+    await ensureTokenAccountExists(ownerPublicKey);
     
-    // Create a new token account for the pet
-    // In a real implementation, you would:
-    // 1. Create an SPL Token mint for the pet
-    // 2. Create an associated token account for the owner
-    // 3. Mint tokens to represent the pet
+    // Create an SPL Token mint for the pet
+    console.log('Creating SPL Token mint...');
+    const mintResult = await createPetTokenMint(ownerPublicKey);
+    const mintAddress = mintResult.mintAddress;
     
-    // For demo purposes, we'll just store the pet with owner info
-    const currentTime = new Date().toISOString();
-    const petWithOwner = {
-      ...petData,
+    // Create associated token account for the owner
+    console.log('Creating associated token account...');
+    const tokenAccountResult = await createAssociatedTokenAccount(ownerPublicKey, mintAddress);
+    const tokenAccount = tokenAccountResult.tokenAccount;
+    
+    // Mint 1 token to represent the pet
+    console.log('Minting pet token...');
+    await mintPetToken(mintAddress, tokenAccount, ownerPublicKey);
+    
+    // Store pet in database with on-chain references
+    const petWithTokens = petDb.createPet({
+      id: petData.id,
+      name: petData.name,
+      species: petData.species,
+      breed: petData.breed,
+      age: petData.age,
       owner: ownerAddress,
-      tokenId: `pet_${petData.id}_${Date.now()}`, // Placeholder token ID
-      createdAt: currentTime,
-      updatedAt: currentTime
-    };
+      mintAddress: mintAddress,
+      tokenAccount: tokenAccount
+    });
     
-    // Store in cache
-    petCache.set(petData.id, petWithOwner);
+    console.log('Pet registered successfully:', petData.id);
     
     res.json({ 
       success: true, 
-      pet: petWithOwner,
-      message: 'Pet registered successfully with Solana token account'
+      pet: petWithTokens,
+      message: 'Pet registered successfully with Solana SPL Token',
+      onChain: {
+        mint: mintAddress,
+        tokenAccount: tokenAccount
+      }
     });
   } catch (error) {
     console.error('Error registering pet:', error);
-    res.status(500).json({ error: 'Failed to register pet' });
+    res.status(500).json({ error: `Failed to register pet: ${error.message}` });
+  }
+});
+
+// GET /api/v1/pettracker/token-info?mint=<mintAddress> - Get token info
+router.get('/token-info', async (req, res) => {
+  try {
+    const { mint } = req.query;
+    if (!mint) {
+      return res.status(400).json({ error: 'Mint address is required' });
+    }
+    
+    const tokenInfo = await getTokenInfo(mint);
+    res.json(tokenInfo);
+  } catch (error) {
+    console.error('Error getting token info:', error);
+    res.status(500).json({ error: 'Failed to get token info' });
   }
 });
 
