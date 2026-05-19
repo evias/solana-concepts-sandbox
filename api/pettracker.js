@@ -85,6 +85,15 @@ router.post('/edit', express.json(), async (req, res) => {
     
     // Check if pet already exists
     if (petDb.petExists(petData.id)) {
+      // Verify mandate authority for existing pet
+      const mandateCheck = petDb.verifyMandate(petData.id, ownerAddress);
+      if (!mandateCheck.valid) {
+        return res.status(403).json({ 
+          error: 'Unauthorized', 
+          reason: mandateCheck.reason 
+        });
+      }
+      
       // Update existing pet
       const updated = petDb.updatePet(petData.id, {
         name: petData.name,
@@ -96,7 +105,8 @@ router.post('/edit', express.json(), async (req, res) => {
       return res.json({ 
         success: true, 
         pet: updated,
-        message: 'Pet updated successfully'
+        message: 'Pet updated successfully',
+        mandate: { authority: ownerAddress }
       });
     } else {
       // Create new pet (without on-chain token)
@@ -106,13 +116,15 @@ router.post('/edit', express.json(), async (req, res) => {
         species: petData.species,
         breed: petData.breed,
         age: petData.age,
-        owner: ownerAddress
+        owner: ownerAddress,
+        mandateAuthority: ownerAddress
       });
       
       return res.json({ 
         success: true, 
         pet: newPet,
-        message: 'Pet created successfully'
+        message: 'Pet created successfully',
+        mandate: { authority: ownerAddress }
       });
     }
   } catch (error) {
@@ -147,8 +159,13 @@ router.post('/delete', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
-    if (pet.owner !== ownerAddress) {
-      return res.status(403).json({ error: 'Not authorized to delete this pet' });
+    // Verify mandate authority for deletion
+    const mandateCheck = petDb.verifyMandate(id, ownerAddress);
+    if (!mandateCheck.valid) {
+      return res.status(403).json({ 
+        error: 'Unauthorized', 
+        reason: mandateCheck.reason 
+      });
     }
     
     // Delete from database
@@ -212,6 +229,7 @@ router.post('/register', express.json(), async (req, res) => {
       breed: petData.breed,
       age: petData.age,
       owner: ownerAddress,
+      mandateAuthority: ownerAddress,
       mintAddress: mintAddress,
       tokenAccount: tokenAccount
     });
@@ -246,6 +264,49 @@ router.get('/token-info', async (req, res) => {
   } catch (error) {
     console.error('Error getting token info:', error);
     res.status(500).json({ error: 'Failed to get token info' });
+  }
+});
+
+// GET /api/v1/pettracker/verify-mandate?petId=<id>&authority=<address> - Verify mandate authority
+router.get('/verify-mandate', async (req, res) => {
+  try {
+    const { petId, authority } = req.query;
+    
+    if (!petId) {
+      return res.status(400).json({ error: 'Pet ID is required' });
+    }
+    
+    if (!authority) {
+      return res.status(400).json({ error: 'Authority address is required' });
+    }
+    
+    // Validate Solana address
+    try {
+      new web3.PublicKey(authority);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid Solana address' });
+    }
+    
+    // Verify mandate
+    const mandateCheck = petDb.verifyMandate(petId, authority);
+    
+    if (mandateCheck.valid) {
+      const mandateInfo = petDb.getMandateInfo(petId);
+      res.json({ 
+        valid: true,
+        authority: authority,
+        mandate: mandateInfo
+      });
+    } else {
+      res.status(403).json({ 
+        valid: false,
+        authority: authority,
+        reason: mandateCheck.reason
+      });
+    }
+  } catch (error) {
+    console.error('Error verifying mandate:', error);
+    res.status(500).json({ error: 'Failed to verify mandate' });
   }
 });
 
