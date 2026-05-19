@@ -36,6 +36,9 @@ app.get('/carecircle', (req, res) => {
 // Serve assets
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+// Serve documentation files
+app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
+
 
 app.listen(port, () => {
   console.log(`Concept Sandbox listening at http://localhost:${port}`);

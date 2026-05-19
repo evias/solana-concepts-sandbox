@@ -7,15 +7,104 @@
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
     <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Markdown parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .prose {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .prose h1 {
+            font-size: 1.875rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .prose h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose p {
+            margin-bottom: 1rem;
+        }
+        .prose ul, .prose ol {
+            margin-bottom: 1rem;
+            margin-left: 1.5rem;
+        }
+        .prose li {
+            margin-bottom: 0.25rem;
+        }
+        .prose code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #dc2626;
+        }
+        .prose pre {
+            background-color: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        .prose pre code {
+            background-color: transparent;
+            color: #f3f4f6;
+            padding: 0;
+        }
+        .prose blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin-left: 0;
+            color: #6b7280;
+            font-style: italic;
+        }
+        .prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .prose table td, .prose table th {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+        }
+        .prose table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .prose a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        .prose a:hover {
+            color: #1d4ed8;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">PetTracker</h1>
-            <p class="text-gray-600">Pet Registry with Solana Token Accounts</p>
+    <div class="container mx-auto px-4 py-8" x-data="petTracker()">
+        <header class="mb-8 flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">PetTracker</h1>
+                <p class="text-gray-600">Pet Registry with Solana Token Accounts</p>
+            </div>
+            <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                📚 Documentation
+            </button>
         </header>
 
-        <div x-data="petTracker()" class="space-y-8">
+        <div class="space-y-8">
             <!-- Registration Form -->
             <section class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-2xl font-bold mb-4">Register a New Pet</h2>
@@ -107,6 +196,21 @@
                 </div>
             </div>
 
+            <!-- Documentation Modal -->
+            <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">PetTracker Documentation</h2>
+                        <button
+                            @click="showDocumentation = false"
+                            class="text-gray-500 hover:text-gray-700 text-2xl">
+                            ✕
+                        </button>
+                    </div>
+                    <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+                </div>
+            </div>
+
             <!-- Pet List -->
             <section class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-2xl font-bold mb-4">Registered Pets</h2>
@@ -137,6 +241,7 @@
         </div>
     </div>
 
+
     <script>
         function petTracker() {
             return {
@@ -150,8 +255,10 @@
                 },
                 ownerAddress: '',
                 showWalletModal: false,
+                showDocumentation: false,
                 manualAddress: '',
                 availableWallets: [],
+                documentationContent: '',
                 
                 async init() {
                     await this.detectWallets();
@@ -392,6 +499,35 @@
                         breed: '',
                         age: ''
                     };
+                },
+                
+                async openDocumentation() {
+                    try {
+                        console.log('Opening documentation...');
+                        console.log('Marked library available:', typeof marked !== 'undefined');
+                        
+                        const response = await fetch('/concepts/docs/pettracker.md');
+                        console.log('Fetch response status:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const markdown = await response.text();
+                        console.log('Markdown loaded, length:', markdown.length);
+                        
+                        if (typeof marked === 'undefined') {
+                            throw new Error('marked.js library not loaded');
+                        }
+                        
+                        // Parse markdown to HTML using marked
+                        this.documentationContent = marked.parse(markdown);
+                        this.showDocumentation = true;
+                        console.log('Documentation content set successfully');
+                    } catch (error) {
+                        console.error('Error loading documentation:', error);
+                        alert(`Error loading documentation: ${error.message}`);
+                    }
                 }
             }
         }
