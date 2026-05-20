@@ -1,14 +1,26 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 // Create/connect to database
 const dbPath = path.join(__dirname, '..', 'pettracker.db');
+
+// Check if database exists; if not, throw error
+if (!fs.existsSync(dbPath)) {
+  throw new Error(
+    `Database not found at ${dbPath}\n` +
+    `Please run: npm run db:init\n` +
+    `Then run: npm run db:seed\n` +
+    `Then run: npm run db:migrate`
+  );
+}
+
 const db = new Database(dbPath);
 
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 
-// Initialize database schema
+// Initialize database schema (only called by db:init script)
 function initializeDatabase() {
   // Create pets table
   db.exec(`
@@ -56,10 +68,7 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);
   `);
   
-  // Run migrations
-  runMigrations();
-  
-  console.log('Database initialized at:', dbPath);
+  console.log('Database schema created at:', dbPath);
 }
 
 // Database migrations
@@ -308,7 +317,5 @@ const vaccinationDb = {
   }
 };
 
-// Initialize on load
-initializeDatabase();
-
-module.exports = { db, petDb, vaccinationDb };
+// Export database and helper functions (do NOT initialize on require)
+module.exports = { db, petDb, vaccinationDb, initializeDatabase, runMigrations };

@@ -9,7 +9,11 @@
     "build": "npx @tailwindcss/cli -i ./assets/base.css -o ./assets/base.min.css",
     "watch": "npx @tailwindcss/cli -i ./assets/base.css -o ./assets/base.min.css --watch",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "db:init": "node scripts/db-init.js",
+    "db:seed": "node scripts/db-seed.js",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:fresh": "npm run db:init && npm run db:seed && npm run db:migrate"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.14",
