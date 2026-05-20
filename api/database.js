@@ -42,6 +42,8 @@ function initializeDatabase() {
       vet_mandate_authority TEXT,
       notes TEXT,
       mint_address TEXT,
+      transaction_signature TEXT,
+      transaction_hash TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
@@ -50,6 +52,8 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_pet_id ON vaccinations(pet_id);
     CREATE INDEX IF NOT EXISTS idx_vet ON vaccinations(vet_address);
     CREATE INDEX IF NOT EXISTS idx_vax_mint ON vaccinations(mint_address);
+    CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);
+    CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);
   `);
   
   // Run migrations
@@ -61,36 +65,56 @@ function initializeDatabase() {
 // Database migrations
 function runMigrations() {
   try {
-    // Check if mandate_authority column exists
-    const tableInfo = db.prepare("PRAGMA table_info(pets)").all();
-    const hasMandate = tableInfo.some(col => col.name === 'mandate_authority');
+    // Migration 1: Add mandate_authority to pets
+    const petTableInfo = db.prepare("PRAGMA table_info(pets)").all();
+    const hasMandate = petTableInfo.some(col => col.name === 'mandate_authority');
     
     if (!hasMandate) {
-      console.log('Running migration: Adding mandate_authority column...');
+      console.log('Running migration: Adding mandate_authority column to pets...');
       
-      // Add mandate_authority column with default value
-      db.exec(`
-        ALTER TABLE pets ADD COLUMN mandate_authority TEXT;
-      `);
+      db.exec(`ALTER TABLE pets ADD COLUMN mandate_authority TEXT;`);
+      db.prepare(`UPDATE pets SET mandate_authority = owner WHERE mandate_authority IS NULL`).run();
       
-      // Set mandate_authority to owner for all existing pets
-      db.prepare(`
-        UPDATE pets SET mandate_authority = owner WHERE mandate_authority IS NULL
-      `).run();
+      console.log('Migration completed: mandate_authority column added');
+    }
+    
+    // Migration 2: Add transaction_signature to vaccinations
+    try {
+      const vaxTableInfo = db.prepare("PRAGMA table_info(vaccinations)").all();
+      const hasTxSig = vaxTableInfo.some(col => col.name === 'transaction_signature');
       
-      // Make the column NOT NULL for future inserts
-      // SQLite doesn't support ALTER COLUMN, so we need to recreate the table
-      db.exec(`
-        UPDATE pets SET mandate_authority = owner WHERE mandate_authority IS NULL;
-      `);
+      if (!hasTxSig) {
+        console.log('Running migration: Adding transaction_signature column to vaccinations...');
+        
+        db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_signature TEXT;`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);`);
+        
+        console.log('Migration completed: transaction_signature column added');
+      }
       
-      console.log('Migration completed: mandate_authority column added and populated');
+      // Migration 2b: Add transaction_hash to vaccinations
+      const hasTxHash = vaxTableInfo.some(col => col.name === 'transaction_hash');
+      
+      if (!hasTxHash) {
+        console.log('Running migration: Adding transaction_hash column to vaccinations...');
+        
+        db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_hash TEXT;`);
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);`);
+        
+        console.log('Migration completed: transaction_hash column added');
+      }
+    } catch (error) {
+      if (error.message.includes('no such table')) {
+        // vaccinations table doesn't exist yet, will be created on init
+      } else {
+        throw error;
+      }
     }
   } catch (error) {
     console.error('Migration error:', error.message);
     // If migration fails, log but don't crash
     if (error.message.includes('duplicate column')) {
-      console.log('Column mandate_authority already exists, skipping migration');
+      console.log('Column already exists, skipping migration');
     }
   }
 }
@@ -213,7 +237,7 @@ const petDb = {
 const vaccinationDb = {
   // Create/Record a new vaccination
   createVaccination(vaccinationData) {
-    const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress } = vaccinationData;
+    const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress, transactionSignature, transactionHash } = vaccinationData;
     const now = new Date().toISOString();
     
     // Verify pet exists
@@ -223,11 +247,11 @@ const vaccinationDb = {
     }
     
     const stmt = db.prepare(`
-      INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, transaction_signature, transaction_hash, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
-    stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, now, now);
+    stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, transactionSignature || null, transactionHash || null, now, now);
     
     return vaccinationDb.getVaccinationById(id);
   },
@@ -275,6 +299,12 @@ const vaccinationDb = {
       return { valid: false, reason: 'Vet not authorized' };
     }
     return { valid: true, reason: 'Vet authorized' };
+  },
+  
+  // Get vaccination by transaction hash (for Solscan lookup)
+  getVaccinationByTransactionHash(transactionHash) {
+    const stmt = db.prepare('SELECT * FROM vaccinations WHERE transaction_hash = ?');
+    return stmt.get(transactionHash);
   }
 };
 

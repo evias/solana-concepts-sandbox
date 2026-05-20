@@ -9,6 +9,10 @@
     <script src="/assets/alpinejs.min.js" defer></script>
     <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Solana Web3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <!-- Base58 encoding -->
+    <script src="https://cdn.jsdelivr.net/npm/bs58/index.js"></script>
     <style>
         .prose {
             font-size: 0.95rem;
@@ -186,13 +190,31 @@
                         <label class="block text-sm font-medium text-gray-700">Notes</label>
                         <textarea x-model="vaccinationForm.notes" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" rows="3" placeholder="Optional notes about the vaccination"></textarea>
                     </div>
-                    <button 
-                        type="submit" 
-                        :disabled="!selectedPetId || !userAddress"
-                        :class="!selectedPetId || !userAddress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
-                        class="bg-green-600 text-white px-4 py-2 rounded-md">
-                        Record Vaccination
-                    </button>
+                     <div x-show="signingStatus" class="p-4 rounded-md" :class="signingStatus === 'signing' ? 'bg-yellow-50 border border-yellow-200' : signingStatus === 'signed' ? 'bg-blue-50 border border-blue-200' : 'bg-green-50 border border-green-200'">
+                         <p class="text-sm font-semibold" :class="signingStatus === 'signing' ? 'text-yellow-800' : signingStatus === 'signed' ? 'text-blue-800' : 'text-green-800'">
+                             <span x-show="signingStatus === 'signing'">⏳ Waiting for wallet signature...</span>
+                             <span x-show="signingStatus === 'signed'">📝 Transaction signed, submitting to Solana...</span>
+                             <span x-show="signingStatus === 'submitted'">🚀 Transaction submitted!</span>
+                             <span x-show="signingStatus === 'confirmed'">✓ Transaction confirmed on-chain!</span>
+                         </p>
+                         <p x-show="transactionSignature" class="text-xs font-mono break-all mt-2 p-2 bg-white rounded" :class="signingStatus === 'signing' ? 'text-yellow-700' : signingStatus === 'signed' ? 'text-blue-700' : 'text-green-700'">
+                             <span x-show="signingStatus === 'signed' || signingStatus === 'submitted' || signingStatus === 'confirmed'">Signature: </span><span x-text="transactionSignature.substring(0, 40) + '...'"></span>
+                         </p>
+                         <p x-show="transactionHash" class="text-xs font-mono break-all mt-2 p-2 bg-white rounded text-green-700">
+                             Hash: <span x-text="transactionHash.substring(0, 40) + '...'"></span>
+                         </p>
+                     </div>
+                     <button 
+                         type="submit" 
+                         :disabled="!selectedPetId || !userAddress || signingStatus"
+                         :class="(!selectedPetId || !userAddress || signingStatus) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
+                         class="bg-green-600 text-white px-4 py-2 rounded-md">
+                         <span x-show="!signingStatus">Record Vaccination with On-Chain Proof</span>
+                         <span x-show="signingStatus === 'signing'">Signing...</span>
+                         <span x-show="signingStatus === 'signed'">Submitting Transaction...</span>
+                         <span x-show="signingStatus === 'submitted'">Confirming...</span>
+                         <span x-show="signingStatus === 'confirmed'">Transaction Confirmed!</span>
+                     </button>
                 </form>
             </section>
 
@@ -205,21 +227,30 @@
                 <div x-show="vaccinations.length === 0" class="text-gray-500">
                     No vaccinations recorded yet for this pet.
                 </div>
-                <div x-show="vaccinations.length > 0" class="space-y-4">
-                    <template x-for="vax in vaccinations" :key="vax.id">
-                        <div class="border rounded-lg p-4 bg-green-50 border-green-200">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="text-lg font-bold text-green-900" x-text="vax.vaccine_name"></h3>
-                                    <p class="text-sm text-green-700" x-text="'Date: ' + new Date(vax.vaccination_date).toLocaleDateString()"></p>
-                                </div>
-                                <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
-                            </div>
-                            <p class="text-sm text-green-600 mb-2" x-text="'Recorded by: ' + vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></p>
-                            <p x-show="vax.notes" class="text-sm text-green-700 italic" x-text="'Notes: ' + vax.notes"></p>
-                        </div>
-                    </template>
-                </div>
+                 <div x-show="vaccinations.length > 0" class="space-y-4">
+                     <template x-for="vax in vaccinations" :key="vax.id">
+                         <div class="border rounded-lg p-4" :class="vax.transaction_hash ? 'bg-purple-50 border-purple-200' : vax.transaction_signature ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'">
+                             <div class="flex justify-between items-start mb-2">
+                                 <div>
+                                     <h3 class="text-lg font-bold" :class="vax.transaction_hash ? 'text-purple-900' : vax.transaction_signature ? 'text-blue-900' : 'text-green-900'" x-text="vax.vaccine_name"></h3>
+                                     <p class="text-sm" :class="vax.transaction_hash ? 'text-purple-700' : vax.transaction_signature ? 'text-blue-700' : 'text-green-700'" x-text="'Date: ' + new Date(vax.vaccination_date).toLocaleDateString()"></p>
+                                 </div>
+                                 <div class="flex gap-2">
+                                     <span x-show="vax.transaction_hash" class="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">⛓ On-Chain Verified</span>
+                                     <span x-show="!vax.transaction_hash && vax.transaction_signature" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">🔐 Signed</span>
+                                     <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
+                                 </div>
+                             </div>
+                             <p class="text-sm mb-2" :class="vax.transaction_hash ? 'text-purple-600' : vax.transaction_signature ? 'text-blue-600' : 'text-green-600'" x-text="'Recorded by: ' + vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></p>
+                             <p x-show="vax.notes" class="text-sm italic mb-2" :class="vax.transaction_hash ? 'text-purple-700' : vax.transaction_signature ? 'text-blue-700' : 'text-green-700'" x-text="'Notes: ' + vax.notes"></p>
+                             <p x-show="vax.transaction_signature" class="text-xs font-mono break-all p-2 rounded mb-2" :class="vax.transaction_hash ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'" x-text="'Signature: ' + vax.transaction_signature.substring(0, 40) + '...'"></p>
+                             <p x-show="vax.transaction_hash" class="text-xs font-mono break-all p-2 rounded mb-2 bg-purple-100 text-purple-800" x-text="'Hash: ' + vax.transaction_hash.substring(0, 40) + '...'"></p>
+                             <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
+                                 🔗 View on Solscan
+                             </a>
+                         </div>
+                     </template>
+                 </div>
             </section>
 
             <!-- Wallet Modal -->
@@ -258,14 +289,19 @@
                 selectedPet: null,
                 vaccinations: [],
                 documentationContent: '',
-                vaccinationForm: {
-                    vaccineName: '',
-                    vaccinationDate: '',
-                    vetAddress: '',
-                    notes: ''
-                },
-                
-                async init() {
+                signingStatus: '',
+                transactionSignature: '',
+                 vaccinationForm: {
+                     vaccineName: '',
+                     vaccinationDate: '',
+                     vetAddress: '',
+                     notes: ''
+                 },
+                 transactionHash: '',
+                 isSubmittingTransaction: false,
+                 solscanUrl: '',
+                 
+                 async init() {
                     await this.detectWallets();
                     this.checkStoredWallet();
                     await this.loadPets();
@@ -374,51 +410,165 @@
                 },
                 
                 async recordVaccination() {
-                    if (!this.selectedPetId) {
-                        alert('Please select a pet');
-                        return;
-                    }
-                    
-                    if (!this.userAddress) {
-                        alert('Please connect your wallet');
-                        return;
-                    }
-                    
-                    try {
-                        const response = await fetch('/api/v1/petvax/record', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                petId: this.selectedPetId,
-                                vaccineName: this.vaccinationForm.vaccineName,
-                                vaccinationDate: this.vaccinationForm.vaccinationDate,
-                                vetAddress: this.vaccinationForm.vetAddress,
-                                notes: this.vaccinationForm.notes
-                            })
-                        });
-                        
-                        if (response.ok) {
-                            const result = await response.json();
-                            console.log('Vaccination recorded:', result);
-                            this.vaccinationForm = {
-                                vaccineName: '',
-                                vaccinationDate: '',
-                                vetAddress: '',
-                                notes: ''
-                            };
-                            await this.loadVaccinationHistory();
-                            alert('Vaccination recorded successfully!');
-                        } else {
-                            const error = await response.json();
-                            alert('Failed to record vaccination: ' + error.error);
-                        }
-                    } catch (error) {
-                        console.error('Error recording vaccination:', error);
-                        alert('Error: ' + error.message);
-                    }
-                },
+                     if (!this.selectedPetId) {
+                         alert('Please select a pet');
+                         return;
+                     }
+                     
+                     if (!this.userAddress) {
+                         alert('Please connect your wallet');
+                         return;
+                     }
+                     
+                     try {
+                         // Step 1: Prepare transaction on backend
+                         this.signingStatus = 'signing';
+                         this.transactionSignature = '';
+                         this.transactionHash = '';
+                         this.solscanUrl = '';
+                         
+                         console.log('Preparing vaccination transaction...');
+                         
+                         const prepareResponse = await fetch('/api/v1/petvax/prepare', {
+                             method: 'POST',
+                             headers: {
+                                 'Content-Type': 'application/json'
+                             },
+                             body: JSON.stringify({
+                                 petId: this.selectedPetId,
+                                 vaccineName: this.vaccinationForm.vaccineName,
+                                 vaccinationDate: this.vaccinationForm.vaccinationDate,
+                                 vetAddress: this.vaccinationForm.vetAddress
+                             })
+                         });
+                         
+                         if (!prepareResponse.ok) {
+                             const error = await prepareResponse.json();
+                             alert('Failed to prepare transaction: ' + error.error);
+                             this.signingStatus = '';
+                             return;
+                         }
+                         
+                         const preparedData = await prepareResponse.json();
+                         console.log('Transaction prepared:', preparedData);
+                         
+                         // Step 2: Deserialize transaction from backend
+                         // solanaWeb3 is available globally from CDN
+                         const transactionBuffer = Buffer.from(preparedData.transaction, 'base64');
+                         const transaction = solanaWeb3.Transaction.from(transactionBuffer);
+                         
+                         console.log('Transaction deserialized, requesting signature from Phantom...');
+                         
+                         // Step 3: Request Phantom to sign the transaction
+                         if (!window.solana) {
+                             alert('Phantom wallet not available. Please connect your wallet first.');
+                             this.signingStatus = '';
+                             return;
+                         }
+                         
+                         const signedTransaction = await window.solana.signTransaction(transaction);
+                         
+                         // Extract signature (Phantom returns array of signatures)
+                         if (!signedTransaction.signatures || signedTransaction.signatures.length === 0) {
+                             alert('Transaction was not signed');
+                             this.signingStatus = '';
+                             return;
+                         }
+                         
+                         this.transactionSignature = bs58.encode(signedTransaction.signatures[0].signature);
+                         this.signingStatus = 'signed';
+                         console.log('Transaction signed:', this.transactionSignature.substring(0, 20) + '...');
+                         
+                         // Step 4: Serialize and submit signed transaction to Solana devnet
+                         this.signingStatus = 'submitted';
+                         console.log('Submitting transaction to Solana devnet...');
+                         
+                         const connection = new solanaWeb3.Connection('https://api.devnet.solana.com', 'confirmed');
+                         
+                         const txHash = await connection.sendRawTransaction(
+                             signedTransaction.serialize(),
+                             { skipPreflight: false, preflightCommitment: 'confirmed' }
+                         );
+                         
+                         this.transactionHash = txHash;
+                         console.log('Transaction submitted with hash:', txHash);
+                         
+                         // Step 5: Wait for confirmation
+                         this.signingStatus = 'submitted'; // Still submitting while confirming
+                         console.log('Waiting for transaction confirmation...');
+                         
+                         const latestBlockhash = await connection.getLatestBlockhash();
+                         await connection.confirmTransaction({
+                             signature: txHash,
+                             blockhash: latestBlockhash.blockhash,
+                             lastValidBlockHeight: latestBlockhash.lastValidBlockHeight
+                         }, 'confirmed');
+                         
+                         this.signingStatus = 'confirmed';
+                         console.log('Transaction confirmed!');
+                         
+                         // Step 6: Record vaccination with transaction hash on backend
+                         const recordResponse = await fetch('/api/v1/petvax/record', {
+                             method: 'POST',
+                             headers: {
+                                 'Content-Type': 'application/json'
+                             },
+                             body: JSON.stringify({
+                                 petId: this.selectedPetId,
+                                 vaccineName: this.vaccinationForm.vaccineName,
+                                 vaccinationDate: this.vaccinationForm.vaccinationDate,
+                                 vetAddress: this.vaccinationForm.vetAddress,
+                                 notes: this.vaccinationForm.notes,
+                                 transactionSignature: this.transactionSignature,
+                                 transactionHash: this.transactionHash
+                             })
+                         });
+                         
+                         if (recordResponse.ok) {
+                             const result = await recordResponse.json();
+                             console.log('Vaccination recorded:', result);
+                             
+                             this.solscanUrl = result.metadata.solscanUrl;
+                             
+                             // Clear form
+                             this.vaccinationForm = {
+                                 vaccineName: '',
+                                 vaccinationDate: '',
+                                 vetAddress: '',
+                                 notes: ''
+                             };
+                             
+                             // Show success with Solscan link
+                             await this.loadVaccinationHistory();
+                             
+                             // Display success message with Solscan link
+                             const message = `✓ Vaccination recorded successfully!\n\nTransaction verified on Solana devnet!\n\nTransaction Hash:\n${this.transactionHash}\n\nView on Solscan:\nhttps://solscan.io/tx/${this.transactionHash}?cluster=devnet`;
+                             alert(message);
+                         } else {
+                             const error = await recordResponse.json();
+                             alert('Failed to record vaccination: ' + error.error);
+                         }
+                         
+                         this.signingStatus = '';
+                         this.transactionSignature = '';
+                         this.transactionHash = '';
+                         
+                     } catch (error) {
+                         console.error('Error recording vaccination:', error);
+                         this.signingStatus = '';
+                         
+                         // Handle specific errors
+                         if (error.message && error.message.includes('User rejected')) {
+                             alert('Transaction cancelled by user');
+                         } else if (error.message && error.message.includes('Transaction simulation failed')) {
+                             alert('Transaction simulation failed. Make sure you have devnet SOL and all addresses are valid.');
+                         } else if (error.message && error.message.includes('Blockhash not found')) {
+                             alert('Transaction took too long. Try again.');
+                         } else {
+                             alert('Error: ' + (error.message || error));
+                         }
+                     }
+                 },
                 
                 async openDocumentation() {
                     try {
