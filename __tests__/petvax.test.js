@@ -36,6 +36,8 @@ describe('PetVax API - Vaccination Records', () => {
         vet_mandate_authority TEXT,
         notes TEXT,
         mint_address TEXT,
+        transaction_signature TEXT,
+        transaction_hash TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
@@ -44,6 +46,8 @@ describe('PetVax API - Vaccination Records', () => {
       CREATE INDEX IF NOT EXISTS idx_pet_id ON vaccinations(pet_id);
       CREATE INDEX IF NOT EXISTS idx_vet ON vaccinations(vet_address);
       CREATE INDEX IF NOT EXISTS idx_vax_mint ON vaccinations(mint_address);
+      CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);
+      CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);
     `);
     
     return { database, testDbPath };
@@ -73,7 +77,7 @@ describe('PetVax API - Vaccination Records', () => {
   function createVaccinationDbHelper(database) {
     return {
       createVaccination(vaccinationData) {
-        const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress } = vaccinationData;
+        const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress, transactionSignature, transactionHash } = vaccinationData;
         const now = new Date().toISOString();
         
         // Verify pet exists
@@ -83,11 +87,11 @@ describe('PetVax API - Vaccination Records', () => {
         }
         
         const stmt = database.prepare(`
-          INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, transaction_signature, transaction_hash, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         
-        stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, now, now);
+        stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, transactionSignature || null, transactionHash || null, now, now);
         return database.prepare('SELECT * FROM vaccinations WHERE id = ?').get(id);
       },
       
@@ -114,6 +118,10 @@ describe('PetVax API - Vaccination Records', () => {
         }
         
         return { valid: true, reason: 'Vaccination verified', vaccination };
+      },
+      
+      getVaccinationByTransactionHash(hash) {
+        return database.prepare('SELECT * FROM vaccinations WHERE transaction_hash = ?').get(hash);
       }
     };
   }
@@ -388,6 +396,8 @@ describe('PetVax API - Vaccination Records', () => {
       expect(columnNames).toContain('vet_mandate_authority');
       expect(columnNames).toContain('notes');
       expect(columnNames).toContain('mint_address');
+      expect(columnNames).toContain('transaction_signature');
+      expect(columnNames).toContain('transaction_hash');
       expect(columnNames).toContain('created_at');
       expect(columnNames).toContain('updated_at');
       
@@ -404,6 +414,196 @@ describe('PetVax API - Vaccination Records', () => {
       expect(indexNames).toContain('idx_pet_id');
       expect(indexNames).toContain('idx_vet');
       expect(indexNames).toContain('idx_vax_mint');
+      expect(indexNames).toContain('idx_tx_sig');
+      expect(indexNames).toContain('idx_tx_hash');
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+  });
+
+  describe('Transaction Signature Support', () => {
+    test('should store transaction signature with vaccination record', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-sig-1',
+        name: 'Buddy',
+        species: 'Dog',
+        breed: 'Golden Retriever',
+        age: 3,
+        owner: 'owner-1',
+        mandateAuthority: 'owner-1',
+        mintAddress: 'mint-1',
+        tokenAccount: 'token-1'
+      });
+      
+      const testSignature = 'sig1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-sig-1',
+        petId: pet.id,
+        vaccineName: 'Rabies',
+        vaccinationDate: '2026-05-20',
+        vetAddress: 'vet-addr-1',
+        vetMandateAuthority: 'vet-addr-1',
+        notes: 'Annual',
+        transactionSignature: testSignature
+      });
+      
+      expect(vaccination.transaction_signature).toBe(testSignature);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should allow vaccination without transaction signature', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-no-sig',
+        name: 'Fluffy',
+        species: 'Cat',
+        breed: 'Persian',
+        age: 4,
+        owner: 'owner-2',
+        mandateAuthority: 'owner-2',
+        mintAddress: 'mint-2',
+        tokenAccount: 'token-2'
+      });
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-no-sig',
+        petId: pet.id,
+        vaccineName: 'DPPE',
+        vaccinationDate: '2026-05-20',
+        vetAddress: 'vet-addr-2',
+        notes: 'Initial'
+        // transactionSignature not provided
+      });
+      
+      expect(vaccination.transaction_signature).toBeNull();
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should retrieve vaccination with transaction signature', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-retrieve-sig',
+        name: 'Rex',
+        species: 'Dog',
+        breed: 'Labrador',
+        age: 2,
+        owner: 'owner-3',
+        mandateAuthority: 'owner-3',
+        mintAddress: 'mint-3',
+        tokenAccount: 'token-3'
+      });
+      
+      const testSig = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+      
+      vaccinationDb.createVaccination({
+        id: 'vax-retrieve',
+        petId: pet.id,
+        vaccineName: 'Lepto',
+        vaccinationDate: '2026-05-20',
+        vetAddress: 'vet-addr-3',
+        transactionSignature: testSig
+      });
+      
+      const retrieved = vaccinationDb.getVaccinationById('vax-retrieve');
+      
+      expect(retrieved.transaction_signature).toBe(testSig);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should store and retrieve transaction hash for Solscan lookup', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-hash-1',
+        name: 'Shadow',
+        species: 'Cat',
+        breed: 'Black',
+        age: 1,
+        owner: 'owner-4',
+        mandateAuthority: 'owner-4',
+        mintAddress: 'mint-4',
+        tokenAccount: 'token-4'
+      });
+      
+      const testHash = '5sGjZRX9yHeYqvdC8LYBz4Y5j8V3sK2mN1pQ6rT7uW8xA9bC0dE1fG2hI3jK4lM5nO6pP7qR8sT9uV0wX1yZ2';
+      
+      vaccinationDb.createVaccination({
+        id: 'vax-hash-1',
+        petId: pet.id,
+        vaccineName: 'Feline Distemper',
+        vaccinationDate: '2026-05-20',
+        vetAddress: 'vet-addr-4',
+        transactionHash: testHash
+      });
+      
+      // Should be able to look up by hash
+      const retrieved = vaccinationDb.getVaccinationByTransactionHash(testHash);
+      
+      expect(retrieved).toBeDefined();
+      expect(retrieved.id).toBe('vax-hash-1');
+      expect(retrieved.transaction_hash).toBe(testHash);
+      expect(retrieved.pet_id).toBe(pet.id);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should store both signature and hash together', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-both-1',
+        name: 'Tiger',
+        species: 'Tiger',
+        breed: 'Bengal',
+        age: 5,
+        owner: 'owner-5',
+        mandateAuthority: 'owner-5',
+        mintAddress: 'mint-5',
+        tokenAccount: 'token-5'
+      });
+      
+      const testSig = 'sig123456789';
+      const testHash = 'hash123456789';
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-both-1',
+        petId: pet.id,
+        vaccineName: 'Tiger Shot',
+        vaccinationDate: '2026-05-20',
+        vetAddress: 'vet-addr-5',
+        transactionSignature: testSig,
+        transactionHash: testHash
+      });
+      
+      expect(vaccination.transaction_signature).toBe(testSig);
+      expect(vaccination.transaction_hash).toBe(testHash);
+      
+      // Should be retrievable by hash
+      const byHash = vaccinationDb.getVaccinationByTransactionHash(testHash);
+      expect(byHash.transaction_signature).toBe(testSig);
       
       database.close();
       fs.unlinkSync(testDbPath);
