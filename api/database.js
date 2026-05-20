@@ -31,6 +31,27 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_mint ON pets(mint_address);
   `);
   
+  // Create vaccinations table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vaccinations (
+      id TEXT PRIMARY KEY,
+      pet_id TEXT NOT NULL,
+      vaccine_name TEXT NOT NULL,
+      vaccination_date TEXT NOT NULL,
+      vet_address TEXT NOT NULL,
+      vet_mandate_authority TEXT,
+      notes TEXT,
+      mint_address TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_pet_id ON vaccinations(pet_id);
+    CREATE INDEX IF NOT EXISTS idx_vet ON vaccinations(vet_address);
+    CREATE INDEX IF NOT EXISTS idx_vax_mint ON vaccinations(mint_address);
+  `);
+  
   // Run migrations
   runMigrations();
   
@@ -188,7 +209,76 @@ const petDb = {
   }
 };
 
+// Vaccination database operations
+const vaccinationDb = {
+  // Create/Record a new vaccination
+  createVaccination(vaccinationData) {
+    const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress } = vaccinationData;
+    const now = new Date().toISOString();
+    
+    // Verify pet exists
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      throw new Error(`Pet not found: ${petId}`);
+    }
+    
+    const stmt = db.prepare(`
+      INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, now, now);
+    
+    return vaccinationDb.getVaccinationById(id);
+  },
+  
+  // Get vaccination by ID
+  getVaccinationById(id) {
+    const stmt = db.prepare('SELECT * FROM vaccinations WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  // Get all vaccinations for a pet
+  getVaccinationsByPetId(petId) {
+    const stmt = db.prepare('SELECT * FROM vaccinations WHERE pet_id = ? ORDER BY vaccination_date DESC');
+    return stmt.all(petId);
+  },
+  
+  // Get all vaccinations by vet
+  getVaccinationsByVet(vetAddress) {
+    const stmt = db.prepare('SELECT * FROM vaccinations WHERE vet_address = ? ORDER BY vaccination_date DESC');
+    return stmt.all(vetAddress);
+  },
+  
+  // Verify vaccination is linked to a valid pet
+  verifyVaccinationPet(vaccinationId, expectedPetId) {
+    const vaccination = vaccinationDb.getVaccinationById(vaccinationId);
+    if (!vaccination) {
+      return { valid: false, reason: 'Vaccination not found' };
+    }
+    
+    if (vaccination.pet_id !== expectedPetId) {
+      return { valid: false, reason: 'Vaccination not linked to this pet' };
+    }
+    
+    const pet = petDb.getPetById(vaccination.pet_id);
+    if (!pet) {
+      return { valid: false, reason: 'Pet not found' };
+    }
+    
+    return { valid: true, reason: 'Vaccination verified', vaccination, pet };
+  },
+  
+  // Check if vet has authorization
+  verifyVetAuthorization(vetAddress, expectedAuthority) {
+    if (vetAddress !== expectedAuthority) {
+      return { valid: false, reason: 'Vet not authorized' };
+    }
+    return { valid: true, reason: 'Vet authorized' };
+  }
+};
+
 // Initialize on load
 initializeDatabase();
 
-module.exports = { db, petDb };
+module.exports = { db, petDb, vaccinationDb };
