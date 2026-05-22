@@ -7,6 +7,9 @@ const connection = new web3.Connection(
   'confirmed'
 );
 
+// Memo program address
+const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gDiYM2piU8gLgcsVCoJUn5Z5cp4TF3KT6RkN');
+
 /**
  * Create and sign a vaccination record transaction
  * Uses memo instruction to record vaccination data on-chain
@@ -32,6 +35,16 @@ async function createVaccinationTransaction(data) {
     } = data;
 
     console.log('Creating vaccination transaction for pet:', petId);
+    
+    // Check if memo program exists on devnet
+    const memoProgramInfo = await connection.getAccountInfo(MEMO_PROGRAM_ID);
+    console.log('[MEMO-CHECK] Memo program exists on devnet:', !!memoProgramInfo);
+    if (memoProgramInfo) {
+      console.log('[MEMO-CHECK] Program executable:', memoProgramInfo.executable);
+      console.log('[MEMO-CHECK] Program owner:', memoProgramInfo.owner.toString());
+    } else {
+      console.warn('[MEMO-CHECK] WARNING: Memo program NOT found on devnet!');
+    }
 
     // Create a transaction with vaccination data in a memo instruction
     const transaction = new web3.Transaction();
@@ -47,27 +60,36 @@ async function createVaccinationTransaction(data) {
       recordedAt: new Date().toISOString()
     });
 
-    // Use SPL Token's memo program
-    const memoInstruction = new web3.TransactionInstruction({
-      programId: new web3.PublicKey('MemoSq4gDiYM2piU8gLgcsVCoJUn5Z5cp4TF3KT6RkN'), // Memo program ID
-      keys: [],
-      data: Buffer.from(memoData)
-    });
+    console.log("createVaccinationTransaction: memoData = ", memoData);
 
-    transaction.add(memoInstruction);
+    // Create memo instruction using the SPL Memo program
+    // The memo program just stores data, no accounts needed
+    const memoInstruction = new web3.TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: [],
+      data: Buffer.from(memoData, 'utf8')
+    });
+    await transaction.add(memoInstruction);
 
     // Set transaction properties
     const latestBlockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = latestBlockhash.blockhash;
-    transaction.feePayer = new web3.PublicKey(vetAddress); // Vet pays for transaction
+    transaction.feePayer = new web3.PublicKey(petOwner); // Owner pays for transaction ("PAYING VACCINE")
 
     console.log('Transaction created with memo data');
+    console.log('[TX-DEBUG] Fee payer:', transaction.feePayer.toString());
+    console.log('[TX-DEBUG] Recent blockhash:', transaction.recentBlockhash);
+    console.log('[TX-DEBUG] instructions count:', transaction.instructions.length);
+    console.log('[TX-DEBUG] instruction[0].data length:', transaction.instructions[0].data.length);
+    console.log('[TX-DEBUG] instruction[0].data:', transaction.instructions[0].data.toString('utf8').substring(0, 100) + '...');
 
     // Note: The actual signing happens in the frontend with Phantom
     // This function prepares the transaction
     return {
       ready: true,
       transaction: transaction.serialize({ requireAllSignatures: false }).toString('base64'),
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
       message: 'Transaction ready for signing',
       petId,
       vaccineName,

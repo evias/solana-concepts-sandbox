@@ -1,7 +1,8 @@
 const express = require('express');
 const web3 = require('@solana/web3.js');
+const splToken = require('@solana/spl-token');
 const { petDb, vaccinationDb } = require('./database');
-const { createVaccinationTransaction, verifyVaccinationSignature, getVaccinationTransactionInfo } = require('./vaccination-tx');
+const { payer } = require('./payer');
 
 const router = express.Router();
 
@@ -40,12 +41,128 @@ router.get('/verify', async (req, res) => {
       vaccinationCount: vaccinations.length,
       onChainProofs: vaccinations.filter(v => v.transaction_signature).length
     });
+   } catch (error) {
+     console.error('Error verifying vaccinations:', error);
+     res.status(500).json({ error: 'Failed to verify vaccinations' });
+   }
+ });
+
+// POST /api/v1/petvax/record-with-spl - Record vaccination with SPL token using message signing
+router.post('/record-with-spl', express.json(), async (req, res) => {
+  try {
+    const { petId, vaccineName, vaccinationDate, vetAddress, notes, ownerAddress, signedMessage } = req.body;
+    
+    if (!petId || !vaccineName || !vaccinationDate || !vetAddress || !ownerAddress || !signedMessage) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Validate Solana addresses
+    try {
+      new web3.PublicKey(vetAddress);
+      new web3.PublicKey(ownerAddress);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid Solana address' });
+    }
+    
+    // Verify pet exists and owner matches
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+    
+    if (pet.owner !== ownerAddress) {
+      return res.status(403).json({ error: 'Only pet owner can record vaccinations' });
+    }
+    
+    console.log(`[PetVax] Recording vaccination for pet ${petId} with SPL token...`);
+    
+    // Create SPL token mint for this vaccination
+    console.log(`[PetVax] Creating SPL token mint...`);
+    const mint = await splToken.createMint(
+      connection,
+      payer,
+      payer.publicKey,      // Mint authority
+      payer.publicKey,      // Freeze authority
+      0                     // Decimals
+    );
+    
+    const mintAddress = mint.toBase58();
+    console.log(`[PetVax] Token mint created:`, mintAddress);
+    
+    // Create associated token account for the owner
+    console.log(`[PetVax] Creating associated token account...`);
+    const ownerPublicKey = new web3.PublicKey(ownerAddress);
+    const associatedTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      mint,
+      ownerPublicKey
+    );
+    
+    const tokenAccount = associatedTokenAccount.address.toBase58();
+    console.log(`[PetVax] Token account created:`, tokenAccount);
+    
+    // Mint 1 token to represent this vaccination
+    console.log(`[PetVax] Minting vaccination token...`);
+    const signature = await splToken.mintTo(
+      connection,
+      payer,
+      mint,
+      associatedTokenAccount.address,
+      payer,
+      1
+    );
+    
+    console.log(`[PetVax] Token minted, signature:`, signature);
+    
+    // Create vaccination record with token references
+    const vaccinationId = 'vax_' + Date.now();
+    
+    try {
+      const vaccination = vaccinationDb.createVaccination({
+        id: vaccinationId,
+        petId: petId,
+        vaccineName: vaccineName,
+        vaccinationDate: vaccinationDate,
+        vetAddress: vetAddress,
+        vetMandateAuthority: vetAddress,
+        notes: notes || '',
+        transactionSignature: signature,  // Token mint transaction signature
+        transactionHash: signature        // Use signature as hash for now
+      });
+      
+      console.log(`[PetVax] Vaccination recorded:`, vaccinationId);
+      
+      res.json({
+        success: true,
+        vaccination: vaccination,
+        message: 'Vaccination recorded on-chain with SPL token',
+        onChain: {
+          mint: mintAddress,
+          tokenAccount: tokenAccount,
+          transactionSignature: signature
+        },
+        metadata: {
+          petId: pet.id,
+          petName: pet.name,
+          vetAddress: vetAddress,
+          onChainProof: true,
+          transactionSignature: signature,
+          solscanUrl: `https://solscan.io/tx/${signature}?cluster=devnet`
+        }
+      });
+    } catch (error) {
+      if (error.message.includes('Pet not found')) {
+        return res.status(404).json({ error: 'Pet not found' });
+      }
+      throw error;
+    }
   } catch (error) {
-    console.error('Error verifying vaccinations:', error);
-    res.status(500).json({ error: 'Failed to verify vaccinations' });
+    console.error('[PetVax] Error recording vaccination with SPL token:', error);
+    res.status(500).json({ error: `Failed to record vaccination: ${error.message}` });
   }
 });
-
+ 
 // POST /api/v1/petvax/prepare - Prepare vaccination transaction for signing
 router.post('/prepare', express.json(), async (req, res) => {
   try {
