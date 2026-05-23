@@ -244,6 +244,56 @@ describe('Landing Page (index.html)', () => {
     });
   });
 
+  describe('Concept Logos', () => {
+    it('each concept box should have a logo section', () => {
+      expect(htmlContent).toMatch(/<!-- Logo -->/);
+    });
+
+    it('logo section should have gray background', () => {
+      expect(htmlContent).toMatch(/bg-gray-50[\s\S]*?logo/i);
+    });
+
+    it('logo container should have h-24 height', () => {
+      expect(htmlContent).toMatch(/h-24[\s\S]*?logo/i);
+    });
+
+    it('logo should use dynamic src from concept.id', () => {
+      expect(htmlContent).toMatch(/:src="'\/assets\/' \+ concept.id \+ '-logo.png'"/);
+    });
+
+    it('logo images should have alt text using concept name', () => {
+      expect(htmlContent).toMatch(/:alt="concept.name \+ ' logo'"/);
+    });
+
+    it('logo images should have max-h-20 for height constraint', () => {
+      expect(htmlContent).toMatch(/max-h-20[\s\S]*?logo/i);
+    });
+
+    it('logo images should preserve aspect ratio with object-contain', () => {
+      expect(htmlContent).toMatch(/object-contain[\s\S]*?logo/i);
+    });
+
+    it('logo should be centered in container', () => {
+      expect(htmlContent).toMatch(/flex items-center justify-center[\s\S]*?logo/i);
+    });
+
+    it('concept box should use flexbox column layout', () => {
+      expect(htmlContent).toMatch(/flex-col[\s\S]*?concept/i);
+    });
+
+    it('concept content should flex-grow to fill space', () => {
+      expect(htmlContent).toMatch(/flex-grow[\s\S]*?concept/i);
+    });
+
+    it('all concept images should reference correct logo files', () => {
+      expect(htmlContent).toMatch(/concept.id[\s\S]*?logo.png/);
+    });
+
+    it('logo images should have transition effects', () => {
+      expect(htmlContent).toMatch(/transition/);
+    });
+  });
+
   describe('Responsive Design', () => {
     it('should use flex-col for body layout', () => {
       expect(htmlContent).toMatch(/flex[^>]*flex-col/);
