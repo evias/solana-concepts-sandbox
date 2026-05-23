@@ -8,7 +8,7 @@ const connection = new web3.Connection(
 );
 
 // Memo program address
-const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gDiYM2piU8gLgcsVCoJUn5Z5cp4TF3KT6RkN');
+const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
 /**
  * Create and sign a vaccination record transaction
@@ -16,10 +16,18 @@ const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gDiYM2piU8gLgcsVCoJUn5Z5cp4TF
  * 
  * @param {Object} data - Vaccination data
  * @param {string} data.petId - Pet ID
+ * @param {string} data.petName - Pet name
  * @param {string} data.petOwner - Pet owner's Solana address
  * @param {string} data.vaccineName - Vaccine name
  * @param {string} data.vaccinationDate - Vaccination date
  * @param {string} data.vetAddress - Vet address (signer)
+ * @param {boolean} data.mustRenew - Must renew flag
+ * @param {string} data.renewalPeriod - Renewal period
+ * @param {string} data.customRenewalPeriod - Custom renewal period
+ * @param {string} data.vaccinationToken - Vaccination token mint address
+ * @param {string} data.vaccineUrl - Vaccine URL (optional)
+ * @param {string} data.clinicUrl - Clinic URL (optional)
+ * @param {string} data.petSignature - Pet message signature
  * @param {object} data.signerKeypair - Keypair or Phantom provider (for signing)
  * @returns {Promise<{signature: string, petId: string, vaccineName: string, vetAddress: string}>}
  */
@@ -27,10 +35,18 @@ async function createVaccinationTransaction(data) {
   try {
     const {
       petId,
+      petName,
       petOwner,
       vaccineName,
       vaccinationDate,
       vetAddress,
+      mustRenew,
+      renewalPeriod,
+      customRenewalPeriod,
+      vaccinationToken,
+      vaccineUrl,
+      clinicUrl,
+      petSignature,
       signerKeypair
     } = data;
 
@@ -51,12 +67,20 @@ async function createVaccinationTransaction(data) {
     
     // Add memo instruction with vaccination details
     const memoData = JSON.stringify({
-      type: 'vaccination_record',
+      type: 'vaccination_renewal_record',
       petId,
+      petName,
       petOwner,
       vaccineName,
       vaccinationDate,
       vetAddress,
+      mustRenew,
+      renewalPeriod,
+      customRenewalPeriod: renewalPeriod === 'custom' ? customRenewalPeriod : null,
+      vaccinationToken,
+      vaccineUrl: vaccineUrl || null,
+      clinicUrl: clinicUrl || null,
+      petSignature,
       recordedAt: new Date().toISOString()
     });
 
@@ -92,6 +116,7 @@ async function createVaccinationTransaction(data) {
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
       message: 'Transaction ready for signing',
       petId,
+      petName,
       vaccineName,
       vetAddress
     };
@@ -142,7 +167,7 @@ async function getVaccinationTransactionInfo(signature) {
     let memoData = null;
     if (tx.transaction.message.instructions) {
       const memoInstruction = tx.transaction.message.instructions.find(
-        instr => instr.programId?.toString() === 'MemoSq4gDiYM2piU8gLgcsVCoJUn5Z5cp4TF3KT6RkN'
+        instr => instr.programId?.toString() === 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
       );
       if (memoInstruction && memoInstruction.data) {
         try {
