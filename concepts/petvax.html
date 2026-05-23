@@ -101,9 +101,14 @@
                 <h1 class="text-3xl font-bold text-gray-800">PetVax</h1>
                 <p class="text-gray-600">Vaccination Records for Registered Pets</p>
             </div>
-            <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                📚 Documentation
-            </button>
+            <div class="flex gap-2">
+                <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                    ← Back
+                </a>
+                <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    📚 Documentation
+                </button>
+            </div>
         </header>
 
         <!-- Documentation Modal -->
