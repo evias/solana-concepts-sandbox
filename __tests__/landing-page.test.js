@@ -202,8 +202,7 @@ describe('Landing Page (index.html)', () => {
     });
 
     it('each concept box should have a clickable link', () => {
-      expect(htmlContent).toMatch(/<a[^>]*href="\/pettracker"[^>]*>/);
-      expect(htmlContent).toMatch(/<a[^>]*href="\/petvax"[^>]*>/);
+      expect(htmlContent).toMatch(/:href="concept.enabled \? concept.link : '#'"/);
     });
 
     it('should have concept titles in h3 tags', () => {
@@ -274,6 +273,85 @@ describe('Landing Page (index.html)', () => {
     it('should have alt text patterns available for future logo images', () => {
       // Future improvement: verify alt attributes when logos are added
       expect(true).toBe(true);
+    });
+  });
+
+  describe('Search Functionality', () => {
+    it('should have search input for filtering concepts', () => {
+      expect(htmlContent).toMatch(/Search concepts by name or description/);
+    });
+
+    it('search input should use x-model for Alpine.js binding', () => {
+      expect(htmlContent).toMatch(/<input[^>]*x-model="searchQuery"[^>]*>/);
+    });
+
+    it('should have clear filter button', () => {
+      expect(htmlContent).toMatch(/Clear Filter/);
+    });
+
+    it('clear button should use clearSearch Alpine method', () => {
+      expect(htmlContent).toMatch(/@click="clearSearch"/);
+    });
+
+    it('clear button should only show when search query is active', () => {
+      expect(htmlContent).toMatch(/x-show="searchQuery"/);
+    });
+
+    it('should display error message when no concepts match search', () => {
+      expect(htmlContent).toMatch(/No concepts match your search/);
+    });
+
+    it('error message should be conditionally shown', () => {
+      expect(htmlContent).toMatch(/x-show="filteredConcepts.length === 0 && searchQuery"/);
+    });
+
+    it('should have Alpine.js data function landingPage', () => {
+      expect(htmlContent).toMatch(/x-data="landingPage\(\)"/);
+    });
+
+    it('should have searchQuery property in Alpine data', () => {
+      expect(htmlContent).toMatch(/searchQuery:\s*''/);
+    });
+
+    it('concepts should be defined in Alpine data', () => {
+      expect(htmlContent).toMatch(/concepts:\s*\[/);
+    });
+
+    it('each concept should have id, name, description, link, and enabled properties', () => {
+      expect(htmlContent).toMatch(/id:/);
+      expect(htmlContent).toMatch(/name:/);
+      expect(htmlContent).toMatch(/description:/);
+      expect(htmlContent).toMatch(/link:/);
+      expect(htmlContent).toMatch(/enabled:/);
+    });
+
+    it('should have filteredConcepts computed getter in Alpine', () => {
+      expect(htmlContent).toMatch(/get filteredConcepts\(\)/);
+    });
+
+    it('filteredConcepts should filter by name and description', () => {
+      expect(htmlContent).toMatch(/concept.name.toLowerCase\(\).includes\(query\)/);
+      expect(htmlContent).toMatch(/concept.description.toLowerCase\(\).includes\(query\)/);
+    });
+
+    it('concepts grid should use x-for to render filtered concepts', () => {
+      expect(htmlContent).toMatch(/x-for="concept in filteredConcepts"/);
+    });
+
+    it('disabled concepts should not be clickable', () => {
+      expect(htmlContent).toMatch(/pointer-events-none/);
+    });
+
+    it('search should be case-insensitive', () => {
+      expect(htmlContent).toMatch(/toLowerCase/);
+    });
+
+    it('concepts should have cursor-pointer class when enabled', () => {
+      expect(htmlContent).toMatch(/cursor-pointer/);
+    });
+
+    it('disabled concepts should have reduced opacity', () => {
+      expect(htmlContent).toMatch(/opacity-60/);
     });
   });
 });
