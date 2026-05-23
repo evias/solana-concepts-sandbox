@@ -169,7 +169,91 @@
                         <p class="text-sm text-blue-700" x-text="selectedPet ? `Owner: ${selectedPet.owner.substring(0, 6)}...${selectedPet.owner.substring(selectedPet.owner.length - 4)}` : ''"></p>
                     </div>
                 </div>
-            </section>
+             </section>
+
+             <!-- Vaccination History Table Section -->
+             <section x-show="selectedPet" class="bg-white rounded-lg shadow-md p-6">
+                 <h2 class="text-2xl font-bold mb-4">Vaccination History</h2>
+                 
+                 <!-- Search and Controls -->
+                 <div class="mb-6 space-y-3">
+                     <div class="flex gap-2 items-center">
+                         <input 
+                             x-model="vaccinationSearchQuery" 
+                             type="text" 
+                             placeholder="Search vaccinations by name, vet address, or date..." 
+                             class="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                         <button 
+                             @click="clearVaccinationSearch" 
+                             x-show="vaccinationSearchQuery"
+                             class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
+                             Clear Search
+                         </button>
+                         <button @click="loadVaccinationHistory()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh</button>
+                     </div>
+                     <p x-show="vaccinationSearchQuery && filteredVaccinations.length === 0" class="text-red-600 text-sm">No vaccinations match your search.</p>
+                 </div>
+                 
+                 <div x-show="vaccinations.length === 0" class="text-gray-500 py-4">
+                     No vaccinations recorded yet for this pet.
+                 </div>
+                 
+                 <!-- Vaccinations Table -->
+                 <div x-show="vaccinations.length > 0 && filteredVaccinations.length > 0" class="overflow-x-auto">
+                     <table class="min-w-full border-collapse">
+                         <thead class="bg-gray-100 border-b">
+                             <tr>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Vaccine</th>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Date</th>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Type</th>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Vet Address</th>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
+                                 <th class="text-left px-4 py-3 font-semibold text-gray-700">Actions</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             <template x-for="vax in filteredVaccinations" :key="vax.id">
+                                 <tr class="border-b hover:bg-gray-50 transition-colors" :class="vax.transaction_hash ? 'bg-purple-50' : vax.transaction_signature ? 'bg-blue-50' : 'bg-green-50'">
+                                     <!-- Vaccine Name -->
+                                     <td class="px-4 py-3 font-medium" x-text="vax.vaccine_name"></td>
+                                     
+                                     <!-- Date -->
+                                     <td class="px-4 py-3 text-sm" x-text="new Date(vax.vaccination_date).toLocaleDateString()"></td>
+                                     
+                                     <!-- Type Badge -->
+                                     <td class="px-4 py-3">
+                                         <span x-show="vax.transaction_hash" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">⛓ SPL Token</span>
+                                         <span x-show="!vax.transaction_hash && vax.transaction_signature" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">📝 Shot Record</span>
+                                         <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
+                                     </td>
+                                     
+                                     <!-- Vet Address -->
+                                     <td class="px-4 py-3 text-sm font-mono text-gray-600" x-text="vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></td>
+                                     
+                                     <!-- Status -->
+                                     <td class="px-4 py-3">
+                                         <span x-show="vax.transaction_hash" class="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">On-Chain</span>
+                                         <span x-show="!vax.transaction_hash && vax.transaction_signature" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Signed</span>
+                                         <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Local</span>
+                                     </td>
+                                     
+                                     <!-- Actions -->
+                                     <td class="px-4 py-3">
+                                         <div class="flex gap-2 flex-wrap">
+                                             <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
+                                                 🔗 Solscan
+                                             </a>
+                                             <button @click="openRecordNewShotModal(vax)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                                                 📋 New Shot
+                                             </button>
+                                         </div>
+                                     </td>
+                                 </tr>
+                             </template>
+                         </tbody>
+                     </table>
+                 </div>
+             </section>
 
              <!-- Record Vaccination -->
              <section class="bg-white rounded-lg shadow-md p-6">
@@ -219,49 +303,9 @@
                          <span x-show="signingStatus === 'confirmed'">Transaction Confirmed!</span>
                      </button>
                 </form>
-            </section>
-
-            <!-- Verify Vaccinations -->
-            <section x-show="selectedPet" class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Vaccination History</h2>
-                <div class="mb-4">
-                    <button @click="loadVaccinationHistory()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh History</button>
-                </div>
-                <div x-show="vaccinations.length === 0" class="text-gray-500">
-                    No vaccinations recorded yet for this pet.
-                </div>
-                 <div x-show="vaccinations.length > 0" class="space-y-4">
-                     <template x-for="vax in vaccinations" :key="vax.id">
-                         <div class="border rounded-lg p-4" :class="vax.transaction_hash ? 'bg-purple-50 border-purple-200' : vax.transaction_signature ? 'bg-blue-50 border-blue-200' : 'bg-green-50 border-green-200'">
-                             <div class="flex justify-between items-start mb-2">
-                                 <div>
-                                     <h3 class="text-lg font-bold" :class="vax.transaction_hash ? 'text-purple-900' : vax.transaction_signature ? 'text-blue-900' : 'text-green-900'" x-text="vax.vaccine_name"></h3>
-                                     <p class="text-sm" :class="vax.transaction_hash ? 'text-purple-700' : vax.transaction_signature ? 'text-blue-700' : 'text-green-700'" x-text="'Date: ' + new Date(vax.vaccination_date).toLocaleDateString()"></p>
-                                 </div>
-                                 <div class="flex gap-2">
-                                     <span x-show="vax.transaction_hash" class="bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">⛓ On-Chain Verified</span>
-                                     <span x-show="!vax.transaction_hash && vax.transaction_signature" class="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">🔐 Signed</span>
-                                     <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
-                                 </div>
-                             </div>
-                             <p class="text-sm mb-2" :class="vax.transaction_hash ? 'text-purple-600' : vax.transaction_signature ? 'text-blue-600' : 'text-green-600'" x-text="'Recorded by: ' + vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></p>
-                             <p x-show="vax.notes" class="text-sm italic mb-2" :class="vax.transaction_hash ? 'text-purple-700' : vax.transaction_signature ? 'text-blue-700' : 'text-green-700'" x-text="'Notes: ' + vax.notes"></p>
-                             <p x-show="vax.transaction_signature" class="text-xs font-mono break-all p-2 rounded mb-2" :class="vax.transaction_hash ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'" x-text="'Signature: ' + vax.transaction_signature.substring(0, 40) + '...'"></p>
-                             <p x-show="vax.transaction_hash" class="text-xs font-mono break-all p-2 rounded mb-2 bg-purple-100 text-purple-800" x-text="'Hash: ' + vax.transaction_hash.substring(0, 40) + '...'"></p>
-                              <div class="flex gap-2">
-                                  <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
-                                      🔗 View on Solscan
-                                  </a>
-                                  <button @click="openRecordNewShotModal(vax)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
-                                      📋 Record new shot
-                                  </button>
-                              </div>
-                          </div>
-                      </template>
-                  </div>
              </section>
 
-            <!-- Wallet Modal -->
+             <!-- Wallet Modal -->
             <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4" @click.self="showWalletModal = false">
                 <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
                     <h2 class="text-2xl font-bold mb-4">Connect Wallet</h2>
@@ -379,6 +423,7 @@
                 selectedPetId: '',
                 selectedPet: null,
                 vaccinations: [],
+                vaccinationSearchQuery: '',
                 documentationContent: '',
                 signingStatus: '',
                 transactionSignature: '',
@@ -401,7 +446,24 @@
                  transactionHash: '',
                  isSubmittingTransaction: false,
                  solscanUrl: '',
-                 
+                  
+                  get filteredVaccinations() {
+                      if (!this.vaccinationSearchQuery) {
+                          return this.vaccinations;
+                      }
+                      const query = this.vaccinationSearchQuery.toLowerCase();
+                      return this.vaccinations.filter(vax =>
+                          vax.vaccine_name.toLowerCase().includes(query) ||
+                          vax.vet_address.toLowerCase().includes(query) ||
+                          vax.notes?.toLowerCase().includes(query) ||
+                          new Date(vax.vaccination_date).toLocaleDateString().includes(query)
+                      );
+                  },
+                  
+                  clearVaccinationSearch() {
+                      this.vaccinationSearchQuery = '';
+                  },
+                  
                   async init() {
                      console.log('[INIT] petVax component initializing...');
                      await this.detectWallets();
