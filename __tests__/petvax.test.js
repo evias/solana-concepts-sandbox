@@ -605,11 +605,338 @@ describe('PetVax API - Vaccination Records', () => {
       const byHash = vaccinationDb.getVaccinationByTransactionHash(testHash);
       expect(byHash.transaction_signature).toBe(testSig);
       
-      database.close();
-      fs.unlinkSync(testDbPath);
+       database.close();
+       fs.unlinkSync(testDbPath);
      });
    });
- });
+});
+
+describe('PetVax API - Vaccination Renewal with Memo', () => {
+  function createTestDatabase() {
+    const testDbPath = `/tmp/test_petvax_renewal_${Date.now()}.db`;
+    const database = new Database(testDbPath);
+    database.pragma('foreign_keys = ON');
+    
+    // Create pets table
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS pets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        species TEXT NOT NULL,
+        breed TEXT,
+        age INTEGER,
+        owner TEXT NOT NULL,
+        mandate_authority TEXT NOT NULL,
+        mint_address TEXT,
+        token_account TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    
+    // Create vaccinations table
+    database.exec(`
+      CREATE TABLE IF NOT EXISTS vaccinations (
+        id TEXT PRIMARY KEY,
+        pet_id TEXT NOT NULL,
+        vaccine_name TEXT NOT NULL,
+        vaccination_date TEXT NOT NULL,
+        vet_address TEXT NOT NULL,
+        vet_mandate_authority TEXT,
+        notes TEXT,
+        mint_address TEXT,
+        transaction_signature TEXT,
+        transaction_hash TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+      );
+    `);
+    
+    return { database, testDbPath };
+  }
+  
+  function createPetDbHelper(database) {
+    return {
+      createPet(petData) {
+        const { id, name, species, breed, age, owner, mandateAuthority, mintAddress, tokenAccount } = petData;
+        const now = new Date().toISOString();
+        
+        const stmt = database.prepare(`
+          INSERT INTO pets (id, name, species, breed, age, owner, mandate_authority, mint_address, token_account, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        stmt.run(id, name, species, breed, age, owner, mandateAuthority || owner, mintAddress, tokenAccount, now, now);
+        return database.prepare('SELECT * FROM pets WHERE id = ?').get(id);
+      },
+      
+      getPetById(id) {
+        return database.prepare('SELECT * FROM pets WHERE id = ?').get(id);
+      }
+    };
+  }
+  
+  function createVaccinationDbHelper(database) {
+    return {
+      createVaccination(vaccinationData) {
+        const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress, transactionSignature, transactionHash, customData } = vaccinationData;
+        const now = new Date().toISOString();
+        
+        // Verify pet exists
+        const pet = database.prepare('SELECT * FROM pets WHERE id = ?').get(petId);
+        if (!pet) {
+          throw new Error(`Pet not found: ${petId}`);
+        }
+        
+        const stmt = database.prepare(`
+          INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, transaction_signature, transaction_hash, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes || (customData ? JSON.stringify(customData) : ''), mintAddress, transactionSignature || null, transactionHash || null, now, now);
+        return database.prepare('SELECT * FROM vaccinations WHERE id = ?').get(id);
+      },
+      
+      getVaccinationById(id) {
+        return database.prepare('SELECT * FROM vaccinations WHERE id = ?').get(id);
+      }
+    };
+  }
+
+  describe('Memo Structure for Vaccination Renewal', () => {
+    test('should include renewal fields in vaccination memo', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-renewal-1',
+        name: 'Buddy',
+        species: 'Dog',
+        breed: 'Golden',
+        owner: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc',
+        mandateAuthority: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc'
+      });
+      
+      // Create memo-like custom data for renewal
+      const customData = {
+        mustRenew: true,
+        renewalPeriod: 'yearly',
+        customRenewalPeriod: null,
+        vaccinationToken: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        vaccineUrl: 'https://example.com/vaccine',
+        clinicUrl: 'https://example.com/clinic',
+        petSignature: 'sig123456789'
+      };
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-renewal-1',
+        petId: pet.id,
+        vaccineName: 'Rabies',
+        vaccinationDate: '2026-05-22',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        mintAddress: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        customData: customData
+      });
+      
+      // Verify the record was created
+      expect(vaccination).toBeDefined();
+      expect(vaccination.pet_id).toBe(pet.id);
+      
+      // Parse the stored custom data (now in notes field)
+      const storedData = JSON.parse(vaccination.notes);
+      expect(storedData.mustRenew).toBe(true);
+      expect(storedData.renewalPeriod).toBe('yearly');
+      expect(storedData.vaccinationToken).toBe('TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp');
+      expect(storedData.vaccineUrl).toBe('https://example.com/vaccine');
+      expect(storedData.clinicUrl).toBe('https://example.com/clinic');
+      expect(storedData.petSignature).toBe('sig123456789');
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should handle custom renewal period', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-custom-period',
+        name: 'Fluffy',
+        species: 'Cat',
+        owner: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc',
+        mandateAuthority: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc'
+      });
+      
+      const customData = {
+        mustRenew: true,
+        renewalPeriod: 'custom',
+        customRenewalPeriod: '6 months',
+        vaccinationToken: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        petSignature: 'sig987654321'
+      };
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-custom-period',
+        petId: pet.id,
+        vaccineName: 'DPPE',
+        vaccinationDate: '2026-05-22',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        customData: customData
+      });
+      
+      const storedData = JSON.parse(vaccination.notes);
+      expect(storedData.renewalPeriod).toBe('custom');
+      expect(storedData.customRenewalPeriod).toBe('6 months');
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should handle optional vaccine and clinic URLs', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-urls',
+        name: 'Rex',
+        species: 'Dog',
+        owner: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc',
+        mandateAuthority: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc'
+      });
+      
+      const customDataWithUrls = {
+        mustRenew: false,
+        renewalPeriod: 'yearly',
+        vaccinationToken: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        vaccineUrl: 'https://vaccine-info.example.com/rabies',
+        clinicUrl: 'https://clinic.example.com/location',
+        petSignature: 'sig111222333'
+      };
+      
+      const vaccinationWithUrls = vaccinationDb.createVaccination({
+        id: 'vax-with-urls',
+        petId: pet.id,
+        vaccineName: 'Lepto',
+        vaccinationDate: '2026-05-22',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        customData: customDataWithUrls
+      });
+      
+      const stored = JSON.parse(vaccinationWithUrls.notes);
+      expect(stored.vaccineUrl).toBe('https://vaccine-info.example.com/rabies');
+      expect(stored.clinicUrl).toBe('https://clinic.example.com/location');
+      
+      // Also test without URLs (optional fields)
+      const customDataNoUrls = {
+        mustRenew: true,
+        renewalPeriod: 'quarterly',
+        vaccinationToken: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        petSignature: 'sig444555666'
+      };
+      
+      const vaccinationNoUrls = vaccinationDb.createVaccination({
+        id: 'vax-no-urls',
+        petId: pet.id,
+        vaccineName: 'Feline Distemper',
+        vaccinationDate: '2026-05-23',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        customData: customDataNoUrls
+      });
+      
+      const storedNoUrls = JSON.parse(vaccinationNoUrls.notes);
+      expect(storedNoUrls.vaccineUrl).toBeUndefined();
+      expect(storedNoUrls.clinicUrl).toBeUndefined();
+      expect(storedNoUrls.mustRenew).toBe(true);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+
+    test('should store pet signature from message signing', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-sig-renewal',
+        name: 'Shadow',
+        species: 'Dog',
+        owner: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc',
+        mandateAuthority: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc'
+      });
+      
+      const petSignature = '3018473019283719283741928374019283479182374918237491823749182374918237419823749182374918237419823749';
+      
+      const customData = {
+        mustRenew: true,
+        renewalPeriod: 'yearly',
+        vaccinationToken: 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp',
+        petSignature: petSignature
+      };
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-sig-renewal',
+        petId: pet.id,
+        vaccineName: 'Rabies',
+        vaccinationDate: '2026-05-22',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        customData: customData
+      });
+      
+      const stored = JSON.parse(vaccination.notes);
+      expect(stored.petSignature).toBe(petSignature);
+      expect(stored.petSignature.length).toBe(petSignature.length);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+  });
+
+  describe('Vaccination Token Reference', () => {
+    test('should store vaccination token mint address', () => {
+      const { database, testDbPath } = createTestDatabase();
+      const petDb = createPetDbHelper(database);
+      const vaccinationDb = createVaccinationDbHelper(database);
+      
+      const pet = petDb.createPet({
+        id: 'pet-token-ref',
+        name: 'Buddy',
+        species: 'Dog',
+        owner: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc',
+        mandateAuthority: 'J8kEp5euznzbrFqK61Dbu22zJfCzFH184xSbu7LMVTHc'
+      });
+      
+      const vaccinationToken = 'TokenkegQfeZyiNwAJsyFbPVwwQQfKTwtUvCPfjbWp';
+      
+      const customData = {
+        vaccinationToken: vaccinationToken,
+        petSignature: 'sig123'
+      };
+      
+      const vaccination = vaccinationDb.createVaccination({
+        id: 'vax-token-ref',
+        petId: pet.id,
+        vaccineName: 'Rabies',
+        vaccinationDate: '2026-05-22',
+        vetAddress: 'EMA46kJJmgdzsMWdLenGZ8f7cW2Zm2cY8tSLkKVhgwk6',
+        customData: customData
+      });
+      
+      // Retrieve and verify token reference
+      const retrieved = vaccinationDb.getVaccinationById('vax-token-ref');
+      const storedData = JSON.parse(retrieved.notes);
+      
+      expect(storedData.vaccinationToken).toBe(vaccinationToken);
+      
+      database.close();
+      fs.unlinkSync(testDbPath);
+    });
+  });
+});
 
 describe('PetVax API - SPL Token Recording', () => {
   function createTestDatabase() {

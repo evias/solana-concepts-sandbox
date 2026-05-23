@@ -109,8 +109,36 @@ try {
           throw error;
         }
       }
+    },
+    
+    // Migration 4: Update mint_address for existing vaccinations
+    {
+      name: 'Update mint_address for existing vaccinations from SPL token recording',
+      up: (db) => {
+        try {
+          // Update vaccination vax_1779533855468 with mint address
+          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+            '9XoXMYBMYZs51w9EpyQt9aELMAGReLHZiuo3KYbFvxj',
+            'vax_1779533855468'
+          );
+          
+          // Update vaccination vax_1779448067318 with mint address
+          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+            'CGNQGjhDyoSCsrv4RLbrVBdutHLX9xjqgzZsnEt1V1oa',
+            'vax_1779448067318'
+          );
+          
+          console.log('    ✓ Updated mint addresses for 2 vaccinations');
+          return true;
+        } catch (error) {
+          console.error('    Error updating mint addresses:', error.message);
+          throw error;
+        }
+      }
     }
   ];
+  
+  console.log(`   Total migrations defined: ${migrations.length}`);
   
   // Run pending migrations
   let appliedCount = 0;

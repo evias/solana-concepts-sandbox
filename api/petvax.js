@@ -3,6 +3,11 @@ const web3 = require('@solana/web3.js');
 const splToken = require('@solana/spl-token');
 const { petDb, vaccinationDb } = require('./database');
 const { payer } = require('./payer');
+const { 
+  createVaccinationTransaction,
+  verifyVaccinationSignature,
+  getVaccinationTransactionInfo
+} = require('./vaccination-tx');
 
 const router = express.Router();
 
@@ -118,18 +123,19 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
     // Create vaccination record with token references
     const vaccinationId = 'vax_' + Date.now();
     
-    try {
-      const vaccination = vaccinationDb.createVaccination({
-        id: vaccinationId,
-        petId: petId,
-        vaccineName: vaccineName,
-        vaccinationDate: vaccinationDate,
-        vetAddress: vetAddress,
-        vetMandateAuthority: vetAddress,
-        notes: notes || '',
-        transactionSignature: signature,  // Token mint transaction signature
-        transactionHash: signature        // Use signature as hash for now
-      });
+     try {
+       const vaccination = vaccinationDb.createVaccination({
+         id: vaccinationId,
+         petId: petId,
+         vaccineName: vaccineName,
+         vaccinationDate: vaccinationDate,
+         vetAddress: vetAddress,
+         vetMandateAuthority: vetAddress,
+         notes: notes || '',
+         mintAddress: mintAddress,           // SPL token mint address
+         transactionSignature: signature,    // Token mint transaction signature
+         transactionHash: signature          // Use signature as hash for now
+       });
       
       console.log(`[PetVax] Vaccination recorded:`, vaccinationId);
       
@@ -166,17 +172,32 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
 // POST /api/v1/petvax/prepare - Prepare vaccination transaction for signing
 router.post('/prepare', express.json(), async (req, res) => {
   try {
-    const { petId, vaccineName, vaccinationDate, vetAddress } = req.body;
+    const { 
+      petId, 
+      vaccineName, 
+      vaccinationDate, 
+      vetAddress,
+      mustRenew,
+      renewalPeriod,
+      customRenewalPeriod,
+      vaccinationToken,
+      vaccineUrl,
+      clinicUrl,
+      petSignature,
+      petName,
+      ownerAddress
+    } = req.body;
     
-    if (!petId || !vaccineName || !vaccinationDate || !vetAddress) {
+    if (!petId || !vaccineName || !vaccinationDate || !vetAddress || !petSignature || !vaccinationToken) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
     // Validate Solana addresses
     try {
       new web3.PublicKey(vetAddress);
+      if (ownerAddress) new web3.PublicKey(ownerAddress);
     } catch (error) {
-      return res.status(400).json({ error: 'Invalid vet address' });
+      return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
     // Verify pet exists
@@ -188,10 +209,18 @@ router.post('/prepare', express.json(), async (req, res) => {
     // Create transaction for signing
     const txData = await createVaccinationTransaction({
       petId,
-      petOwner: pet.owner,
+      petName: petName || pet.name,
+      petOwner: ownerAddress || pet.owner,
       vaccineName,
       vaccinationDate,
-      vetAddress
+      vetAddress,
+      mustRenew: mustRenew || false,
+      renewalPeriod: renewalPeriod || '',
+      customRenewalPeriod: customRenewalPeriod || '',
+      vaccinationToken,
+      vaccineUrl: vaccineUrl || null,
+      clinicUrl: clinicUrl || null,
+      petSignature
     });
     
     res.json({
@@ -209,7 +238,22 @@ router.post('/prepare', express.json(), async (req, res) => {
 // POST /api/v1/petvax/record - Record a new vaccination with transaction signature and hash
 router.post('/record', express.json(), async (req, res) => {
   try {
-    const { petId, vaccineName, vaccinationDate, vetAddress, notes, transactionSignature, transactionHash } = req.body;
+    const { 
+      petId, 
+      vaccineName, 
+      vaccinationDate, 
+      vetAddress, 
+      notes,
+      mustRenew,
+      renewalPeriod,
+      customRenewalPeriod,
+      vaccinationToken,
+      vaccineUrl,
+      clinicUrl,
+      petSignature,
+      transactionSignature, 
+      transactionHash 
+    } = req.body;
     
     if (!petId || !vaccineName || !vaccinationDate || !vetAddress) {
       return res.status(400).json({ error: 'Missing required fields: petId, vaccineName, vaccinationDate, vetAddress' });
@@ -243,7 +287,7 @@ router.post('/record', express.json(), async (req, res) => {
       }
     }
     
-    // Create vaccination record
+    // Create vaccination record with new fields
     const vaccinationId = 'vax_' + Date.now();
     
     try {
@@ -256,7 +300,17 @@ router.post('/record', express.json(), async (req, res) => {
         vetMandateAuthority: vetAddress,
         notes: notes || '',
         transactionSignature: transactionSignature || null,
-        transactionHash: transactionHash || null
+        transactionHash: transactionHash || null,
+        // New fields stored in notes or as separate columns if schema allows
+        customData: JSON.stringify({
+          mustRenew: mustRenew || false,
+          renewalPeriod: renewalPeriod || '',
+          customRenewalPeriod: customRenewalPeriod || '',
+          vaccinationToken: vaccinationToken || '',
+          vaccineUrl: vaccineUrl || '',
+          clinicUrl: clinicUrl || '',
+          petSignature: petSignature || ''
+        })
       });
       
       console.log('Vaccination recorded:', vaccinationId, 'for pet:', petId);
