@@ -48,6 +48,96 @@ describe('Landing Page (index.html)', () => {
     });
   });
 
+  describe('Introductory Message and Sponsors', () => {
+    it('should have introductory text matching README first paragraph', () => {
+      expect(htmlContent).toMatch(/A comprehensive sandbox for exploring Solana concepts/);
+    });
+
+    it('should mention PetTracker in intro', () => {
+      expect(htmlContent).toMatch(/PetTracker.*application.*demonstrates hybrid on-chain\/off-chain storage/);
+    });
+
+    it('should mention SPL tokens in intro', () => {
+      expect(htmlContent).toMatch(/SPL tokens/);
+    });
+
+    it('should have warning about experimental status', () => {
+      expect(htmlContent).toMatch(/Experimental Software/);
+    });
+
+    it('should include caution text about experimental software', () => {
+      expect(htmlContent).toMatch(/This is experimental software not intended for production use/);
+    });
+
+    it('should reference LICENSE in warning', () => {
+      expect(htmlContent).toMatch(/See LICENSE for the complete terms/);
+    });
+
+    it('should have sponsors section header', () => {
+      expect(htmlContent).toMatch(/Sponsors \/ Partners/);
+    });
+
+    it('should have Evi.as sponsor link', () => {
+      expect(htmlContent).toMatch(/<a[^>]*href="https:\/\/evi.as"[^>]*>/);
+    });
+
+    it('should have Evi.as logo image', () => {
+      expect(htmlContent).toMatch(/<img[^>]*src="\/assets\/evias-logo.png"[^>]*alt="Evi.as logo"/);
+    });
+
+    it('should have re:Software sponsor link', () => {
+      expect(htmlContent).toMatch(/<a[^>]*href="https:\/\/resoftware.es"[^>]*>/);
+    });
+
+    it('should have re:Software logo image', () => {
+      expect(htmlContent).toMatch(/<img[^>]*src="\/assets\/resoftware-logo.png"[^>]*alt="re:Software logo"/);
+    });
+
+    it('should have dHealth sponsor link', () => {
+      expect(htmlContent).toMatch(/<a[^>]*href="https:\/\/dhealth.com"[^>]*>/);
+    });
+
+    it('should have dHealth logo image', () => {
+      expect(htmlContent).toMatch(/<img[^>]*src="\/assets\/dhealth-logo.png"[^>]*alt="dHealth logo"/);
+    });
+
+    it('sponsor links should open in new tab', () => {
+      expect(htmlContent).toMatch(/rel="noopener noreferrer"/);
+    });
+
+    it('sponsor logos should have hover effect', () => {
+      expect(htmlContent).toMatch(/hover:opacity-80/);
+    });
+
+    it('sponsors should be responsive (flex-col on mobile, flex-row on desktop)', () => {
+      expect(htmlContent).toMatch(/flex[^>]*flex-col[^>]*md:flex-row/);
+    });
+
+    it('sponsors should be centered', () => {
+      expect(htmlContent).toMatch(/justify-center/);
+    });
+
+    it('sponsors should have proper spacing', () => {
+      expect(htmlContent).toMatch(/gap-8/);
+    });
+
+    it('sponsor logo images should have proper height', () => {
+      expect(htmlContent).toMatch(/h-16/);
+    });
+
+    it('introductory section should have white background', () => {
+      expect(htmlContent).toMatch(/bg-white/);
+    });
+
+    it('warning box should have yellow background', () => {
+      expect(htmlContent).toMatch(/bg-yellow-50/);
+    });
+
+    it('warning box should have yellow left border', () => {
+      expect(htmlContent).toMatch(/border-l-4 border-yellow-400/);
+    });
+  });
+
   describe('Concept Grid Layout', () => {
     it('should have a main heading "Solana Concepts Sandbox"', () => {
       expect(htmlContent).toMatch(/<h1[^>]*>Solana Concepts Sandbox<\/h1>/);
