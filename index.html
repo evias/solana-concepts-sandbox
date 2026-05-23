@@ -9,16 +9,62 @@
   <script defer src="/assets/alpinejs.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <div class="max-w-4xl mx-auto p-8">
-    <h1 class="text-3xl font-bold mb-4">Solana Concepts Sandbox</h1>
-    <p class="mb-6">Welcome to the Solana Concepts Sandbox. Select a concept to explore:</p>
-    <ul class="list-disc pl-6 space-y-2">
-      <li><a href="/pettracker" class="text-blue-600 hover:underline">PetTracker (Pet Registry)</a></li>
-      <li><a href="/petvax" class="text-blue-600 hover:underline">PetVax (Proof of Immunization)</a></li>
-      <li><a href="/petdiet" class="text-blue-600 hover:underline">PetDiet (Attested Nutrition Plans)</a></li>
-      <li><a href="/healthcred" class="text-blue-600 hover:underline">HealthCred (Healthcare Worker Badges)</a></li>
-      <li><a href="/carecircle" class="text-blue-600 hover:underline">CareCircle (Mandate Circles)</a></li>
-    </ul>
+  <div class="min-h-screen flex flex-col">
+    <div class="flex-grow">
+      <div class="max-w-7xl mx-auto p-8">
+        <h1 class="text-4xl font-bold mb-8 text-center">Solana Concepts Sandbox</h1>
+        
+        <!-- Concepts Grid -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <!-- PetTracker Concept -->
+          <a href="/pettracker" class="group">
+            <div class="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-white cursor-pointer h-full">
+              <h3 class="text-2xl font-bold mb-2 text-gray-800 group-hover:text-indigo-600 transition-colors">PetTracker</h3>
+              <p class="text-gray-600 text-sm leading-relaxed">Register and manage pets as SPL tokens on Solana devnet. Explore hybrid on-chain/off-chain storage patterns with SQLite metadata and blockchain verification.</p>
+            </div>
+          </a>
+
+          <!-- PetVax Concept -->
+          <a href="/petvax" class="group">
+            <div class="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-white cursor-pointer h-full">
+              <h3 class="text-2xl font-bold mb-2 text-gray-800 group-hover:text-indigo-600 transition-colors">PetVax</h3>
+              <p class="text-gray-600 text-sm leading-relaxed">Proof of immunization system combining SPL tokens with vaccination records. Create verifiable, on-chain proof of veterinary care and vaccine administration.</p>
+            </div>
+          </a>
+
+          <!-- PetDiet Concept -->
+          <a href="/petdiet" class="group">
+            <div class="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-white cursor-pointer h-full opacity-60 cursor-not-allowed">
+              <h3 class="text-2xl font-bold mb-2 text-gray-500">PetDiet</h3>
+              <p class="text-gray-500 text-sm leading-relaxed">Attested nutrition plans with mandate-based security. Coming soon.</p>
+            </div>
+          </a>
+
+          <!-- HealthCred Concept -->
+          <a href="/healthcred" class="group">
+            <div class="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-white cursor-pointer h-full opacity-60 cursor-not-allowed">
+              <h3 class="text-2xl font-bold mb-2 text-gray-500">HealthCred</h3>
+              <p class="text-gray-500 text-sm leading-relaxed">Healthcare worker badges and credentials. Coming soon.</p>
+            </div>
+          </a>
+
+          <!-- CareCircle Concept -->
+          <a href="/carecircle" class="group">
+            <div class="border rounded-lg p-6 hover:shadow-lg transition-shadow bg-white cursor-pointer h-full opacity-60 cursor-not-allowed">
+              <h3 class="text-2xl font-bold mb-2 text-gray-500">CareCircle</h3>
+              <p class="text-gray-500 text-sm leading-relaxed">Caregiver delegation and mandate circles. Coming soon.</p>
+            </div>
+          </a>
+        </section>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-12">
+      <div class="max-w-7xl mx-auto px-8 py-8 text-center text-gray-600 text-sm">
+        <p>© 2026 Grégory Saive for re:Software S.L. All rights reserved.</p>
+      </div>
+    </footer>
   </div>
 </body>
 </html>
