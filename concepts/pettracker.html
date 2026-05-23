@@ -116,7 +116,89 @@
                 </div>
             </section>
 
-            <!-- Registration Form -->
+            <!-- Pet Listing Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">Registered Pets</h2>
+                
+                <!-- Search and Controls -->
+                <div class="mb-6 space-y-4">
+                    <div class="flex gap-2 items-center">
+                        <input 
+                            x-model="petSearchQuery" 
+                            type="text" 
+                            placeholder="Search pets by name, species, breed, or owner..." 
+                            class="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                        <button 
+                            @click="clearPetSearch" 
+                            x-show="petSearchQuery"
+                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
+                            Clear Search
+                        </button>
+                        <button @click="loadPets" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh List</button>
+                    </div>
+                    <p x-show="petSearchQuery && totalFilteredPets === 0" class="text-red-600 text-sm">No pets match your search.</p>
+                    <p x-show="petSearchQuery && totalFilteredPets > 0" class="text-gray-600 text-sm" x-text="`Found ${totalFilteredPets} pet(s) matching your search.`"></p>
+                </div>
+                
+                <!-- No Pets Message -->
+                <div x-show="pets.length === 0" class="text-gray-500">
+                    No pets registered yet.
+                </div>
+                
+                <!-- Pets Grid -->
+                <div x-show="pets.length > 0" class="space-y-4">
+                    <!-- Filtered Pets Display -->
+                    <div x-show="filteredAndPaginatedPets.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="pet in filteredAndPaginatedPets" :key="pet.id">
+                            <div class="border rounded-lg p-4 hover:shadow-md transition-shadow" :class="{ 'border-indigo-300 bg-indigo-50': pet.owner === ownerAddress }">
+                                <h3 class="text-xl font-bold" x-text="pet.name"></h3>
+                                <p class="text-gray-600" x-text="`${pet.species} - ${pet.breed || 'Unknown breed'}`"></p>
+                                <p class="text-gray-500 text-sm" x-text="`Age: ${pet.age || 'Unknown'}`"></p>
+                                <p class="text-gray-500 text-sm mt-2" x-text="`Owner: ${pet.owner.substring(0, 6)}...${pet.owner.substring(pet.owner.length - 4)}`"></p>
+                                <p x-show="pet.mandate_authority" class="text-amber-600 text-xs font-semibold mt-1">
+                                    <span x-show="pet.mandate_authority === ownerAddress">You have management rights</span>
+                                    <span x-show="pet.mandate_authority !== ownerAddress" x-text="`Managed by: ${pet.mandate_authority.substring(0, 6)}...${pet.mandate_authority.substring(pet.mandate_authority.length - 4)}`"></span>
+                                </p>
+                                <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
+                                    <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
+                                </p>
+                                <div class="mt-4 flex space-x-2 flex-wrap">
+                                    <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
+                                    <button 
+                                        x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
+                                        @click="editPet(pet.id)" 
+                                        class="text-amber-600 hover:text-amber-800 text-sm font-semibold">Edit</button>
+                                    <button 
+                                        x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
+                                        @click="deletePet(pet.id)" 
+                                        class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                                    <span x-show="pet.owner !== ownerAddress && pet.mandate_authority !== ownerAddress" class="text-gray-400 text-sm italic">
+                                        (read-only)
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Pagination Controls -->
+                    <div x-show="filteredAndPaginatedPets.length > 0 && (displayedPetsCount < totalFilteredPets || displayedPetsCount > 12)" class="mt-6 flex justify-center gap-4">
+                        <button 
+                            @click="loadMorePets" 
+                            x-show="displayedPetsCount < totalFilteredPets"
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors">
+                            Load More
+                        </button>
+                        <button 
+                            @click="collapsePets" 
+                            x-show="displayedPetsCount > 12"
+                            class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors">
+                            Collapse
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Registration Form Section -->
             <section class="bg-white rounded-lg shadow-md p-6">
                 <h2 class="text-2xl font-bold mb-4" x-text="isEditMode ? 'Edit Pet' : 'Register a New Pet'"></h2>
                 <form @submit.prevent="registerOrUpdatePet" class="space-y-4">
@@ -245,48 +327,6 @@
                     <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
                 </div>
             </div>
-
-            <!-- Pet List -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Registered Pets</h2>
-                <div class="mb-4">
-                    <button @click="loadPets" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh List</button>
-                </div>
-                <div x-show="pets.length === 0" class="text-gray-500">
-                    No pets registered yet.
-                </div>
-                <div x-show="pets.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <template x-for="pet in pets" :key="pet.id">
-                        <div class="border rounded-lg p-4 hover:shadow-md transition-shadow" :class="{ 'border-indigo-300 bg-indigo-50': pet.owner === ownerAddress }">
-                            <h3 class="text-xl font-bold" x-text="pet.name"></h3>
-                            <p class="text-gray-600" x-text="`${pet.species} - ${pet.breed || 'Unknown breed'}`"></p>
-                            <p class="text-gray-500 text-sm" x-text="`Age: ${pet.age || 'Unknown'}`"></p>
-                            <p class="text-gray-500 text-sm mt-2" x-text="`Owner: ${pet.owner.substring(0, 6)}...${pet.owner.substring(pet.owner.length - 4)}`"></p>
-                            <p x-show="pet.mandate_authority" class="text-amber-600 text-xs font-semibold mt-1">
-                                <span x-show="pet.mandate_authority === ownerAddress">You have management rights</span>
-                                <span x-show="pet.mandate_authority !== ownerAddress" x-text="`Managed by: ${pet.mandate_authority.substring(0, 6)}...${pet.mandate_authority.substring(pet.mandate_authority.length - 4)}`"></span>
-                            </p>
-                            <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
-                                <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
-                            </p>
-                            <div class="mt-4 flex space-x-2 flex-wrap">
-                                <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
-                                <button 
-                                    x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
-                                    @click="editPet(pet.id)" 
-                                    class="text-amber-600 hover:text-amber-800 text-sm font-semibold">Edit</button>
-                                <button 
-                                    x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
-                                    @click="deletePet(pet.id)" 
-                                    class="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                                <span x-show="pet.owner !== ownerAddress && pet.mandate_authority !== ownerAddress" class="text-gray-400 text-sm italic">
-                                    (read-only)
-                                </span>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </section>
         </div>
     </div>
 
@@ -295,6 +335,8 @@
         function petTracker() {
             return {
                 pets: [],
+                petSearchQuery: '',
+                displayedPetsCount: 12,
                 newPet: {
                     id: '',
                     name: '',
@@ -650,7 +692,49 @@
                     this.isEditMode = false;
                 },
                 
-                async openDocumentation() {
+                get filteredAndPaginatedPets() {
+                    // Filter pets based on search query
+                    let filtered = this.pets;
+                    if (this.petSearchQuery) {
+                        const query = this.petSearchQuery.toLowerCase();
+                        filtered = this.pets.filter(pet =>
+                            pet.name.toLowerCase().includes(query) ||
+                            pet.species.toLowerCase().includes(query) ||
+                            pet.breed?.toLowerCase().includes(query) ||
+                            pet.owner.toLowerCase().includes(query)
+                        );
+                    }
+                    // Return only the number of pets to display
+                    return filtered.slice(0, this.displayedPetsCount);
+                },
+                
+                get totalFilteredPets() {
+                    if (!this.petSearchQuery) {
+                        return this.pets.length;
+                    }
+                    const query = this.petSearchQuery.toLowerCase();
+                    return this.pets.filter(pet =>
+                        pet.name.toLowerCase().includes(query) ||
+                        pet.species.toLowerCase().includes(query) ||
+                        pet.breed?.toLowerCase().includes(query) ||
+                        pet.owner.toLowerCase().includes(query)
+                    ).length;
+                },
+                
+                clearPetSearch() {
+                    this.petSearchQuery = '';
+                    this.displayedPetsCount = 12;
+                },
+                
+                loadMorePets() {
+                    this.displayedPetsCount += 12;
+                },
+                
+                collapsePets() {
+                    this.displayedPetsCount = 12;
+                },
+                
+                openDocumentation() {
                     try {
                         console.log('Opening documentation...');
                         console.log('Marked library available:', typeof marked !== 'undefined');
