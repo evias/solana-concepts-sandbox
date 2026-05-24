@@ -273,11 +273,25 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/View on Solscan[\s\S]*transaction_hash/);
     });
 
-    it('View Details should appear before Solscan link in actions', () => {
-      const viewDetailsMatch = htmlContent.match(/📋 View Details[\s\S]*openVaccinationDetailsModal/);
-      const solscanMatch = htmlContent.match(/🔗 Solscan[\s\S]*transaction_hash/);
-      expect(viewDetailsMatch).toBeTruthy();
-      expect(solscanMatch).toBeTruthy();
-    });
-  });
+     it('View Details should appear before Solscan link in actions', () => {
+       const viewDetailsMatch = htmlContent.match(/📋 View Details[\s\S]*openVaccinationDetailsModal/);
+       const solscanMatch = htmlContent.match(/🔗 Solscan[\s\S]*transaction_hash/);
+       expect(viewDetailsMatch).toBeTruthy();
+       expect(solscanMatch).toBeTruthy();
+     });
+   });
+
+   describe('New Shot Link Restrictions', () => {
+     it('New Shot button should only show for SPL Token Mint type', () => {
+       expect(htmlContent).toMatch(/getVaccinationType\(vax\) === 'spl_token_mint'/);
+     });
+
+     it('New Shot button should only show for first vaccination of vaccine type', () => {
+       expect(htmlContent).toMatch(/isFirstVaccinationOfType\(vax\)/);
+     });
+
+     it('New Shot button should have both conditions: type check and first check', () => {
+       expect(htmlContent).toMatch(/getVaccinationType\(vax\) === 'spl_token_mint' && isFirstVaccinationOfType\(vax\)/);
+     });
+   });
 });
