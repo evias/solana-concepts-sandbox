@@ -479,13 +479,13 @@
                              <p class="mt-1 text-sm text-gray-600" x-text="new Date(selectedVaccinationForDetails?.created_at).toLocaleDateString('en-US', {weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})"></p>
                          </div>
 
-                         <!-- Solscan Link -->
-                         <div class="pt-4">
-                             <a x-show="selectedVaccinationForDetails?.transaction_hash" :href="'https://solscan.io/tx/' + selectedVaccinationForDetails.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                                 🔗 View on Solscan
-                             </a>
-                             <p x-show="!selectedVaccinationForDetails?.transaction_hash" class="text-sm text-gray-500">No on-chain transaction available for Solscan verification</p>
-                         </div>
+                          <!-- Solscan Link -->
+                          <div class="pt-4">
+                              <a x-show="selectedVaccinationForDetails?.transaction_hash" :href="'https://solscan.io/tx/' + selectedVaccinationForDetails?.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                                  🔗 View on Solscan
+                              </a>
+                              <p x-show="!selectedVaccinationForDetails?.transaction_hash" class="text-sm text-gray-500">No on-chain transaction available for Solscan verification</p>
+                          </div>
                      </div>
                  </div>
              </div>
