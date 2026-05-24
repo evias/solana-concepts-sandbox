@@ -1002,28 +1002,48 @@
                            const { signature: txSignature } = await window.solana.signAndSendTransaction(transaction);
                            console.log('[NEW-SHOT] Transaction sent:', txSignature);
 
-                           // Step 5: Record transaction on backend
-                           const recordResponse = await fetch('/api/v1/petvax/record', {
-                               method: 'POST',
-                               headers: {
-                                   'Content-Type': 'application/json'
-                               },
-                               body: JSON.stringify({
-                                   petId: this.selectedPetId,
-                                   vaccineName: this.currentVaccinationForShot.vaccine_name,
-                                   vaccinationDate: this.currentVaccinationForShot.vaccination_date,
-                                   vetAddress: this.currentVaccinationForShot.vet_address,
-                                   mustRenew: this.newShotForm.mustRenew,
-                                   renewalPeriod: this.newShotForm.renewalPeriod,
-                                   customRenewalPeriod: this.newShotForm.customRenewalPeriod,
-                                   vaccinationToken: this.newShotForm.vaccinationToken,
-                                   vaccineUrl: this.newShotForm.vaccineUrl,
-                                   clinicUrl: this.newShotForm.clinicUrl,
-                                   petSignature: petSignature,
-                                   transactionSignature: txSignature,
-                                   transactionHash: txSignature
-                               })
-                           });
+                            // Step 5: Record transaction on backend
+                            // Create memo data structure to store in notes
+                            const memoData = JSON.stringify({
+                                type: 'vaccination_renewal_record',
+                                petId: this.selectedPetId,
+                                petName: this.selectedPet.name,
+                                petOwner: this.userAddress,
+                                vaccineName: this.currentVaccinationForShot.vaccine_name,
+                                vaccinationDate: this.currentVaccinationForShot.vaccination_date,
+                                vetAddress: this.currentVaccinationForShot.vet_address,
+                                mustRenew: this.newShotForm.mustRenew,
+                                renewalPeriod: this.newShotForm.renewalPeriod,
+                                customRenewalPeriod: this.newShotForm.renewalPeriod === 'custom' ? this.newShotForm.customRenewalPeriod : null,
+                                vaccinationToken: this.newShotForm.vaccinationToken,
+                                vaccineUrl: this.newShotForm.vaccineUrl || null,
+                                clinicUrl: this.newShotForm.clinicUrl || null,
+                                petSignature: petSignature,
+                                recordedAt: new Date().toISOString()
+                            });
+
+                            const recordResponse = await fetch('/api/v1/petvax/record', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    petId: this.selectedPetId,
+                                    vaccineName: this.currentVaccinationForShot.vaccine_name,
+                                    vaccinationDate: this.currentVaccinationForShot.vaccination_date,
+                                    vetAddress: this.currentVaccinationForShot.vet_address,
+                                    notes: memoData,
+                                    mustRenew: this.newShotForm.mustRenew,
+                                    renewalPeriod: this.newShotForm.renewalPeriod,
+                                    customRenewalPeriod: this.newShotForm.customRenewalPeriod,
+                                    vaccinationToken: this.newShotForm.vaccinationToken,
+                                    vaccineUrl: this.newShotForm.vaccineUrl,
+                                    clinicUrl: this.newShotForm.clinicUrl,
+                                    petSignature: petSignature,
+                                    transactionSignature: txSignature,
+                                    transactionHash: txSignature
+                                })
+                            });
 
                            if (recordResponse.ok) {
                                const result = await recordResponse.json();
