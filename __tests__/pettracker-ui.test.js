@@ -209,8 +209,35 @@ describe('PetTracker UI (concepts/pettracker.html)', () => {
       expect(htmlContent).toMatch(/pet.owner.toLowerCase\(\).includes\(query\)/);
     });
 
-    it('searches should be case-insensitive', () => {
-      expect(htmlContent).toMatch(/toLowerCase/);
-    });
-  });
+     it('searches should be case-insensitive', () => {
+       expect(htmlContent).toMatch(/toLowerCase/);
+     });
+   });
+
+   describe('Registration Form Placeholders', () => {
+     it('Pet Name field should have placeholder', () => {
+       expect(htmlContent).toMatch(/placeholder="e\.g\., Max, Bella, Charlie"/);
+     });
+
+     it('Species field should have placeholder', () => {
+       expect(htmlContent).toMatch(/placeholder="e\.g\., Dog, Cat, Bird, Rabbit"/);
+     });
+
+     it('Breed field should have placeholder', () => {
+       expect(htmlContent).toMatch(/placeholder="e\.g\., Golden Retriever, Siamese Cat"/);
+     });
+
+     it('Age field should have placeholder', () => {
+       expect(htmlContent).toMatch(/placeholder="e\.g\., 3, 5, 7"/);
+     });
+
+     it('Owner wallet field should have placeholder', () => {
+       expect(htmlContent).toMatch(/placeholder="Enter Solana address"/);
+     });
+
+     it('all form inputs should have placeholders', () => {
+       const placeholderCount = (htmlContent.match(/placeholder="/g) || []).length;
+       expect(placeholderCount).toBeGreaterThanOrEqual(5);
+     });
+   });
 });
