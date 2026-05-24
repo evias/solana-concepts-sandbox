@@ -217,8 +217,7 @@
                                       <!-- Vaccine Name with Icon -->
                                       <td class="px-4 py-3 font-medium">
                                           <span x-show="getVaccinationType(vax) === 'spl_token_mint'">✙</span>
-                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'">💉</span>
-                                          <span x-show="getVaccinationType(vax) === 'verified'"> </span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccine_tx_shot'">💉</span>
                                           <span x-text="vax.vaccine_name"></span>
                                       </td>
                                      
@@ -228,8 +227,7 @@
                                       <!-- Type Badge -->
                                       <td class="px-4 py-3">
                                           <span x-show="getVaccinationType(vax) === 'spl_token_mint'" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">⛓ SPL Token Mint</span>
-                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">📝 Vaccination Shot</span>
-                                          <span x-show="getVaccinationType(vax) === 'verified'" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccine_tx_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">📝 Vaccine Tx (Shot)</span>
                                       </td>
                                      
                                      <!-- Vet Address -->
@@ -238,8 +236,7 @@
                                       <!-- Status -->
                                       <td class="px-4 py-3">
                                           <span x-show="getVaccinationType(vax) === 'spl_token_mint'" class="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">On-Chain</span>
-                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Signed</span>
-                                          <span x-show="getVaccinationType(vax) === 'verified'" class="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Local</span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccine_tx_shot'" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Signed</span>
                                       </td>
                                      
                                       <!-- Actions -->
@@ -430,8 +427,7 @@
                              <label class="block text-sm font-medium text-gray-700">Type</label>
                              <div class="mt-1">
                                  <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'spl_token_mint'" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">⛓ SPL Token Mint</span>
-                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'vaccination_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">📝 Vaccination Shot</span>
-                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'verified'" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">✓ Verified</span>
+                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'vaccine_tx_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">📝 Vaccine Tx (Shot)</span>
                              </div>
                          </div>
 
@@ -574,13 +570,10 @@
                    },
                    
                    getVaccinationType(vax) {
-                       if (vax.transaction_hash) {
+                       if (vax.mint_address) {
                            return 'spl_token_mint';
                        }
-                       if (vax.transaction_signature && !vax.transaction_hash) {
-                           return 'vaccination_shot';
-                       }
-                       return 'verified';
+                       return 'vaccine_tx_shot';
                    },
 
                    isFirstVaccinationOfType(vax) {

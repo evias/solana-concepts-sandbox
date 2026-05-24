@@ -59,10 +59,9 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/new Date\(vax.vaccination_date\).toLocaleDateString\(\)/);
     });
 
-    it('vaccines should have type badges (SPL Token Mint, Vaccination Shot, Verified)', () => {
+    it('vaccines should have type badges (SPL Token Mint, Vaccine Tx (Shot))', () => {
       expect(htmlContent).toMatch(/⛓ SPL Token Mint/);
-      expect(htmlContent).toMatch(/📝 Vaccination Shot/);
-      expect(htmlContent).toMatch(/✓ Verified/);
+      expect(htmlContent).toMatch(/📝 Vaccine Tx \(Shot\)/);
     });
 
     it('should display vet address truncated', () => {
@@ -212,21 +211,17 @@ describe('PetVax UI (concepts/petvax.html)', () => {
     });
 
     it('shot records shown with 📝 icon and blue styling', () => {
-      expect(htmlContent).toMatch(/📝 Vaccination Shot[\s\S]*bg-blue/);
+      expect(htmlContent).toMatch(/📝 Vaccine Tx \(Shot\)[\s\S]*bg-blue/);
     });
 
-     it('verified records shown with ✓ icon and green styling', () => {
-       expect(htmlContent).toMatch(/✓ Verified[\s\S]*bg-green/);
-     });
+    it('SPL Token Mint rows should have ✙ icon in first column', () => {
+      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'spl_token_mint'"[\s\S]*✙/);
+    });
 
-     it('SPL Token Mint rows should have ✙ icon in first column', () => {
-       expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'spl_token_mint'"[\s\S]*✙/);
-     });
-
-     it('Vaccination Shot rows should have 💉 icon in first column', () => {
-       expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'vaccination_shot'"[\s\S]*💉/);
-     });
-   });
+    it('Vaccine Tx Shot rows should have 💉 icon in first column', () => {
+      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'vaccine_tx_shot'"[\s\S]*💉/);
+    });
+  });
 
    describe('Vaccination Details Modal', () => {
     it('should have View Details button in actions', () => {
