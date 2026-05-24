@@ -570,6 +570,7 @@
                    },
                    
                    getVaccinationType(vax) {
+                       if (!vax) return 'unknown';
                        if (vax.mint_address) {
                            return 'spl_token_mint';
                        }
@@ -577,10 +578,11 @@
                    },
 
                    isFirstVaccinationOfType(vax) {
+                       if (!vax) return false;
                        // Check if this is the first SPL Token Mint vaccination for this vaccine name
                        const vaccineName = vax.vaccine_name;
                        const firstOfType = this.filteredVaccinations.find(v =>
-                           v.vaccine_name === vaccineName && this.getVaccinationType(v) === 'spl_token_mint'
+                           v && v.vaccine_name === vaccineName && this.getVaccinationType(v) === 'spl_token_mint'
                        );
                        return firstOfType && firstOfType.id === vax.id;
                    },
