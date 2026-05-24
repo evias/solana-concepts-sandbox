@@ -214,8 +214,13 @@
                          <tbody>
                              <template x-for="vax in filteredVaccinations" :key="vax.id">
                                  <tr class="border-b hover:bg-gray-50 transition-colors" :class="vax.transaction_hash ? 'bg-purple-50' : vax.transaction_signature ? 'bg-blue-50' : 'bg-green-50'">
-                                     <!-- Vaccine Name -->
-                                     <td class="px-4 py-3 font-medium" x-text="vax.vaccine_name"></td>
+                                      <!-- Vaccine Name with Icon -->
+                                      <td class="px-4 py-3 font-medium">
+                                          <span x-show="getVaccinationType(vax) === 'spl_token_mint'">✙</span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'">💉</span>
+                                          <span x-show="getVaccinationType(vax) === 'verified'"> </span>
+                                          <span x-text="vax.vaccine_name"></span>
+                                      </td>
                                      
                                      <!-- Date -->
                                      <td class="px-4 py-3 text-sm" x-text="new Date(vax.vaccination_date).toLocaleDateString()"></td>

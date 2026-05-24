@@ -218,5 +218,13 @@ describe('PetVax UI (concepts/petvax.html)', () => {
     it('verified records shown with ✓ icon and green styling', () => {
       expect(htmlContent).toMatch(/✓ Verified[\s\S]*bg-green/);
     });
+
+    it('SPL Token Mint rows should have ✙ icon in first column', () => {
+      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'spl_token_mint'"[\s\S]*✙/);
+    });
+
+    it('Vaccination Shot rows should have 💉 icon in first column', () => {
+      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'vaccination_shot'"[\s\S]*💉/);
+    });
   });
 });
