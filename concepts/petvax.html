@@ -220,22 +220,22 @@
                                      <!-- Date -->
                                      <td class="px-4 py-3 text-sm" x-text="new Date(vax.vaccination_date).toLocaleDateString()"></td>
                                      
-                                     <!-- Type Badge -->
-                                     <td class="px-4 py-3">
-                                         <span x-show="vax.transaction_hash" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">⛓ SPL Token</span>
-                                         <span x-show="!vax.transaction_hash && vax.transaction_signature" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">📝 Shot Record</span>
-                                         <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
-                                     </td>
+                                      <!-- Type Badge -->
+                                      <td class="px-4 py-3">
+                                          <span x-show="getVaccinationType(vax) === 'spl_token_mint'" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">⛓ SPL Token Mint</span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">📝 Vaccination Shot</span>
+                                          <span x-show="getVaccinationType(vax) === 'verified'" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-semibold">✓ Verified</span>
+                                      </td>
                                      
                                      <!-- Vet Address -->
                                      <td class="px-4 py-3 text-sm font-mono text-gray-600" x-text="vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></td>
                                      
-                                     <!-- Status -->
-                                     <td class="px-4 py-3">
-                                         <span x-show="vax.transaction_hash" class="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">On-Chain</span>
-                                         <span x-show="!vax.transaction_hash && vax.transaction_signature" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Signed</span>
-                                         <span x-show="!vax.transaction_hash && !vax.transaction_signature" class="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Local</span>
-                                     </td>
+                                      <!-- Status -->
+                                      <td class="px-4 py-3">
+                                          <span x-show="getVaccinationType(vax) === 'spl_token_mint'" class="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-xs font-semibold">On-Chain</span>
+                                          <span x-show="getVaccinationType(vax) === 'vaccination_shot'" class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Signed</span>
+                                          <span x-show="getVaccinationType(vax) === 'verified'" class="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Local</span>
+                                      </td>
                                      
                                      <!-- Actions -->
                                      <td class="px-4 py-3">
@@ -469,22 +469,32 @@
                  isSubmittingTransaction: false,
                  solscanUrl: '',
                   
-                  get filteredVaccinations() {
-                      if (!this.vaccinationSearchQuery) {
-                          return this.vaccinations;
-                      }
-                      const query = this.vaccinationSearchQuery.toLowerCase();
-                      return this.vaccinations.filter(vax =>
-                          vax.vaccine_name.toLowerCase().includes(query) ||
-                          vax.vet_address.toLowerCase().includes(query) ||
-                          vax.notes?.toLowerCase().includes(query) ||
-                          new Date(vax.vaccination_date).toLocaleDateString().includes(query)
-                      );
-                  },
-                  
-                  clearVaccinationSearch() {
-                      this.vaccinationSearchQuery = '';
-                  },
+                   get filteredVaccinations() {
+                       if (!this.vaccinationSearchQuery) {
+                           return this.vaccinations;
+                       }
+                       const query = this.vaccinationSearchQuery.toLowerCase();
+                       return this.vaccinations.filter(vax =>
+                           vax.vaccine_name.toLowerCase().includes(query) ||
+                           vax.vet_address.toLowerCase().includes(query) ||
+                           vax.notes?.toLowerCase().includes(query) ||
+                           new Date(vax.vaccination_date).toLocaleDateString().includes(query)
+                       );
+                   },
+                   
+                   clearVaccinationSearch() {
+                       this.vaccinationSearchQuery = '';
+                   },
+                   
+                   getVaccinationType(vax) {
+                       if (vax.transaction_hash) {
+                           return 'spl_token_mint';
+                       }
+                       if (vax.transaction_signature && !vax.transaction_hash) {
+                           return 'vaccination_shot';
+                       }
+                       return 'verified';
+                   },
                   
                   async init() {
                      console.log('[INIT] petVax component initializing...');

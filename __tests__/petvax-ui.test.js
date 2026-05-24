@@ -59,9 +59,9 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/new Date\(vax.vaccination_date\).toLocaleDateString\(\)/);
     });
 
-    it('vaccines should have type badges (SPL Token, Shot Record, Verified)', () => {
-      expect(htmlContent).toMatch(/⛓ SPL Token/);
-      expect(htmlContent).toMatch(/📝 Shot Record/);
+    it('vaccines should have type badges (SPL Token Mint, Vaccination Shot, Verified)', () => {
+      expect(htmlContent).toMatch(/⛓ SPL Token Mint/);
+      expect(htmlContent).toMatch(/📝 Vaccination Shot/);
       expect(htmlContent).toMatch(/✓ Verified/);
     });
 
@@ -208,11 +208,11 @@ describe('PetVax UI (concepts/petvax.html)', () => {
 
   describe('Type Differentiation', () => {
     it('SPL tokens shown with ⛓ icon and purple styling', () => {
-      expect(htmlContent).toMatch(/⛓ SPL Token[\s\S]*bg-purple/);
+      expect(htmlContent).toMatch(/⛓ SPL Token Mint[\s\S]*bg-purple/);
     });
 
     it('shot records shown with 📝 icon and blue styling', () => {
-      expect(htmlContent).toMatch(/📝 Shot Record[\s\S]*bg-blue/);
+      expect(htmlContent).toMatch(/📝 Vaccination Shot[\s\S]*bg-blue/);
     });
 
     it('verified records shown with ✓ icon and green styling', () => {
