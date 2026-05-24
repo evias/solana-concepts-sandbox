@@ -256,9 +256,21 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.transaction_signature"[\s\S]*Transaction Signature/);
     });
 
-    it('details modal should conditionally show transaction hash', () => {
-      expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.transaction_hash"[\s\S]*Transaction Hash/);
-    });
+      it('details modal should conditionally show transaction hash', () => {
+       expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.transaction_hash"[\s\S]*Transaction Hash/);
+     });
+
+     it('details modal should show formatted memo data in notes section', () => {
+       expect(htmlContent).toMatch(/Memo Data \/ Notes/);
+     });
+
+     it('details modal should use pre-formatted display for notes', () => {
+       expect(htmlContent).toMatch(/<pre[\s\S]*formatNotesForDisplay/);
+     });
+
+     it('formatNotesForDisplay function should be available', () => {
+       expect(htmlContent).toMatch(/formatNotesForDisplay\(notesContent\)/);
+     });
 
     it('details modal should show Solscan link for on-chain transactions', () => {
       expect(htmlContent).toMatch(/View on Solscan[\s\S]*transaction_hash/);

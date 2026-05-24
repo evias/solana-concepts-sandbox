@@ -467,11 +467,11 @@
                              <p class="mt-1 text-gray-900 font-mono break-all text-xs" x-text="selectedVaccinationForDetails?.transaction_hash"></p>
                          </div>
 
-                         <!-- Notes (if available) -->
-                         <div x-show="selectedVaccinationForDetails?.notes && selectedVaccinationForDetails.notes.length > 0">
-                             <label class="block text-sm font-medium text-gray-700">Notes</label>
-                             <p class="mt-1 text-gray-900 whitespace-pre-wrap" x-text="selectedVaccinationForDetails?.notes"></p>
-                         </div>
+                          <!-- Notes (if available) -->
+                          <div x-show="selectedVaccinationForDetails?.notes && selectedVaccinationForDetails.notes.length > 0">
+                              <label class="block text-sm font-medium text-gray-700">Memo Data / Notes</label>
+                              <pre class="mt-1 bg-gray-50 border border-gray-300 rounded-md p-3 text-xs overflow-x-auto text-gray-900" x-text="formatNotesForDisplay(selectedVaccinationForDetails?.notes)"></pre>
+                          </div>
 
                          <!-- Record Created -->
                          <div class="border-t pt-4">
@@ -895,6 +895,18 @@
                        console.log('[DETAILS] Opening details modal for vaccination:', vaccination.id);
                        this.selectedVaccinationForDetails = JSON.parse(JSON.stringify(vaccination));
                        this.showVaccinationDetailsModal = true;
+                   },
+
+                   formatNotesForDisplay(notesContent) {
+                       if (!notesContent) return '';
+                       try {
+                           // Try to parse as JSON (memo data)
+                           const parsed = JSON.parse(notesContent);
+                           return JSON.stringify(parsed, null, 2);
+                       } catch (e) {
+                           // If not JSON, return as-is
+                           return notesContent;
+                       }
                    },
 
                    async submitRecordNewShot() {
