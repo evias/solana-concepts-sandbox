@@ -215,16 +215,69 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/📝 Vaccination Shot[\s\S]*bg-blue/);
     });
 
-    it('verified records shown with ✓ icon and green styling', () => {
-      expect(htmlContent).toMatch(/✓ Verified[\s\S]*bg-green/);
+     it('verified records shown with ✓ icon and green styling', () => {
+       expect(htmlContent).toMatch(/✓ Verified[\s\S]*bg-green/);
+     });
+
+     it('SPL Token Mint rows should have ✙ icon in first column', () => {
+       expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'spl_token_mint'"[\s\S]*✙/);
+     });
+
+     it('Vaccination Shot rows should have 💉 icon in first column', () => {
+       expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'vaccination_shot'"[\s\S]*💉/);
+     });
+   });
+
+   describe('Vaccination Details Modal', () => {
+    it('should have View Details button in actions', () => {
+      expect(htmlContent).toMatch(/📋 View Details/);
     });
 
-    it('SPL Token Mint rows should have ✙ icon in first column', () => {
-      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'spl_token_mint'"[\s\S]*✙/);
+    it('View Details button should open vaccination details modal', () => {
+      expect(htmlContent).toMatch(/openVaccinationDetailsModal\(vax\)/);
     });
 
-    it('Vaccination Shot rows should have 💉 icon in first column', () => {
-      expect(htmlContent).toMatch(/x-show="getVaccinationType\(vax\) === 'vaccination_shot'"[\s\S]*💉/);
+    it('should have vaccination details modal', () => {
+      expect(htmlContent).toMatch(/Vaccination Details/);
+    });
+
+    it('details modal should show vaccination type badge', () => {
+      expect(htmlContent).toMatch(/getVaccinationType\(selectedVaccinationForDetails\)/);
+    });
+
+    it('details modal should display vaccine name', () => {
+      expect(htmlContent).toMatch(/Vaccine Name[\s\S]*selectedVaccinationForDetails\?\.vaccine_name/);
+    });
+
+    it('details modal should display vaccination date', () => {
+      expect(htmlContent).toMatch(/Vaccination Date[\s\S]*selectedVaccinationForDetails\?\.vaccination_date/);
+    });
+
+    it('details modal should display vet address', () => {
+      expect(htmlContent).toMatch(/Veterinary Clinic Address[\s\S]*selectedVaccinationForDetails\?\.vet_address/);
+    });
+
+    it('details modal should conditionally show token mint address', () => {
+      expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.mint_address"[\s\S]*Token Mint Address/);
+    });
+
+    it('details modal should conditionally show transaction signature', () => {
+      expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.transaction_signature"[\s\S]*Transaction Signature/);
+    });
+
+    it('details modal should conditionally show transaction hash', () => {
+      expect(htmlContent).toMatch(/x-show="selectedVaccinationForDetails\?\.transaction_hash"[\s\S]*Transaction Hash/);
+    });
+
+    it('details modal should show Solscan link for on-chain transactions', () => {
+      expect(htmlContent).toMatch(/View on Solscan[\s\S]*transaction_hash/);
+    });
+
+    it('View Details should appear before Solscan link in actions', () => {
+      const viewDetailsMatch = htmlContent.match(/📋 View Details[\s\S]*openVaccinationDetailsModal/);
+      const solscanMatch = htmlContent.match(/🔗 Solscan[\s\S]*transaction_hash/);
+      expect(viewDetailsMatch).toBeTruthy();
+      expect(solscanMatch).toBeTruthy();
     });
   });
 });
