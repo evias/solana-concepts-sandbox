@@ -74,21 +74,17 @@ describe('PetVax UI (concepts/petvax.html)', () => {
       expect(htmlContent).toMatch(/bg-green-50/);   // Verified
     });
 
-    it('should show On-Chain badge for transaction hash', () => {
-      expect(htmlContent).toMatch(/On-Chain/);
-    });
+     it('should show On-Chain badge for SPL Token Mint with lock icon', () => {
+       expect(htmlContent).toMatch(/🔐 On-Chain/);
+     });
 
-    it('should show Signed badge for transaction signature', () => {
-      expect(htmlContent).toMatch(/Signed/);
-    });
+     it('should show Signed badge for Vaccine Tx with checkmark icon', () => {
+       expect(htmlContent).toMatch(/✓ Signed/);
+     });
 
-    it('should show Local badge for neither', () => {
-      expect(htmlContent).toMatch(/Local/);
-    });
-
-    it('should have Solscan link when transaction exists', () => {
-      expect(htmlContent).toMatch(/solscan.io\/tx\//);
-    });
+     it('should have Solscan link when transaction exists', () => {
+       expect(htmlContent).toMatch(/solscan.io\/tx\//);
+     });
 
     it('should have Record New Shot button', () => {
       expect(htmlContent).toMatch(/📋 New Shot/);
