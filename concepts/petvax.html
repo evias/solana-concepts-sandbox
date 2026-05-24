@@ -242,17 +242,20 @@
                                           <span x-show="getVaccinationType(vax) === 'verified'" class="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">Local</span>
                                       </td>
                                      
-                                     <!-- Actions -->
-                                     <td class="px-4 py-3">
-                                         <div class="flex gap-2 flex-wrap">
-                                             <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
-                                                 🔗 Solscan
-                                             </a>
-                                             <button @click="openRecordNewShotModal(vax)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
-                                                 📋 New Shot
-                                             </button>
-                                         </div>
-                                     </td>
+                                      <!-- Actions -->
+                                      <td class="px-4 py-3">
+                                          <div class="flex gap-2 flex-wrap">
+                                              <button @click="openVaccinationDetailsModal(vax)" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
+                                                  📋 View Details
+                                              </button>
+                                              <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
+                                                  🔗 Solscan
+                                              </a>
+                                              <button @click="openRecordNewShotModal(vax)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                                                  📋 New Shot
+                                              </button>
+                                          </div>
+                                      </td>
                                  </tr>
                              </template>
                          </tbody>
@@ -410,9 +413,86 @@
                                 <span x-show="newShotStatus === 'confirmed'">Confirmed!</span>
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
+                     </form>
+                 </div>
+             </div>
+
+             <!-- Vaccination Details Modal -->
+             <div x-show="showVaccinationDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4" @click.self="showVaccinationDetailsModal = false">
+                 <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                     <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                         <h2 class="text-2xl font-bold">Vaccination Details</h2>
+                         <button @click="showVaccinationDetailsModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                     </div>
+                     <div class="p-6 space-y-4" x-show="selectedVaccinationForDetails">
+                         <!-- Type -->
+                         <div>
+                             <label class="block text-sm font-medium text-gray-700">Type</label>
+                             <div class="mt-1">
+                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'spl_token_mint'" class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold">⛓ SPL Token Mint</span>
+                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'vaccination_shot'" class="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">📝 Vaccination Shot</span>
+                                 <span x-show="getVaccinationType(selectedVaccinationForDetails) === 'verified'" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">✓ Verified</span>
+                             </div>
+                         </div>
+
+                         <!-- Vaccine Name -->
+                         <div>
+                             <label class="block text-sm font-medium text-gray-700">Vaccine Name</label>
+                             <p class="mt-1 text-gray-900" x-text="selectedVaccinationForDetails?.vaccine_name"></p>
+                         </div>
+
+                         <!-- Vaccination Date -->
+                         <div>
+                             <label class="block text-sm font-medium text-gray-700">Vaccination Date</label>
+                             <p class="mt-1 text-gray-900" x-text="new Date(selectedVaccinationForDetails?.vaccination_date).toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})"></p>
+                         </div>
+
+                         <!-- Vet Address -->
+                         <div>
+                             <label class="block text-sm font-medium text-gray-700">Veterinary Clinic Address</label>
+                             <p class="mt-1 text-gray-900 font-mono break-all" x-text="selectedVaccinationForDetails?.vet_address"></p>
+                         </div>
+
+                         <!-- Mint Address (if available) -->
+                         <div x-show="selectedVaccinationForDetails?.mint_address">
+                             <label class="block text-sm font-medium text-gray-700">Token Mint Address</label>
+                             <p class="mt-1 text-gray-900 font-mono break-all" x-text="selectedVaccinationForDetails?.mint_address"></p>
+                         </div>
+
+                         <!-- Transaction Signature (if available) -->
+                         <div x-show="selectedVaccinationForDetails?.transaction_signature">
+                             <label class="block text-sm font-medium text-gray-700">Transaction Signature</label>
+                             <p class="mt-1 text-gray-900 font-mono break-all text-xs" x-text="selectedVaccinationForDetails?.transaction_signature"></p>
+                         </div>
+
+                         <!-- Transaction Hash (if available) -->
+                         <div x-show="selectedVaccinationForDetails?.transaction_hash">
+                             <label class="block text-sm font-medium text-gray-700">Transaction Hash</label>
+                             <p class="mt-1 text-gray-900 font-mono break-all text-xs" x-text="selectedVaccinationForDetails?.transaction_hash"></p>
+                         </div>
+
+                         <!-- Notes (if available) -->
+                         <div x-show="selectedVaccinationForDetails?.notes && selectedVaccinationForDetails.notes.length > 0">
+                             <label class="block text-sm font-medium text-gray-700">Notes</label>
+                             <p class="mt-1 text-gray-900 whitespace-pre-wrap" x-text="selectedVaccinationForDetails?.notes"></p>
+                         </div>
+
+                         <!-- Record Created -->
+                         <div class="border-t pt-4">
+                             <label class="block text-sm font-medium text-gray-700">Record Created</label>
+                             <p class="mt-1 text-sm text-gray-600" x-text="new Date(selectedVaccinationForDetails?.created_at).toLocaleDateString('en-US', {weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})"></p>
+                         </div>
+
+                         <!-- Solscan Link -->
+                         <div class="pt-4">
+                             <a x-show="selectedVaccinationForDetails?.transaction_hash" :href="'https://solscan.io/tx/' + selectedVaccinationForDetails.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                                 🔗 View on Solscan
+                             </a>
+                             <p x-show="!selectedVaccinationForDetails?.transaction_hash" class="text-sm text-gray-500">No on-chain transaction available for Solscan verification</p>
+                         </div>
+                     </div>
+                 </div>
+             </div>
         </div>
     </div>
 
@@ -439,20 +519,22 @@
     </footer>
 
     <script>
-        function petVax() {
-            return {
-                userAddress: '',
-                showWalletModal: false,
-                showDocumentation: false,
-                showRecordNewShotModal: false,
-                manualAddress: '',
-                availablePets: [],
-                selectedPetId: '',
-                selectedPet: null,
-                vaccinations: [],
-                vaccinationSearchQuery: '',
-                documentationContent: '',
-                signingStatus: '',
+         function petVax() {
+             return {
+                 userAddress: '',
+                 showWalletModal: false,
+                 showDocumentation: false,
+                 showRecordNewShotModal: false,
+                 showVaccinationDetailsModal: false,
+                 selectedVaccinationForDetails: null,
+                 manualAddress: '',
+                 availablePets: [],
+                 selectedPetId: '',
+                 selectedPet: null,
+                 vaccinations: [],
+                 vaccinationSearchQuery: '',
+                 documentationContent: '',
+                 signingStatus: '',
                 transactionSignature: '',
                  vaccinationForm: {
                      vaccineName: '',
@@ -805,6 +887,12 @@
                        console.log('[NEW-SHOT] newShotForm after init:', this.newShotForm);
                        this.newShotStatus = '';
                        this.showRecordNewShotModal = true;
+                   },
+
+                   openVaccinationDetailsModal(vaccination) {
+                       console.log('[DETAILS] Opening details modal for vaccination:', vaccination.id);
+                       this.selectedVaccinationForDetails = JSON.parse(JSON.stringify(vaccination));
+                       this.showVaccinationDetailsModal = true;
                    },
 
                    async submitRecordNewShot() {
