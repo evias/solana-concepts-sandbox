@@ -702,6 +702,9 @@
   .break-all {
     word-break: break-all;
   }
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
+  }
   .text-amber-600 {
     color: var(--color-amber-600);
   }
