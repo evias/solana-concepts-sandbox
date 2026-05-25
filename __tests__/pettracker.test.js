@@ -962,8 +962,8 @@ describe('Pet Registration with SPL Token', () => {
     test('should return 400 for invalid Solana addresses', () => {
       const invalidAddress = 'not_a_valid_address';
 
-      // Solana address regex validation
-      const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+      // Solana address regex validation (base58: excludes 0, O, I, l)
+      const solanaAddressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
       const isValid = solanaAddressRegex.test(invalidAddress);
 
       expect(isValid).toBe(false);
@@ -971,7 +971,7 @@ describe('Pet Registration with SPL Token', () => {
 
     test('should validate correct Solana address format', () => {
       const validAddress = '11111111111111111111111111111111';
-      const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+      const solanaAddressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
       const isValid = solanaAddressRegex.test(validAddress);
 
       expect(isValid).toBe(true);
