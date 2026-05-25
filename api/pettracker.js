@@ -310,4 +310,116 @@ router.get('/verify-mandate', async (req, res) => {
   }
 });
 
+// POST /authorize-vet - Add authorized veterinary to a pet
+router.post('/authorize-vet', async (req, res) => {
+  const { petId, ownerAddress, vetAddress } = req.body;
+
+  // Validation
+  if (!petId || !ownerAddress || !vetAddress) {
+    return res.status(400).json({
+      error: 'Missing required fields: petId, ownerAddress, vetAddress'
+    });
+  }
+
+  try {
+    // Validate Solana addresses
+    new web3.PublicKey(ownerAddress);
+    new web3.PublicKey(vetAddress);
+  } catch (error) {
+    return res.status(400).json({
+      error: 'Invalid Solana address format',
+      details: error.message
+    });
+  }
+
+  try {
+    // Check pet exists
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return res.status(404).json({
+        error: 'Pet not found',
+        petId
+      });
+    }
+
+    // Verify mandate (owner can authorize vets)
+    const mandate = petDb.verifyMandate(petId, ownerAddress);
+    if (!mandate.valid) {
+      return res.status(403).json({
+        error: 'Unauthorized',
+        reason: mandate.reason
+      });
+    }
+
+    // Parse current authorized vets
+    const currentVets = JSON.parse(pet.authorizedVets || '[]');
+
+    // Check if vet already authorized
+    if (currentVets.includes(vetAddress)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Veterinary already authorized for this pet'
+      });
+    }
+
+    // Get payer for SAS operations
+    const payer = require('./payer').getPayerKeypair();
+
+    // SAS Integration: Ensure credential exists or create
+    const sasIntegration = require('./sas-integration');
+    console.log(`[SAS] Ensuring credential for owner ${ownerAddress}...`);
+    const sasResult = await sasIntegration.ensureSasCredential(ownerAddress, payer);
+    console.log(`[SAS] Credential ${sasResult.credentialAddress} exists: ${sasResult.exists}`);
+
+    // If credential exists, add the new signer
+    if (sasResult.exists) {
+      console.log(`[SAS] Adding signer ${vetAddress} to credential ${sasResult.credentialAddress}...`);
+      try {
+        const addResult = await sasIntegration.addAuthorizedSigner(
+          sasResult.credentialAddress,
+          ownerAddress,
+          vetAddress,
+          payer
+        );
+        sasResult.transactionSignature = addResult.transactionSignature;
+        sasResult.authorizedSigners = addResult.authorizedSigners;
+        console.log(`[SAS] Signer added successfully. Tx: ${addResult.transactionSignature}`);
+      } catch (addError) {
+        console.error('[SAS] Error adding signer:', addError.message);
+        // If error is "signer already authorized", continue anyway
+        if (!addError.message.includes('Signer already authorized')) {
+          throw addError;
+        }
+        console.log('[SAS] Signer was already added, continuing...');
+      }
+    }
+
+    // Update database with new vet
+    const updatedVets = [...currentVets, vetAddress];
+    petDb.updatePet(petId, { authorizedVets: JSON.stringify(updatedVets) });
+
+    // Get updated pet
+    const updatedPet = petDb.getPetById(petId);
+
+    res.json({
+      success: true,
+      pet: updatedPet,
+      sasCredential: {
+        address: sasResult.credentialAddress,
+        owner: ownerAddress,
+        authorizedSigners: sasResult.authorizedSigners,
+        exists: sasResult.exists,
+        transactionSignature: sasResult.transactionSignature
+      },
+      message: 'Veterinary authorized successfully'
+    });
+  } catch (error) {
+    console.error('Error authorizing veterinary:', error);
+    res.status(500).json({
+      error: 'Failed to authorize veterinary',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
