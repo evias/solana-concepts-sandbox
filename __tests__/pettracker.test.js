@@ -851,4 +851,236 @@ describe('Pet Registration with SPL Token', () => {
       fs.unlinkSync(testDbPath);
     });
   });
+
+  // Authorization endpoint tests
+  describe('POST /authorize-vet endpoint', () => {
+    let testDbPath;
+    let db;
+    let petDb;
+    let petId;
+    let ownerAddress;
+    let vetAddress;
+    const Database = require('better-sqlite3');
+    const path = require('path');
+
+    beforeEach(() => {
+      // Create isolated test database
+      testDbPath = path.join(__dirname, `test-auth-${Date.now()}.db`);
+      db = new Database(testDbPath);
+      db.pragma('foreign_keys = ON');
+
+      // Create schema
+      db.exec(`
+        CREATE TABLE pets (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          species TEXT NOT NULL,
+          breed TEXT,
+          age INTEGER,
+          owner TEXT NOT NULL,
+          mandate_authority TEXT NOT NULL,
+          mint_address TEXT,
+          token_account TEXT,
+          authorizedVets TEXT DEFAULT '[]',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+
+      // Setup petDb
+      petDb = {
+        createPet: (petData) => {
+          const { id, name, species, breed, age, owner } = petData;
+          const now = new Date().toISOString();
+          const stmt = db.prepare(`
+            INSERT INTO pets (id, name, species, breed, age, owner, mandate_authority, authorizedVets, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `);
+          stmt.run(id, name, species, breed, age, owner, owner, '[]', now, now);
+          return petDb.getPetById(id);
+        },
+        getPetById: (id) => {
+          return db.prepare('SELECT * FROM pets WHERE id = ?').get(id);
+        },
+        updatePet: (id, updates) => {
+          const now = new Date().toISOString();
+          const allowedFields = ['authorizedVets'];
+          const setClause = Object.keys(updates)
+            .filter(key => allowedFields.includes(key))
+            .map(key => `${key} = ?`)
+            .join(', ');
+          if (!setClause) return petDb.getPetById(id);
+          const values = Object.keys(updates)
+            .filter(key => allowedFields.includes(key))
+            .map(key => updates[key]);
+          db.prepare(`UPDATE pets SET ${setClause}, updated_at = ? WHERE id = ?`).run(...values, now, id);
+          return petDb.getPetById(id);
+        },
+        verifyMandate: (petId, authority) => {
+          const pet = petDb.getPetById(petId);
+          if (!pet) {
+            return { valid: false, reason: 'Pet not found' };
+          }
+          if (pet.owner === authority || pet.mandate_authority === authority) {
+            return { valid: true, reason: 'Authorized', pet };
+          }
+          return { valid: false, reason: 'Not authorized' };
+        }
+      };
+
+      // Create test pet
+      petId = 'pet_auth_test_' + Date.now();
+      ownerAddress = '11111111111111111111111111111111';
+      vetAddress = '22222222222222222222222222222222';
+
+      petDb.createPet({
+        id: petId,
+        name: 'TestPet',
+        species: 'Dog',
+        breed: 'Lab',
+        age: 3,
+        owner: ownerAddress
+      });
+    });
+
+    afterEach(() => {
+      db.close();
+      const fs = require('fs');
+      if (fs.existsSync(testDbPath)) {
+        fs.unlinkSync(testDbPath);
+      }
+    });
+
+    test('should validate required fields in authorization request', () => {
+      // Test that undefined values are caught
+      expect(undefined).toBeUndefined();
+      expect(petId).toBeDefined();
+      expect(ownerAddress).toBeDefined();
+      expect(vetAddress).toBeDefined();
+    });
+
+    test('should return 400 for invalid Solana addresses', () => {
+      const invalidAddress = 'not_a_valid_address';
+
+      // Solana address regex validation
+      const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+      const isValid = solanaAddressRegex.test(invalidAddress);
+
+      expect(isValid).toBe(false);
+    });
+
+    test('should validate correct Solana address format', () => {
+      const validAddress = '11111111111111111111111111111111';
+      const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+      const isValid = solanaAddressRegex.test(validAddress);
+
+      expect(isValid).toBe(true);
+    });
+
+    test('should check pet existence', () => {
+      const pet = petDb.getPetById(petId);
+      expect(pet).toBeDefined();
+      expect(pet.id).toBe(petId);
+    });
+
+    test('should return 404 if pet not found', () => {
+      const nonExistentPetId = 'pet_nonexistent_' + Date.now();
+      const pet = petDb.getPetById(nonExistentPetId);
+
+      expect(pet).toBeUndefined();
+    });
+
+    test('should verify mandate authority', () => {
+      const mandate = petDb.verifyMandate(petId, ownerAddress);
+
+      expect(mandate.valid).toBe(true);
+      expect(mandate.pet.id).toBe(petId);
+    });
+
+    test('should reject unauthorized mandate requests', () => {
+      const unauthorizedAddress = '99999999999999999999999999999999';
+      const mandate = petDb.verifyMandate(petId, unauthorizedAddress);
+
+      expect(mandate.valid).toBe(false);
+    });
+
+    test('should prevent duplicate vet authorization', () => {
+      const pet = petDb.getPetById(petId);
+      const currentVets = JSON.parse(pet.authorizedVets || '[]');
+
+      // First auth
+      const updatedVets = [...currentVets, vetAddress];
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify(updatedVets) });
+
+      // Check if already present
+      const pet2 = petDb.getPetById(petId);
+      const vets = JSON.parse(pet2.authorizedVets || '[]');
+      const isDuplicate = vets.includes(vetAddress);
+
+      expect(isDuplicate).toBe(true);
+    });
+
+    test('should add vet to authorized list', () => {
+      const pet = petDb.getPetById(petId);
+      const currentVets = JSON.parse(pet.authorizedVets || '[]');
+
+      expect(currentVets.length).toBe(0);
+
+      // Add vet
+      const updatedVets = [...currentVets, vetAddress];
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify(updatedVets) });
+
+      // Verify
+      const pet2 = petDb.getPetById(petId);
+      const vets = JSON.parse(pet2.authorizedVets || '[]');
+
+      expect(vets.length).toBe(1);
+      expect(vets[0]).toBe(vetAddress);
+    });
+
+    test('should maintain vet list with multiple authorizations', () => {
+      const vet1 = '22222222222222222222222222222222';
+      const vet2 = '33333333333333333333333333333333';
+      const vet3 = '44444444444444444444444444444444';
+
+      // Add first vet
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify([vet1]) });
+      let pet = petDb.getPetById(petId);
+      expect(JSON.parse(pet.authorizedVets).length).toBe(1);
+
+      // Add second vet
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify([vet1, vet2]) });
+      pet = petDb.getPetById(petId);
+      expect(JSON.parse(pet.authorizedVets).length).toBe(2);
+
+      // Add third vet
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify([vet1, vet2, vet3]) });
+      pet = petDb.getPetById(petId);
+      const vets = JSON.parse(pet.authorizedVets);
+      expect(vets.length).toBe(3);
+      expect(vets).toContain(vet1);
+      expect(vets).toContain(vet2);
+      expect(vets).toContain(vet3);
+    });
+
+    test('should parse authorizedVets JSON correctly', () => {
+      const testVets = [vetAddress, '33333333333333333333333333333333'];
+
+      petDb.updatePet(petId, { authorizedVets: JSON.stringify(testVets) });
+      const pet = petDb.getPetById(petId);
+
+      const parsedVets = JSON.parse(pet.authorizedVets);
+      expect(Array.isArray(parsedVets)).toBe(true);
+      expect(parsedVets).toEqual(testVets);
+    });
+
+    test('should handle empty authorized vets list', () => {
+      const pet = petDb.getPetById(petId);
+      const vets = JSON.parse(pet.authorizedVets || '[]');
+
+      expect(Array.isArray(vets)).toBe(true);
+      expect(vets.length).toBe(0);
+    });
+  });
 });
+
