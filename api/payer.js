@@ -30,4 +30,7 @@ function initializePayerKeypair() {
 // Get or initialize the payer
 const payer = initializePayerKeypair();
 
-module.exports = { payer };
+module.exports = { 
+  payer,
+  getPayerKeypair: () => payer
+};
