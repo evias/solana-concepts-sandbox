@@ -209,35 +209,154 @@ describe('PetTracker UI (concepts/pettracker.html)', () => {
       expect(htmlContent).toMatch(/pet.owner.toLowerCase\(\).includes\(query\)/);
     });
 
-     it('searches should be case-insensitive', () => {
-       expect(htmlContent).toMatch(/toLowerCase/);
-     });
-   });
+    it('searches should be case-insensitive', () => {
+      expect(htmlContent).toMatch(/toLowerCase/);
+    });
+  });
 
-   describe('Registration Form Placeholders', () => {
-     it('Pet Name field should have placeholder', () => {
-       expect(htmlContent).toMatch(/placeholder="e\.g\., Max, Bella, Charlie"/);
-     });
+  describe('Registration Form Placeholders', () => {
+    it('Pet Name field should have placeholder', () => {
+      expect(htmlContent).toMatch(/placeholder="e\.g\., Max, Bella, Charlie"/);
+    });
 
-     it('Species field should have placeholder', () => {
-       expect(htmlContent).toMatch(/placeholder="e\.g\., Dog, Cat, Bird, Rabbit"/);
-     });
+    it('Species field should have placeholder', () => {
+      expect(htmlContent).toMatch(/placeholder="e\.g\., Dog, Cat, Bird, Rabbit"/);
+    });
 
-     it('Breed field should have placeholder', () => {
-       expect(htmlContent).toMatch(/placeholder="e\.g\., Golden Retriever, Siamese Cat"/);
-     });
+    it('Breed field should have placeholder', () => {
+      expect(htmlContent).toMatch(/placeholder="e\.g\., Golden Retriever, Siamese Cat"/);
+    });
 
-     it('Age field should have placeholder', () => {
-       expect(htmlContent).toMatch(/placeholder="e\.g\., 3, 5, 7"/);
-     });
+    it('Age field should have placeholder', () => {
+      expect(htmlContent).toMatch(/placeholder="e\.g\., 3, 5, 7"/);
+    });
 
-     it('Owner wallet field should have placeholder', () => {
-       expect(htmlContent).toMatch(/placeholder="Enter Solana address"/);
-     });
+    it('Owner wallet field should have placeholder', () => {
+      expect(htmlContent).toMatch(/placeholder="Enter Solana address"/);
+    });
 
-     it('all form inputs should have placeholders', () => {
-       const placeholderCount = (htmlContent.match(/placeholder="/g) || []).length;
-       expect(placeholderCount).toBeGreaterThanOrEqual(5);
-     });
-   });
+    it('all form inputs should have placeholders', () => {
+      const placeholderCount = (htmlContent.match(/placeholder="/g) || []).length;
+      expect(placeholderCount).toBeGreaterThanOrEqual(5);
+    });
+  });
+
+  describe('Veterinary Authorization Form', () => {
+    it('should have authorization form section', () => {
+      expect(htmlContent).toMatch(/Authorize a Veterinary/);
+    });
+
+    it('should have pet selector dropdown', () => {
+      expect(htmlContent).toMatch(/Select Pet/);
+      expect(htmlContent).toMatch(/selectedPetForVetAuth/);
+    });
+
+    it('should have vet address input field', () => {
+      expect(htmlContent).toMatch(/Veterinary Solana Address/);
+      expect(htmlContent).toMatch(/newVetAddress/);
+    });
+
+    it('should have authorized vets list display', () => {
+      expect(htmlContent).toMatch(/Authorized Veterinaries:/);
+      expect(htmlContent).toMatch(/No veterinaries authorized yet/);
+    });
+
+    it('should have submit button for authorization', () => {
+      expect(htmlContent).toMatch(/Authorize Veterinary/);
+      expect(htmlContent).toMatch(/submitAuthorizeVet/);
+    });
+
+    it('should have loading state indicator', () => {
+      expect(htmlContent).toMatch(/isAuthorizingVet/);
+    });
+
+    it('should have scrollable form with id', () => {
+      expect(htmlContent).toMatch(/id="auth-form"/);
+    });
+  });
+
+  describe('Pet Listing - Authorized Vets Display', () => {
+    it('should show authorized vets section on pet cards', () => {
+      expect(htmlContent).toMatch(/Veterinaries Authorized:/);
+    });
+
+    it('should show warning when no vets authorized', () => {
+      expect(htmlContent).toMatch(/No veterinary authorized/);
+    });
+
+    it('should have clickable warning button', () => {
+      expect(htmlContent).toMatch(/scrollToAuthForm/);
+    });
+  });
+
+  describe('Alpine.js Methods for Authorization', () => {
+    it('should have getAuthorizedVets method defined', () => {
+      expect(htmlContent).toMatch(/getAuthorizedVets/);
+    });
+
+    it('should have submitAuthorizeVet method', () => {
+      expect(htmlContent).toMatch(/async submitAuthorizeVet/);
+    });
+
+    it('should have Solana address validation', () => {
+      expect(htmlContent).toMatch(/solanaAddressRegex/);
+    });
+
+    it('should have scrollToAuthForm method', () => {
+      expect(htmlContent).toMatch(/scrollToAuthForm/);
+    });
+
+    it('should clear form after authorization', () => {
+      expect(htmlContent).toMatch(/this\.newVetAddress = '';/);
+    });
+  });
+
+  describe('Data Properties for Authorization', () => {
+    it('should initialize selectedPetForVetAuth', () => {
+      expect(htmlContent).toMatch(/selectedPetForVetAuth:/);
+    });
+
+    it('should initialize newVetAddress', () => {
+      expect(htmlContent).toMatch(/newVetAddress:/);
+    });
+
+    it('should initialize isAuthorizingVet', () => {
+      expect(htmlContent).toMatch(/isAuthorizingVet:/);
+    });
+
+    it('should initialize vetAuthMessage', () => {
+      expect(htmlContent).toMatch(/vetAuthMessage:/);
+    });
+  });
+
+  describe('API Integration for Authorization', () => {
+    it('should call authorize-vet endpoint', () => {
+      expect(htmlContent).toMatch(/authorize-vet/);
+    });
+
+    it('should send POST request', () => {
+      expect(htmlContent).toMatch(/method:.*POST/);
+    });
+
+    it('should parse SAS credential response', () => {
+      expect(htmlContent).toMatch(/sasCredential/);
+    });
+
+    it('should handle form submission', () => {
+      expect(htmlContent).toMatch(/petId/);
+      expect(htmlContent).toMatch(/ownerAddress/);
+      expect(htmlContent).toMatch(/vetAddress/);
+    });
+  });
+
+  describe('Authorization Form Validation', () => {
+    it('should disable submit button when empty', () => {
+      expect(htmlContent).toMatch(/isAuthorizingVet.*selectedPetForVetAuth.*newVetAddress/);
+    });
+
+    it('should show validation help text', () => {
+      expect(htmlContent).toMatch(/32-44.*base58/);
+    });
+  });
 });
+
