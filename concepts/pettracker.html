@@ -362,14 +362,37 @@
                          </button>
                      </div>
 
-                     <!-- Error/Success Message -->
-                     <template x-if="vetAuthMessage">
-                         <div 
-                             :class="vetAuthMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
-                             class="p-3 rounded border">
-                             <p x-text="vetAuthMessage.text"></p>
-                         </div>
-                     </template>
+                       <!-- Error/Success Message -->
+                       <template x-if="vetAuthMessage">
+                           <div 
+                               :class="vetAuthMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
+                               class="p-3 rounded border space-y-2">
+                               <template x-if="vetAuthMessage.isHtml">
+                                   <p x-html="vetAuthMessage.text"></p>
+                               </template>
+                               <template x-if="!vetAuthMessage.isHtml">
+                                   <p x-text="vetAuthMessage.text"></p>
+                               </template>
+                               
+                               <!-- Credential details for success messages -->
+                               <template x-if="vetAuthMessage.credential">
+                                   <div class="mt-3 pt-3 border-t border-current text-sm space-y-1">
+                                       <p><strong>Credential Address:</strong></p>
+                                       <p class="font-mono break-all text-xs" x-text="vetAuthMessage.credential.address"></p>
+                                       <p class="mt-2"><strong>Authorized Vets:</strong></p>
+                                       <template x-for="vet in vetAuthMessage.credential.authorizedSigners" :key="vet">
+                                           <div class="font-mono text-xs break-all" x-text="`• ${vet}`"></div>
+                                       </template>
+                                       <a 
+                                           :href="`https://solscan.io/address/${vetAuthMessage.credential.address}?cluster=devnet`"
+                                           target="_blank"
+                                           class="inline-block mt-2 text-xs underline hover:opacity-70">
+                                           View on Solscan →
+                                       </a>
+                                   </div>
+                               </template>
+                           </div>
+                       </template>
                  </form>
              </section>
 
@@ -839,6 +862,11 @@
                 
                 // Submit veterinary authorization
                 async submitAuthorizeVet() {
+                    if (!this.ownerAddress) {
+                        alert('Please connect your wallet first');
+                        return;
+                    }
+                    
                     if (!this.selectedPetForVetAuth || !this.newVetAddress) {
                         alert('Please select a pet and enter a vet address');
                         return;
@@ -854,17 +882,30 @@
                     this.isAuthorizingVet = true;
                     this.vetAuthMessage = null;
                     
+                    // Debug: Log the data being sent
+                    const requestData = {
+                        petId: this.selectedPetForVetAuth,
+                        ownerAddress: this.ownerAddress,
+                        vetAddress: this.newVetAddress
+                    };
+                    console.log('[DEBUG] Sending authorization request:', requestData);
+                    if (!requestData.ownerAddress) {
+                        console.error('[ERROR] ownerAddress is empty! Did you connect your wallet?');
+                    }
+                    if (!requestData.petId) {
+                        console.error('[ERROR] petId is empty! Did you select a pet?');
+                    }
+                    if (!requestData.vetAddress) {
+                        console.error('[ERROR] vetAddress is empty!');
+                    }
+                    
                     try {
                         const response = await fetch('/api/v1/pettracker/authorize-vet', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({
-                                petId: this.selectedPetForVetAuth,
-                                ownerAddress: this.ownerAddress,
-                                vetAddress: this.newVetAddress
-                            })
+                            body: JSON.stringify(requestData)
                         });
                         
                         const data = await response.json();
@@ -879,10 +920,15 @@
                             // Clear form
                             this.newVetAddress = '';
                             
-                            // Show success message
+                            // Create Solscan link for credential
+                            const solscanUrl = `https://solscan.io/address/${data.sasCredential.address}?cluster=devnet`;
+                            
+                            // Show success message with Solscan link
                             this.vetAuthMessage = {
                                 type: 'success',
-                                text: `✓ Veterinary authorized successfully! On-chain credential: ${data.sasCredential.address.substring(0, 8)}...`
+                                text: `✓ Veterinary authorized! Credential: <a href="${solscanUrl}" target="_blank" class="underline font-mono text-sm">${data.sasCredential.address.substring(0, 12)}...</a>`,
+                                isHtml: true,
+                                credential: data.sasCredential
                             };
                             
                             // Clear message after 3 seconds
