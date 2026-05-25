@@ -34,6 +34,7 @@ function initializeDatabase() {
       mandate_authority TEXT NOT NULL,
       mint_address TEXT,
       token_account TEXT,
+      authorizedVets TEXT DEFAULT '[]',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -119,6 +120,19 @@ function runMigrations() {
         throw error;
       }
     }
+    
+    // Migration 3: Add authorizedVets to pets
+    const petTableInfo2 = db.prepare("PRAGMA table_info(pets)").all();
+    const hasAuthorizedVets = petTableInfo2.some(col => col.name === 'authorizedVets');
+    
+    if (!hasAuthorizedVets) {
+      console.log('Running migration: Adding authorizedVets column to pets...');
+      
+      db.exec(`ALTER TABLE pets ADD COLUMN authorizedVets TEXT;`);
+      db.prepare(`UPDATE pets SET authorizedVets = '[]' WHERE authorizedVets IS NULL`).run();
+      
+      console.log('Migration completed: authorizedVets column added');
+    }
   } catch (error) {
     console.error('Migration error:', error.message);
     // If migration fails, log but don't crash
@@ -166,7 +180,7 @@ const petDb = {
   // Update pet
   updatePet(id, updates) {
     const now = new Date().toISOString();
-    const allowedFields = ['name', 'species', 'breed', 'age', 'mint_address', 'token_account'];
+    const allowedFields = ['name', 'species', 'breed', 'age', 'mint_address', 'token_account', 'authorizedVets'];
     
     const setClause = Object.keys(updates)
       .filter(key => allowedFields.includes(key))
@@ -239,6 +253,20 @@ const petDb = {
       mandateAuthority: pet.mandate_authority,
       createdAt: pet.created_at
     };
+  },
+  
+  // Get authorized vets for a pet
+  getAuthorizedVets(petId) {
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return [];
+    }
+    try {
+      return JSON.parse(pet.authorizedVets || '[]');
+    } catch (error) {
+      console.error(`Failed to parse authorizedVets for pet ${petId}:`, error);
+      return [];
+    }
   }
 };
 
