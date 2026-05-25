@@ -1,58 +1,109 @@
 const lib = require('sas-lib');
+const {
+  createKeyPairSignerFromPrivateKeyBytes,
+  createSolanaRpc
+} = require('@solana/kit');
 const web3 = require('@solana/web3.js');
 
-// Initialize connection
-const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
-
-// SAS Program address on devnet
-const SAS_PROGRAM_ID = lib.SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS;
+// Initialize RPC
+const rpc = createSolanaRpc('https://api.devnet.solana.com');
 
 /**
- * Ensure a SAS Credential exists for a pet owner
- * If it doesn't exist, create one. If it does, return existing.
- * @param {string} ownerAddress - Pet owner's Solana wallet address
- * @param {web3.Keypair} payer - Payer for transaction fees
+ * Convert role number to web3 account metadata
+ * role: 0=readonly, 1=writable, 2=signer+readonly, 3=signer+writable
+ */
+function roleToWeb3Account(address, role) {
+  return {
+    pubkey: new web3.PublicKey(address),
+    isSigner: role >= 2,
+    isWritable: role === 1 || role === 3
+  };
+}
+
+/**
+ * Convert @solana/kit instruction to web3.js instruction
+ */
+async function kitInstructionToWeb3(kitIx) {
+  return new web3.TransactionInstruction({
+    keys: kitIx.accounts.map(acc => roleToWeb3Account(acc.address, acc.role)),
+    programId: new web3.PublicKey(kitIx.programAddress),
+    data: Buffer.from(kitIx.data)
+  });
+}
+
+/**
+ * Send transaction using web3.js
+ */
+async function sendTransaction(ix, payer) {
+  const tx = new web3.Transaction();
+  tx.add(ix);
+  
+  const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
+  tx.feePayer = payer.publicKey;
+  const { blockhash } = await connection.getLatestBlockhash();
+  tx.recentBlockhash = blockhash;
+  
+  tx.sign(payer);
+  
+  const sig = await connection.sendRawTransaction(tx.serialize());
+  await connection.confirmTransaction(sig, 'confirmed');
+  
+  return sig;
+}
+
+/**
+ * Ensure a SAS Credential exists for tracking a pet owner's vets
+ * The credential is created under the PAYER (backend), not the owner
+ * because the backend needs to sign for SAS operations
+ * @param {string} ownerAddress - Pet owner's Solana wallet address (used as part of credential name)
+ * @param {web3.Keypair} payer - Payer for transaction fees (also authority)
  * @returns {Promise<object>} { credentialAddress, exists, transactionSignature?, authorizedSigners }
  */
 async function ensureSasCredential(ownerAddress, payer) {
   try {
-    // Derive credential PDA for this owner
-    // Each owner gets one credential "pet-owner"
+    // Derive credential PDA using PAYER as authority (not owner)
+    // This allows the backend to control the credential
     const credentialPda = await lib.deriveCredentialPda({
-      authority: ownerAddress,
+      authority: payer.publicKey.toBase58(),
       name: 'pet-owner'
     });
 
     const credentialAddress = credentialPda[0].toString();
+    console.log(`[SAS] Derived credential PDA: ${credentialAddress}`);
 
-    // Try to fetch existing credential
-    const existingCredential = await lib.fetchMaybeCredential(connection, credentialAddress);
+    // Check if credential exists
+    console.log(`[SAS] Fetching credential...`);
+    const existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
-    if (existingCredential) {
-      // Credential already exists
+    if (existingCredential?.exists !== false) {
+      console.log(`[SAS] Credential exists with ${existingCredential?.authorizedSigners?.length || 0} signers`);
       return {
         credentialAddress,
         exists: true,
         transactionSignature: null,
-        authorizedSigners: existingCredential.authorizedSigners || []
+        authorizedSigners: existingCredential?.authorizedSigners || []
       };
     }
 
-    // Credential doesn't exist - create it
+    // Create new credential
+    console.log(`[SAS] Creating new credential...`);
+    
+    const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
+      new Uint8Array(payer.secretKey.slice(0, 32))
+    );
+
     const createCredentialIx = lib.getCreateCredentialInstruction({
-      authority: ownerAddress,
+      payer: payerSigner,
+      authority: payerSigner,
+      credential: credentialAddress,
       name: 'pet-owner',
-      payer: payer.publicKey.toString()
+      signers: []
     });
 
-    // Create transaction
-    const tx = new web3.Transaction();
-    tx.add(createCredentialIx);
+    const web3Ix = await kitInstructionToWeb3(createCredentialIx);
+    const txSig = await sendTransaction(web3Ix, payer);
 
-    // Sign and send
-    const txSig = await web3.sendAndConfirmTransaction(connection, tx, [payer], {
-      skipPreflight: false
-    });
+    console.log(`[SAS] Transaction confirmed: ${txSig}`);
 
     return {
       credentialAddress,
@@ -76,10 +127,10 @@ async function ensureSasCredential(ownerAddress, payer) {
  */
 async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAddress, payer) {
   try {
-    // Fetch current credential
-    const credential = await lib.fetchMaybeCredential(connection, credentialAddress);
+    console.log(`[SAS] Fetching credential...`);
+    const credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
-    if (!credential) {
+    if (!credential?.exists) {
       throw new Error('Credential does not exist');
     }
 
@@ -89,24 +140,24 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
       throw new Error('Signer already authorized for this credential');
     }
 
-    // Create new signers array
+    console.log(`[SAS] Adding signer ${newSignerAddress}...`);
     const updatedSigners = [...currentSigners, newSignerAddress];
 
-    // Get instruction to update signers
+    const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
+      new Uint8Array(payer.secretKey.slice(0, 32))
+    );
+
     const changeSignersIx = lib.getChangeAuthorizedSignersInstruction({
-      authority: ownerAddress,
-      name: 'pet-owner',
-      newAuthorities: updatedSigners,
-      payer: payer.publicKey.toString()
+      payer: payerSigner,
+      authority: payerSigner,
+      credential: credentialAddress,
+      signers: updatedSigners
     });
 
-    // Create and send transaction
-    const tx = new web3.Transaction();
-    tx.add(changeSignersIx);
+    const web3Ix = await kitInstructionToWeb3(changeSignersIx);
+    const txSig = await sendTransaction(web3Ix, payer);
 
-    const txSig = await web3.sendAndConfirmTransaction(connection, tx, [payer], {
-      skipPreflight: false
-    });
+    console.log(`[SAS] Transaction confirmed: ${txSig}`);
 
     return {
       transactionSignature: txSig,
@@ -120,13 +171,11 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
 
 /**
  * Get the current list of authorized signers for a credential
- * @param {string} credentialAddress - The credential address
- * @returns {Promise<array>} Array of signer addresses, or empty array if credential doesn't exist
  */
 async function getAuthorizedSigners(credentialAddress) {
   try {
-    const credential = await lib.fetchMaybeCredential(connection, credentialAddress);
-    if (!credential) {
+    const credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+    if (!credential?.exists) {
       return [];
     }
     return credential.authorizedSigners || [];
