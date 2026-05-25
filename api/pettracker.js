@@ -311,7 +311,7 @@ router.get('/verify-mandate', async (req, res) => {
 });
 
 // POST /authorize-vet - Add authorized veterinary to a pet
-router.post('/authorize-vet', async (req, res) => {
+router.post('/authorize-vet', express.json(), async (req, res) => {
   const { petId, ownerAddress, vetAddress } = req.body;
 
   // Validation
