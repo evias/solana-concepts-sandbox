@@ -586,8 +586,8 @@
                         return;
                     }
                     
-                    // Basic validation for Solana address format (base58, 32-44 chars)
-                    if (!/^[1-9A-HJ-NP-Z]{32,44}$/.test(this.manualAddress.trim())) {
+                    // Basic validation for Solana address format (base58: excludes 0, O, I, l)
+                    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(this.manualAddress.trim())) {
                         alert('Invalid Solana address format');
                         return;
                     }
@@ -844,8 +844,8 @@
                         return;
                     }
                     
-                    // Validate Solana address format
-                    const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+                    // Validate Solana address format (base58: excludes 0, O, I, l)
+                    const solanaAddressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
                     if (!solanaAddressRegex.test(this.newVetAddress)) {
                         alert('Invalid Solana address format. Address should be 32-44 base58 characters.');
                         return;
