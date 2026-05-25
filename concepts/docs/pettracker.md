@@ -1,164 +1,63 @@
 # PetTracker - Solana Pet Registry
 
-A hybrid application that stores pet metadata in a local SQLite database and creates SPL tokens on Solana devnet for each registered pet.
+Register pets and create on-chain proof of pet ownership using Solana blockchain. Each pet registration creates a unique SPL token on Solana devnet.
 
-## Architecture
+## Getting Started
 
-- **Frontend**: Alpine.js + Tailwind CSS with Phantom wallet integration
-- **Backend**: Express.js + SQLite + @solana/spl-token
-- **Blockchain**: Solana devnet
+### 1. Fund Your Wallet
 
-## Setup Instructions
+You need SOL on Solana devnet to create pet tokens (approximately 0.005 SOL per pet).
 
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Fund Your Payer Wallet
-
-When you first start the server, a backend payer wallet will be created. You need to fund it with SOL on devnet:
-
-1. The server will print the payer address on startup
+1. Note the payer address displayed on server startup
 2. Go to https://faucet.solana.com
-3. Paste the payer address and request devnet SOL
-4. You need at least 0.01 SOL for a few transactions
+3. Paste the address and request devnet SOL
 
-Example output:
-```
-Created new payer keypair: 9YourPayerAddressHere123...
-IMPORTANT: Fund this address with SOL
-   Address: 9YourPayerAddressHere123...
-   On devnet, use: https://faucet.solana.com
-```
+### 2. Connect Your Wallet
 
-### 3. Set Up HTTPS (for Wallet Connections)
+1. Click "Connect Wallet"
+2. Select Phantom wallet
+3. Approve the connection
 
-Phantom and other Solana wallets require HTTPS. Use ngrok for development:
+### 3. Register a Pet
 
-```bash
-# In one terminal, start the server
-npm start
-
-# In another terminal, expose via ngrok
-ngrok http 3000
-```
-
-Visit the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`) in your browser.
-
-### 4. Connect Your Wallet
-
-1. Click "Connect Wallet" in the app
-2. Select Phantom (or your installed wallet)
-3. Approve the connection in your wallet extension
-
-### 5. Register a Pet
-
-1. Fill in the pet details (name, species, breed, age)
+1. Enter pet details:
+   - **Pet Name** (required): The name of your pet
+   - **Species** (required): Type of animal (e.g., Dog, Cat, Rabbit)
+   - **Breed** (optional): Specific breed
+   - **Age** (optional): Age in years
 2. Click "Register Pet"
-3. The app will:
-   - Create an SPL token mint on Solana devnet
-   - Create an associated token account
-   - Mint 1 token representing your pet
-   - Store metadata in SQLite
+3. Approve the transaction in Phantom
+4. Your pet is now registered with an on-chain SPL token
 
-## Project Structure
+## Features
 
-```
-├── api/
-│   ├── pettracker.js          # Express API routes
-│   ├── database.js            # SQLite database layer
-│   ├── solana-tokens.js       # Solana token operations
-│   └── payer.js               # Backend payer keypair management
-├── concepts/
-│   ├── pettracker.html        # Frontend (Alpine.js)
-│   └── docs/
-│       └── pettracker.md      # This documentation
-├── __tests__/
-│   ├── pettracker.test.js     # API tests
-│   └── solana-tokens.test.js  # Token operations tests
-├── pettracker.db              # SQLite database (created on first run)
-└── .payer-keypair.json        # Backend wallet (created on first run, gitignored)
-```
+### Pet Listing
+- View all registered pets in a searchable list
+- Search by name, species, breed, or owner address
+- Filter results in real-time
+- Load more pets using pagination
 
-## Database Schema
+### Pet Management
+- **Edit Pet**: Update pet name, species, breed, or age
+- **Delete Pet**: Remove pet from registry
+- **View Details**: See full pet information and on-chain token address
 
-The `pets` table stores:
-- `id` - Unique pet identifier
-- `name, species, breed, age` - Pet metadata
-- `owner` - Owner's Solana address
-- `mint_address` - On-chain SPL token mint
-- `token_account` - Associated token account address
-- `created_at, updated_at` - Timestamps
-
-## API Endpoints
-
-### List All Pets
-```
-GET /api/v1/pettracker/list
-```
-
-### Get Pet by ID
-```
-GET /api/v1/pettracker/get?id=<petId>
-```
-
-### Register Pet (Creates On-Chain Token)
-```
-POST /api/v1/pettracker/register
-Body: { petData, ownerAddress }
-```
-
-### Edit Pet
-```
-POST /api/v1/pettracker/edit
-Body: { petData, ownerAddress }
-```
-
-### Delete Pet
-```
-POST /api/v1/pettracker/delete
-Body: { id, ownerAddress }
-```
-
-### Get Token Info
-```
-GET /api/v1/pettracker/token-info?mint=<mintAddress>
-```
-
-## Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run pettracker API tests
-npm test -- pettracker.test.js
-
-# Run Solana token tests
-npm test -- solana-tokens.test.js
-```
+### On-Chain Proof
+- Each pet gets a unique SPL token mint address
+- Token serves as immutable proof of pet registration
+- View token details and owner information
+- Verify pet ownership through blockchain
 
 ## Troubleshooting
 
-### "Attempt to debit an account but found no record of a prior credit"
-The payer wallet needs SOL. Fund it at https://faucet.solana.com
-
-### "Insufficient payer balance"
-Same as above - the payer has less than 0.005 SOL
+### Cannot register pet - insufficient funds
+Fund your wallet at https://faucet.solana.com with at least 0.005 SOL
 
 ### Phantom won't connect
-Make sure you're accessing the site via HTTPS (use ngrok for development)
+Make sure you're using an HTTPS connection (required by Phantom)
 
-### Wallet balance not updating
-Check Solana devnet status at https://status.solana.com
+### Pet details won't update
+Ensure you're connected to your wallet and have SOL in your account
 
-## Production Considerations
-
-For production, you would:
-1. Use a proper backend wallet stored securely (e.g., AWS Secrets Manager)
-2. Store the database encryption key securely
-3. Add authentication for API endpoints
-4. Implement proper transaction monitoring
-5. Use mainnet instead of devnet
-6. Add proper error handling and logging
+### Cannot delete pet
+You must be the pet owner to delete it. Verify your wallet connection matches the owner address
