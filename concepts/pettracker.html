@@ -167,6 +167,29 @@
                                 <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
                                     <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
                                 </p>
+                                
+                                <!-- Authorized Vets Section -->
+                                <div class="mt-2 p-2 bg-gray-50 rounded">
+                                    <template x-if="(JSON.parse(pet.authorizedVets || '[]')).length > 0">
+                                        <div>
+                                            <span class="text-sm font-semibold text-green-700">✓ Veterinaries Authorized:</span>
+                                            <div class="text-xs text-gray-700 mt-1">
+                                                <template x-for="vet in JSON.parse(pet.authorizedVets || '[]')" :key="vet">
+                                                    <div class="flex items-center gap-1" x-text="`• ${vet.substring(0, 6)}...${vet.slice(-4)}`"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    
+                                    <template x-if="(JSON.parse(pet.authorizedVets || '[]')).length === 0">
+                                        <button 
+                                            type="button"
+                                            @click="scrollToAuthForm(pet.id)"
+                                            class="text-sm text-yellow-600 hover:text-yellow-800 font-semibold hover:underline">
+                                            ⚠️ No veterinary authorized
+                                        </button>
+                                    </template>
+                                </div>
                                 <div class="mt-4 flex space-x-2 flex-wrap">
                                     <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
                                     <button 
@@ -274,10 +297,83 @@
                             class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
                             Cancel Update
                         </button>
-                    </div>
-                </form>
-            </section>
+                     </div>
+                 </form>
+             </section>
 
+             <!-- Authorize Veterinary Form Section -->
+             <section class="bg-blue-50 rounded-lg shadow-md p-6 border-l-4 border-blue-500" id="auth-form">
+                 <h2 class="text-2xl font-bold mb-4">👨‍⚕️ Authorize a Veterinary</h2>
+                 <p class="text-gray-600 mb-4">Add authorized veterinaries to your pet. They will be able to record vaccinations on the blockchain.</p>
+                 
+                 <form @submit.prevent="submitAuthorizeVet" class="space-y-4">
+                     <!-- Pet Selector -->
+                     <div>
+                         <label class="block text-sm font-medium text-gray-700 mb-2">Select Pet *</label>
+                         <select 
+                             x-model="selectedPetForVetAuth"
+                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                             <option value="">-- Choose a pet --</option>
+                             <template x-for="pet in pets" :key="pet.id">
+                                 <option :value="pet.id" x-text="`${pet.name} (${pet.species})`"></option>
+                             </template>
+                         </select>
+                     </div>
+
+                     <!-- Vet Address Input -->
+                     <div>
+                         <label class="block text-sm font-medium text-gray-700 mb-2">Veterinary Solana Address *</label>
+                         <input 
+                             type="text"
+                             x-model="newVetAddress"
+                             placeholder="e.g., VetSolanaAddressHere..."
+                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                         />
+                         <p class="text-xs text-gray-500 mt-1">Enter the vet's Solana wallet address (32-44 characters, base58 encoded)</p>
+                     </div>
+
+                     <!-- Authorized Vets List (for selected pet) -->
+                     <div class="p-3 bg-white rounded border border-gray-200">
+                         <label class="font-semibold block mb-2">Authorized Veterinaries:</label>
+                         <template x-if="getAuthorizedVets(selectedPetForVetAuth).length > 0">
+                             <ul class="space-y-2">
+                                 <template x-for="vet in getAuthorizedVets(selectedPetForVetAuth)" :key="vet">
+                                     <li class="text-sm bg-green-50 p-2 rounded flex justify-between items-center">
+                                         <span class="font-mono" x-text="`${vet.substring(0, 6)}...${vet.slice(-4)}`"></span>
+                                         <span class="text-xs text-green-700">✓ Authorized</span>
+                                     </li>
+                                 </template>
+                             </ul>
+                         </template>
+                         <template x-if="getAuthorizedVets(selectedPetForVetAuth).length === 0">
+                             <p class="text-gray-500 text-sm italic">No veterinaries authorized yet for this pet</p>
+                         </template>
+                     </div>
+
+                     <!-- Submit Button -->
+                     <div class="flex gap-2">
+                         <button 
+                             type="submit"
+                             :disabled="isAuthorizingVet || !selectedPetForVetAuth || !newVetAddress"
+                             :class="isAuthorizingVet || !selectedPetForVetAuth || !newVetAddress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                             class="bg-blue-600 text-white px-4 py-2 rounded-md">
+                             <span x-show="!isAuthorizingVet">✓ Authorize Veterinary</span>
+                             <span x-show="isAuthorizingVet">Authorizing...</span>
+                         </button>
+                     </div>
+
+                     <!-- Error/Success Message -->
+                     <template x-if="vetAuthMessage">
+                         <div 
+                             :class="vetAuthMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
+                             class="p-3 rounded border">
+                             <p x-text="vetAuthMessage.text"></p>
+                         </div>
+                     </template>
+                 </form>
+             </section>
+
+             
             <!-- Wallet Modal -->
             <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showWalletModal = false">
                 <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
@@ -375,10 +471,16 @@
                 ownerAddress: '',
                 showWalletModal: false,
                 showDocumentation: false,
-                manualAddress: '',
-                availableWallets: [],
-                documentationContent: '',
-                
+                 manualAddress: '',
+                 availableWallets: [],
+                 documentationContent: '',
+                 
+                 // Veterinary authorization
+                 selectedPetForVetAuth: '',
+                 newVetAddress: '',
+                 isAuthorizingVet: false,
+                 vetAuthMessage: null,
+                 
                 async init() {
                     await this.detectWallets();
                     this.checkStoredWallet();
@@ -716,6 +818,100 @@
                     };
                     this.editingPetId = null;
                     this.isEditMode = false;
+                },
+                
+                // Get authorized vets for a pet
+                getAuthorizedVets(petId) {
+                    if (!petId) {
+                        return [];
+                    }
+                    const pet = this.pets.find(p => p.id === petId);
+                    if (!pet) {
+                        return [];
+                    }
+                    try {
+                        return JSON.parse(pet.authorizedVets || '[]');
+                    } catch (error) {
+                        console.error('Failed to parse authorizedVets:', error);
+                        return [];
+                    }
+                },
+                
+                // Submit veterinary authorization
+                async submitAuthorizeVet() {
+                    if (!this.selectedPetForVetAuth || !this.newVetAddress) {
+                        alert('Please select a pet and enter a vet address');
+                        return;
+                    }
+                    
+                    // Validate Solana address format
+                    const solanaAddressRegex = /^[1-9A-HJ-NP-Z]{32,44}$/;
+                    if (!solanaAddressRegex.test(this.newVetAddress)) {
+                        alert('Invalid Solana address format. Address should be 32-44 base58 characters.');
+                        return;
+                    }
+                    
+                    this.isAuthorizingVet = true;
+                    this.vetAuthMessage = null;
+                    
+                    try {
+                        const response = await fetch('/api/v1/pettracker/authorize-vet', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                petId: this.selectedPetForVetAuth,
+                                ownerAddress: this.ownerAddress,
+                                vetAddress: this.newVetAddress
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Update pet in list
+                            const index = this.pets.findIndex(p => p.id === data.pet.id);
+                            if (index >= 0) {
+                                this.pets[index] = data.pet;
+                            }
+                            
+                            // Clear form
+                            this.newVetAddress = '';
+                            
+                            // Show success message
+                            this.vetAuthMessage = {
+                                type: 'success',
+                                text: `✓ Veterinary authorized successfully! On-chain credential: ${data.sasCredential.address.substring(0, 8)}...`
+                            };
+                            
+                            // Clear message after 3 seconds
+                            setTimeout(() => {
+                                this.vetAuthMessage = null;
+                            }, 3000);
+                        } else {
+                            this.vetAuthMessage = {
+                                type: 'error',
+                                text: `✗ Error: ${data.message || 'Unknown error'}`
+                            };
+                        }
+                    } catch (error) {
+                        console.error('Error authorizing veterinary:', error);
+                        this.vetAuthMessage = {
+                            type: 'error',
+                            text: `✗ Authorization failed: ${error.message}`
+                        };
+                    } finally {
+                        this.isAuthorizingVet = false;
+                    }
+                },
+                
+                // Scroll to authorization form
+                scrollToAuthForm(petId) {
+                    this.selectedPetForVetAuth = petId;
+                    setTimeout(() => {
+                        document.getElementById('auth-form')?.scrollIntoView({ behavior: 'smooth' });
+                    }, 0);
                 },
                 
                 get filteredAndPaginatedPets() {
