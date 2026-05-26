@@ -643,27 +643,31 @@
                          localStorage.setItem('petvax_wallet', this.userAddress);
                          this.showWalletModal = false;
                          console.log('[WALLET] Connected to Phantom:', this.userAddress);
+                         // Reload available pets for the newly connected wallet
+                         await this.loadPets();
                      } catch (error) {
                          console.error('[WALLET] Error connecting to Phantom:', error);
                          alert('Failed to connect Phantom: ' + error.message);
                      }
                  },
                 
-                connectManually() {
-                    if (!this.manualAddress) {
-                        alert('Please enter a Solana address');
-                        return;
-                    }
-                    // Basic address validation
-                    if (this.manualAddress.length < 32) {
-                        alert('Invalid Solana address');
-                        return;
-                    }
-                    this.userAddress = this.manualAddress;
-                    localStorage.setItem('petvax_wallet', this.userAddress);
-                    this.showWalletModal = false;
-                    this.manualAddress = '';
-                },
+                 connectManually() {
+                     if (!this.manualAddress) {
+                         alert('Please enter a Solana address');
+                         return;
+                     }
+                     // Basic address validation
+                     if (this.manualAddress.length < 32) {
+                         alert('Invalid Solana address');
+                         return;
+                     }
+                     this.userAddress = this.manualAddress;
+                     localStorage.setItem('petvax_wallet', this.userAddress);
+                     this.showWalletModal = false;
+                     this.manualAddress = '';
+                     // Reload available pets for the newly connected wallet
+                     this.loadPets();
+                 },
                 
                 disconnectWallet() {
                     this.userAddress = '';
