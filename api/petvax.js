@@ -69,15 +69,16 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
-    // Verify pet exists and owner matches
-    const pet = petDb.getPetById(petId);
-    if (!pet) {
-      return res.status(404).json({ error: 'Pet not found' });
-    }
-    
-    if (pet.owner !== ownerAddress) {
-      return res.status(403).json({ error: 'Only pet owner can record vaccinations' });
-    }
+     // Verify pet exists and owner matches
+     const pet = petDb.getPetById(petId);
+     if (!pet) {
+       return res.status(404).json({ error: 'Pet not found' });
+     }
+     
+     // Check if requester (ownerAddress) is authorized: either owner or authorized vet
+     if (pet.owner !== ownerAddress && !petDb.isVetAuthorizedForPet(petId, ownerAddress)) {
+       return res.status(403).json({ error: 'Only pet owner or authorized veterinarian can record vaccinations' });
+     }
     
     console.log(`[PetVax] Recording vaccination for pet ${petId} with SPL token...`);
     
