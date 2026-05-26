@@ -181,13 +181,13 @@ router.post('/create-plan', express.json(), async (req, res) => {
      });
      transaction.add(memoInstruction);
 
-     // Set transaction properties
-     const latestBlockhash = await connection.getLatestBlockhash();
-     transaction.recentBlockhash = latestBlockhash.blockhash;
-     transaction.feePayer = new web3.PublicKey(ownerAddress);
+      // Set transaction properties
+      const latestBlockhash = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = latestBlockhash.blockhash;
+      transaction.feePayer = payer.publicKey;  // Backend payer signs and pays
 
-     // Sign and send transaction
-     transaction.sign(payer);
+      // Sign and send transaction
+      transaction.sign(payer);
      let memoTxSignature;
      try {
        memoTxSignature = await connection.sendRawTransaction(transaction.serialize());
@@ -344,15 +344,15 @@ router.post('/feed', express.json(), async (req, res) => {
     });
     transaction.add(memoInstruction);
 
-    // Set transaction properties
-    const latestBlockhash = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = latestBlockhash.blockhash;
-    transaction.feePayer = new web3.PublicKey(userAddress);
+     // Set transaction properties
+     const latestBlockhash = await connection.getLatestBlockhash();
+     transaction.recentBlockhash = latestBlockhash.blockhash;
+     transaction.feePayer = payer.publicKey;  // Backend payer signs and pays
 
-    console.log('[PetDiet] Transaction prepared for signing');
+     console.log('[PetDiet] Transaction prepared for signing');
 
-    // Sign transaction with payer
-    transaction.sign(payer);
+     // Sign transaction with payer
+     transaction.sign(payer);
     const signature = transaction.signature?.toString() || Buffer.from(transaction.signatures[0].signature || '').toString('hex');
 
     // Send transaction
