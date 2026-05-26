@@ -411,11 +411,11 @@
 
               
              <!-- Pet Details Modal -->
-             <div x-show="showPetDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showPetDetailsModal = false">
+             <div x-show="showPetDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showPetDetailsModal = false" x-effect="if (showPetDetailsModal && !petDetailsVaccinations.length) { loadPetDetailsVaccinations() }">
                  <div class="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                      <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
                          <h2 class="text-2xl font-bold" x-text="selectedPetForDetails?.name + ' - ' + selectedPetForDetails?.species"></h2>
-                         <button @click="showPetDetailsModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                         <button @click="showPetDetailsModal = false; petDetailsVaccinations = [];" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
                      </div>
                      <div class="p-6 space-y-6" x-show="selectedPetForDetails">
                          <!-- Pet Information -->
@@ -942,21 +942,9 @@
                         if (response.ok) {
                             const pet = await response.json();
                             this.selectedPetForDetails = pet;
+                            this.petDetailsVaccinations = [];
                             
-                            // Load vaccinations for this pet
-                            try {
-                                const vaxResponse = await fetch(`/api/v1/petvax/list?petId=${id}`);
-                                if (vaxResponse.ok) {
-                                    this.petDetailsVaccinations = await vaxResponse.json();
-                                } else {
-                                    this.petDetailsVaccinations = [];
-                                }
-                            } catch (error) {
-                                console.error('Error loading vaccinations:', error);
-                                this.petDetailsVaccinations = [];
-                            }
-                            
-                            // Show modal
+                            // Show modal first (without vaccinations - lazy load)
                             this.showPetDetailsModal = true;
                         } else {
                             const error = await response.json();
@@ -965,6 +953,26 @@
                     } catch (error) {
                         console.error('Error loading pet:', error);
                         alert('Error loading pet: ' + error.message);
+                    }
+                },
+                
+                // Load vaccinations for the pet details modal (lazy-loaded)
+                async loadPetDetailsVaccinations() {
+                    if (!this.selectedPetForDetails?.id) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/v1/petvax/pet?petId=${this.selectedPetForDetails.id}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.petDetailsVaccinations = data.vaccinations || [];
+                        } else {
+                            this.petDetailsVaccinations = [];
+                        }
+                    } catch (error) {
+                        console.error('Error loading vaccinations:', error);
+                        this.petDetailsVaccinations = [];
                     }
                 },
                 
