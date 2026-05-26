@@ -496,17 +496,15 @@
 
                 async connectPhantom() {
                     try {
-                        if (!window.phantom?.solana?.isConnected) {
-                            window.open('https://phantom.app/', '_blank');
+                        if (!window.solana) {
+                            alert('Phantom wallet not installed. Please install it from https://phantom.app');
                             return;
                         }
 
-                        const solana = window.phantom.solana;
-                        solana.connect().then(response => {
-                            this.userAddress = response.publicKey.toString();
-                            this.showWalletModal = false;
-                            this.loadPets();
-                        });
+                        const response = await window.solana.connect();
+                        this.userAddress = response.publicKey.toString();
+                        this.showWalletModal = false;
+                        this.loadPets();
                     } catch (error) {
                         console.error('Error connecting Phantom:', error);
                         alert('Failed to connect Phantom wallet');
@@ -845,8 +843,8 @@
 
                 init() {
                     // Check for Phantom wallet on load
-                    if (window.phantom?.solana?.isConnected) {
-                        this.userAddress = window.phantom.solana.publicKey.toString();
+                    if (window.solana?.isConnected) {
+                        this.userAddress = window.solana.publicKey.toString();
                         this.loadPets();
                     }
                 }
