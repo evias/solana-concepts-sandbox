@@ -267,6 +267,35 @@ const petDb = {
       console.error(`Failed to parse authorizedVets for pet ${petId}:`, error);
       return [];
     }
+  },
+  
+  // Check if a vet address is authorized for a pet
+  isVetAuthorizedForPet(petId, vetAddress) {
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return false;
+    }
+    
+    // Vet is authorized if they are the owner or in the authorizedVets list
+    if (pet.owner === vetAddress) {
+      return true;
+    }
+    
+    try {
+      const authorizedVets = JSON.parse(pet.authorizedVets || '[]');
+      // Handle both string addresses and object format for vets
+      return authorizedVets.some(vet => {
+        if (typeof vet === 'string') {
+          return vet === vetAddress;
+        } else if (typeof vet === 'object' && vet.address) {
+          return vet.address === vetAddress;
+        }
+        return false;
+      });
+    } catch (error) {
+      console.error(`Failed to parse authorizedVets for pet ${petId}:`, error);
+      return false;
+    }
   }
 };
 
