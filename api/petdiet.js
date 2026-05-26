@@ -12,6 +12,9 @@ const connection = new web3.Connection(
   'confirmed'
 );
 
+// Memo program address
+const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+
 // GET /api/v1/petdiet/plans - Get nutrition plans for a pet
 router.get('/plans', async (req, res) => {
   try {
@@ -137,72 +140,122 @@ router.post('/create-plan', express.json(), async (req, res) => {
       1
     );
 
-    console.log(`[PetDiet] Token minted, signature:`, signature);
+     console.log(`[PetDiet] Token minted, signature:`, signature);
 
-    // Create nutrition plan record in database
-    const planId = 'diet_' + Date.now();
+     // Create memo transaction with nutrition plan details
+     console.log(`[PetDiet] Creating memo transaction with nutrition plan data...`);
+     const transaction = new web3.Transaction();
+     
+     // Create memo data with nutrition plan information
+     const memoData = JSON.stringify({
+       type: 'nutrition_plan',
+       planId: 'diet_' + Date.now(),
+       petId: petId,
+       petName: pet.name,
+       planName: planName,
+       startDate: startDate,
+       ingredientsMonday: ingredientsMonday || '',
+       ingredientsTuesday: ingredientsTuesday || '',
+       ingredientsWednesday: ingredientsWednesday || '',
+       ingredientsThursday: ingredientsThursday || '',
+       ingredientsFriday: ingredientsFriday || '',
+       ingredientsSaturday: ingredientsSaturday || '',
+       ingredientsSunday: ingredientsSunday || '',
+       duration: duration,
+       durationEndDate: durationEndDate,
+       authorizedNutritioner: authorizedNutritioner || null,
+       mintAddress: mintAddress,
+       recordedAt: new Date().toISOString()
+     });
 
-    try {
-      // Auto-fill empty ingredient days with the last filled day's ingredients
-      let lastFilledIngredients = '';
-      const filledIngredients = [
-        ingredientsMonday || null,
-        ingredientsTuesday || null,
-        ingredientsWednesday || null,
-        ingredientsThursday || null,
-        ingredientsFriday || null,
-        ingredientsSaturday || null,
-        ingredientsSunday || null
-      ];
+     console.log('[PetDiet] Memo data:', memoData);
 
-      for (let i = filledIngredients.length - 1; i >= 0; i--) {
-        if (filledIngredients[i]) {
-          lastFilledIngredients = filledIngredients[i];
-          break;
-        }
-      }
+     // Create memo instruction
+     const memoInstruction = new web3.TransactionInstruction({
+       programId: MEMO_PROGRAM_ID,
+       keys: [],
+       data: Buffer.from(memoData, 'utf8')
+     });
+     transaction.add(memoInstruction);
 
-      const plan = nutritionPlanDb.createNutritionPlan({
-        id: planId,
-        petId: petId,
-        planName: planName,
-        startDate: startDate,
-        ingredientsMonday: ingredientsMonday || lastFilledIngredients,
-        ingredientsTuesday: ingredientsTuesday || lastFilledIngredients,
-        ingredientsWednesday: ingredientsWednesday || lastFilledIngredients,
-        ingredientsThursday: ingredientsThursday || lastFilledIngredients,
-        ingredientsFriday: ingredientsFriday || lastFilledIngredients,
-        ingredientsSaturday: ingredientsSaturday || lastFilledIngredients,
-        ingredientsSunday: ingredientsSunday || lastFilledIngredients,
-        duration: duration,
-        durationEndDate: durationEndDate,
-        authorizedNutritioner: authorizedNutritioner || null,
-        mintAddress: mintAddress,
-        transactionSignature: signature,
-        transactionHash: signature
-      });
+     // Set transaction properties
+     const latestBlockhash = await connection.getLatestBlockhash();
+     transaction.recentBlockhash = latestBlockhash.blockhash;
+     transaction.feePayer = new web3.PublicKey(ownerAddress);
+
+     // Sign and send transaction
+     transaction.sign(payer);
+     const memoTxSignature = await connection.sendRawTransaction(transaction.serialize());
+     
+     // Wait for confirmation
+     await connection.confirmTransaction(memoTxSignature, 'confirmed');
+     console.log(`[PetDiet] Memo transaction confirmed:`, memoTxSignature);
+
+     // Create nutrition plan record in database
+     const planId = 'diet_' + Date.now();
+
+     try {
+       // Auto-fill empty ingredient days with the last filled day's ingredients
+       let lastFilledIngredients = '';
+       const filledIngredients = [
+         ingredientsMonday || null,
+         ingredientsTuesday || null,
+         ingredientsWednesday || null,
+         ingredientsThursday || null,
+         ingredientsFriday || null,
+         ingredientsSaturday || null,
+         ingredientsSunday || null
+       ];
+
+       for (let i = filledIngredients.length - 1; i >= 0; i--) {
+         if (filledIngredients[i]) {
+           lastFilledIngredients = filledIngredients[i];
+           break;
+         }
+       }
+
+       const plan = nutritionPlanDb.createNutritionPlan({
+         id: planId,
+         petId: petId,
+         planName: planName,
+         startDate: startDate,
+         ingredientsMonday: ingredientsMonday || lastFilledIngredients,
+         ingredientsTuesday: ingredientsTuesday || lastFilledIngredients,
+         ingredientsWednesday: ingredientsWednesday || lastFilledIngredients,
+         ingredientsThursday: ingredientsThursday || lastFilledIngredients,
+         ingredientsFriday: ingredientsFriday || lastFilledIngredients,
+         ingredientsSaturday: ingredientsSaturday || lastFilledIngredients,
+         ingredientsSunday: ingredientsSunday || lastFilledIngredients,
+         duration: duration,
+         durationEndDate: durationEndDate,
+         authorizedNutritioner: authorizedNutritioner || null,
+         mintAddress: mintAddress,
+         transactionSignature: signature,
+         transactionHash: memoTxSignature  // Memo transaction with plan data
+       });
 
       console.log(`[PetDiet] Nutrition plan created:`, planId);
 
-      res.json({
-        success: true,
-        plan: plan,
-        message: 'Nutrition plan created with SPL token',
-        onChain: {
-          mint: mintAddress,
-          tokenAccount: tokenAccount,
-          transactionSignature: signature
-        },
-        metadata: {
-          petId: pet.id,
-          petName: pet.name,
-          planName: planName,
-          onChainProof: true,
-          transactionSignature: signature,
-          transactionHash: signature,
-          solscanUrl: `https://solscan.io/tx/${signature}?cluster=devnet`
-        }
-      });
+       res.json({
+         success: true,
+         plan: plan,
+         message: 'Nutrition plan created with SPL token and on-chain memo',
+         onChain: {
+           mint: mintAddress,
+           tokenAccount: tokenAccount,
+           tokenTransactionSignature: signature,
+           memoTransactionSignature: memoTxSignature
+         },
+         metadata: {
+           petId: pet.id,
+           petName: pet.name,
+           planName: planName,
+           onChainProof: true,
+           mintAddress: mintAddress,
+           transactionHash: memoTxSignature,
+           solscanUrl: `https://solscan.io/tx/${memoTxSignature}?cluster=devnet`
+         }
+       });
     } catch (error) {
       if (error.message.includes('Pet not found')) {
         return res.status(404).json({ error: 'Pet not found' });
