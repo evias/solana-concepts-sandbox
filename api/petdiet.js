@@ -175,7 +175,7 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
       // Add compute budget instruction to increase units for large memo
       const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
-      const computeUnits = 100000;  // Request 100k compute units
+      const computeUnits = 400000;  // Request 400k compute units (larger than default 200k)
       const computeUnitsBuffer = Buffer.alloc(4);
       computeUnitsBuffer.writeUInt32LE(computeUnits, 0);
       
@@ -354,7 +354,7 @@ router.post('/feed', express.json(), async (req, res) => {
 
      // Add compute budget instruction to increase units for large memo
      const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
-     const computeUnits = 100000;  // Request 100k compute units
+     const computeUnits = 400000;  // Request 400k compute units (larger than default 200k)
      const computeUnitsBuffer = Buffer.alloc(4);
      computeUnitsBuffer.writeUInt32LE(computeUnits, 0);
      
