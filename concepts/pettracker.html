@@ -165,7 +165,8 @@
                                     <span x-show="pet.mandate_authority !== ownerAddress" x-text="`Managed by: ${pet.mandate_authority.substring(0, 6)}...${pet.mandate_authority.substring(pet.mandate_authority.length - 4)}`"></span>
                                 </p>
                                 <p x-show="pet.mint_address" class="text-gray-500 text-xs font-mono break-all mt-2 bg-gray-100 p-2 rounded">
-                                    <span class="font-semibold">Mint:</span> <span x-text="pet.mint_address"></span>
+                                    <span class="font-semibold">Mint:</span> 
+                                    <a :href="`https://solscan.io/token/${pet.mint_address}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" x-text="pet.mint_address"></a>
                                 </p>
                                 
                                 <!-- Authorized Vets Section -->
@@ -174,8 +175,14 @@
                                         <div>
                                             <span class="text-sm font-semibold text-green-700">✓ Veterinaries Authorized:</span>
                                             <div class="text-xs text-gray-700 mt-1">
-                                                <template x-for="vet in JSON.parse(pet.authorizedVets || '[]')" :key="vet">
-                                                    <div class="flex items-center gap-1" x-text="`• ${vet.substring(0, 6)}...${vet.slice(-4)}`"></div>
+                                                <template x-for="vetItem in parseVetAuthorizations(pet.authorizedVets)" :key="vetItem.address">
+                                                    <div class="flex items-center gap-1 flex-wrap">
+                                                        <a :href="`https://solscan.io/account/${vetItem.address}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" x-text="`• ${vetItem.address.substring(0, 6)}...${vetItem.address.slice(-4)}`"></a>
+                                                        <template x-if="vetItem.transactionHash">
+                                                            <span>-</span>
+                                                            <a :href="`https://solscan.io/tx/${vetItem.transactionHash}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" title="View authorization transaction">Tx</a>
+                                                        </template>
+                                                    </div>
                                                 </template>
                                             </div>
                                         </div>
@@ -320,35 +327,35 @@
                          </select>
                      </div>
 
-                     <!-- Vet Address Input -->
-                     <div>
-                         <label class="block text-sm font-medium text-gray-700 mb-2">Veterinary Solana Address *</label>
-                         <input 
-                             type="text"
-                             x-model="newVetAddress"
-                             placeholder="e.g., VetSolanaAddressHere..."
-                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                         />
-                         <p class="text-xs text-gray-500 mt-1">Enter the vet's Solana wallet address (32-44 characters, base58 encoded)</p>
-                     </div>
+                      <!-- Vet Address Input -->
+                      <div>
+                          <label class="block text-sm font-medium text-gray-700 mb-2">Veterinary Solana Address *</label>
+                          <input 
+                              type="text"
+                              x-model="newVetAddress"
+                              placeholder="e.g.: Eu1ZYNxv4wVWZtoHtJw4bncmKDQxL9RdYJLAHr6H1H55"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                          />
+                          <p class="text-xs text-gray-500 mt-1">Enter the vet's Solana wallet address (32-44 characters, base58 encoded)</p>
+                      </div>
 
-                     <!-- Authorized Vets List (for selected pet) -->
-                     <div class="p-3 bg-white rounded border border-gray-200">
-                         <label class="font-semibold block mb-2">Authorized Veterinaries:</label>
-                         <template x-if="getAuthorizedVets(selectedPetForVetAuth).length > 0">
-                             <ul class="space-y-2">
-                                 <template x-for="vet in getAuthorizedVets(selectedPetForVetAuth)" :key="vet">
-                                     <li class="text-sm bg-green-50 p-2 rounded flex justify-between items-center">
-                                         <span class="font-mono" x-text="`${vet.substring(0, 6)}...${vet.slice(-4)}`"></span>
-                                         <span class="text-xs text-green-700">✓ Authorized</span>
-                                     </li>
-                                 </template>
-                             </ul>
-                         </template>
-                         <template x-if="getAuthorizedVets(selectedPetForVetAuth).length === 0">
-                             <p class="text-gray-500 text-sm italic">No veterinaries authorized yet for this pet</p>
-                         </template>
-                     </div>
+                      <!-- Authorized Vets List (for selected pet) -->
+                      <div class="p-3 bg-white rounded border border-gray-200">
+                          <label class="font-semibold block mb-2">Authorized Veterinaries:</label>
+                          <template x-if="getAuthorizedVets(selectedPetForVetAuth).length > 0">
+                              <ul class="space-y-2">
+                                  <template x-for="vet in getAuthorizedVets(selectedPetForVetAuth)" :key="vet">
+                                      <li class="text-sm bg-green-50 p-2 rounded flex justify-between items-center">
+                                          <a :href="`https://solscan.io/account/${vet}?cluster=devnet`" target="_blank" class="font-mono text-blue-600 hover:text-blue-800 underline break-all flex-1" x-text="vet"></a>
+                                          <span class="text-xs text-green-700 ml-2">✓ Authorized</span>
+                                      </li>
+                                  </template>
+                              </ul>
+                          </template>
+                          <template x-if="getAuthorizedVets(selectedPetForVetAuth).length === 0">
+                              <p class="text-gray-500 text-sm italic">No veterinaries authorized yet for this pet</p>
+                          </template>
+                      </div>
 
                      <!-- Submit Button -->
                      <div class="flex gap-2">
@@ -362,42 +369,192 @@
                          </button>
                      </div>
 
-                       <!-- Error/Success Message -->
-                       <template x-if="vetAuthMessage">
-                           <div 
-                               :class="vetAuthMessage.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'"
-                               class="p-3 rounded border space-y-2">
-                               <template x-if="vetAuthMessage.isHtml">
-                                   <p x-html="vetAuthMessage.text"></p>
-                               </template>
-                               <template x-if="!vetAuthMessage.isHtml">
-                                   <p x-text="vetAuthMessage.text"></p>
-                               </template>
-                               
-                               <!-- Credential details for success messages -->
-                               <template x-if="vetAuthMessage.credential">
-                                   <div class="mt-3 pt-3 border-t border-current text-sm space-y-1">
-                                       <p><strong>Credential Address:</strong></p>
-                                       <p class="font-mono break-all text-xs" x-text="vetAuthMessage.credential.address"></p>
-                                       <p class="mt-2"><strong>Authorized Vets:</strong></p>
-                                       <template x-for="vet in vetAuthMessage.credential.authorizedSigners" :key="vet">
-                                           <div class="font-mono text-xs break-all" x-text="`• ${vet}`"></div>
-                                       </template>
-                                       <a 
-                                           :href="`https://solscan.io/address/${vetAuthMessage.credential.address}?cluster=devnet`"
-                                           target="_blank"
-                                           class="inline-block mt-2 text-xs underline hover:opacity-70">
-                                           View on Solscan →
-                                       </a>
-                                   </div>
-                               </template>
-                           </div>
-                       </template>
-                 </form>
-             </section>
+                        <!-- Error/Success Message -->
+                        <template x-if="vetAuthMessage">
+                            <div 
+                                :class="vetAuthMessage.type === 'success' ? 'bg-orange-50 border-orange-200 text-orange-800' : 'bg-red-50 border-red-200 text-red-800'"
+                                class="p-3 rounded border space-y-2 relative">
+                                <button 
+                                    type="button"
+                                    @click="vetAuthMessage = null"
+                                    class="absolute top-2 right-2 text-xl hover:opacity-70">
+                                    ✕
+                                </button>
+                                <template x-if="vetAuthMessage.isHtml">
+                                    <p x-html="vetAuthMessage.text" class="pr-6"></p>
+                                </template>
+                                <template x-if="!vetAuthMessage.isHtml">
+                                    <p x-text="vetAuthMessage.text" class="pr-6"></p>
+                                </template>
+                                
+                                <!-- Credential details for success messages -->
+                                <template x-if="vetAuthMessage.credential">
+                                    <div class="mt-3 pt-3 border-t border-current text-sm space-y-1">
+                                        <p><strong>Credential Address:</strong></p>
+                                        <p class="font-mono break-all text-xs" x-text="vetAuthMessage.credential.address"></p>
+                                        <p class="mt-2"><strong>Authorized Vets:</strong></p>
+                                        <template x-for="vet in vetAuthMessage.credential.authorizedSigners" :key="vet">
+                                            <div class="font-mono text-xs break-all" x-text="`• ${vet}`"></div>
+                                        </template>
+                                        <a 
+                                            :href="`https://solscan.io/address/${vetAuthMessage.credential.address}?cluster=devnet`"
+                                            target="_blank"
+                                            class="inline-block mt-2 text-xs underline hover:opacity-70">
+                                            View on Solscan →
+                                        </a>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                  </form>
+              </section>
 
-             
-            <!-- Wallet Modal -->
+              
+             <!-- Pet Details Modal -->
+             <div x-show="showPetDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showPetDetailsModal = false">
+                 <div class="bg-white rounded-lg shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                     <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                         <h2 class="text-2xl font-bold" x-text="selectedPetForDetails?.name + ' - ' + selectedPetForDetails?.species"></h2>
+                         <button @click="showPetDetailsModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                     </div>
+                     <div class="p-6 space-y-6" x-show="selectedPetForDetails">
+                         <!-- Pet Information -->
+                         <div class="space-y-3">
+                             <h3 class="text-lg font-semibold text-gray-800">Pet Information</h3>
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-gray-50 p-4 rounded">
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Name</label>
+                                     <p class="text-gray-900" x-text="selectedPetForDetails?.name"></p>
+                                 </div>
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Species</label>
+                                     <p class="text-gray-900" x-text="selectedPetForDetails?.species"></p>
+                                 </div>
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Breed</label>
+                                     <p class="text-gray-900" x-text="selectedPetForDetails?.breed || 'Unknown'"></p>
+                                 </div>
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Age</label>
+                                     <p class="text-gray-900" x-text="selectedPetForDetails?.age || 'Unknown'"></p>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Ownership Information -->
+                         <div class="space-y-3">
+                             <h3 class="text-lg font-semibold text-gray-800">Ownership Information</h3>
+                             <div class="space-y-3 bg-gray-50 p-4 rounded">
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Owner</label>
+                                     <p class="text-gray-900 font-mono break-all text-sm" x-text="selectedPetForDetails?.owner"></p>
+                                 </div>
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Mandate Authority</label>
+                                     <p class="text-gray-900 font-mono break-all text-sm" x-text="selectedPetForDetails?.mandate_authority"></p>
+                                 </div>
+                                 <div>
+                                     <label class="text-sm font-medium text-gray-700">Your Status</label>
+                                     <p class="text-gray-900" x-text="getPetAccessStatus()"></p>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Blockchain Information -->
+                         <div class="space-y-3">
+                             <h3 class="text-lg font-semibold text-gray-800">Blockchain Information</h3>
+                             <div class="space-y-3 bg-gray-50 p-4 rounded">
+                                 <div x-show="selectedPetForDetails?.mint_address">
+                                     <label class="text-sm font-medium text-gray-700">Token Mint Address</label>
+                                     <p class="text-gray-900 font-mono break-all text-sm">
+                                         <a :href="`https://solscan.io/token/${selectedPetForDetails?.mint_address}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" x-text="selectedPetForDetails?.mint_address"></a>
+                                     </p>
+                                 </div>
+                                 <div x-show="selectedPetForDetails?.token_account">
+                                     <label class="text-sm font-medium text-gray-700">Token Account</label>
+                                     <p class="text-gray-900 font-mono break-all text-sm">
+                                         <a :href="`https://solscan.io/account/${selectedPetForDetails?.token_account}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" x-text="selectedPetForDetails?.token_account"></a>
+                                     </p>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Authorized Veterinaries -->
+                         <div class="space-y-3">
+                             <h3 class="text-lg font-semibold text-gray-800">Authorized Veterinaries</h3>
+                             <template x-if="(JSON.parse(selectedPetForDetails?.authorizedVets || '[]')).length > 0">
+                                 <div class="space-y-2 bg-green-50 p-4 rounded">
+                                     <template x-for="vetItem in parseVetAuthorizations(selectedPetForDetails?.authorizedVets)" :key="vetItem.address">
+                                         <div class="flex items-center gap-2 flex-wrap">
+                                             <span class="text-sm font-semibold text-green-700">✓</span>
+                                             <a :href="`https://solscan.io/account/${vetItem.address}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline font-mono text-xs break-all" x-text="vetItem.address"></a>
+                                             <template x-if="vetItem.transactionHash">
+                                                 <span class="text-xs text-gray-600">-</span>
+                                                 <a :href="`https://solscan.io/tx/${vetItem.transactionHash}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline text-xs" title="View authorization transaction">Tx</a>
+                                             </template>
+                                         </div>
+                                     </template>
+                                 </div>
+                             </template>
+                             <template x-if="(JSON.parse(selectedPetForDetails?.authorizedVets || '[]')).length === 0">
+                                 <p class="text-amber-600 text-sm font-semibold bg-amber-50 p-3 rounded">⚠️ No veterinary authorized yet</p>
+                             </template>
+                         </div>
+
+                         <!-- Vaccination History -->
+                         <div class="space-y-3">
+                             <h3 class="text-lg font-semibold text-gray-800">Vaccination History</h3>
+                             <template x-if="petDetailsVaccinations.length > 0">
+                                 <div class="bg-white border border-gray-200 rounded overflow-x-auto">
+                                     <table class="min-w-full border-collapse text-sm">
+                                         <thead class="bg-gray-100 border-b">
+                                             <tr>
+                                                 <th class="text-left px-3 py-2 font-semibold text-gray-700">Vaccine</th>
+                                                 <th class="text-left px-3 py-2 font-semibold text-gray-700">Date</th>
+                                                 <th class="text-left px-3 py-2 font-semibold text-gray-700">Type</th>
+                                                 <th class="text-left px-3 py-2 font-semibold text-gray-700">Vet Address</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody>
+                                             <template x-for="vax in petDetailsVaccinations" :key="vax.id">
+                                                 <tr class="border-b hover:bg-gray-50 transition-colors" :class="vax.transaction_hash ? 'bg-purple-50' : vax.transaction_signature ? 'bg-blue-50' : 'bg-green-50'">
+                                                     <td class="px-3 py-2 font-medium">
+                                                         <span x-show="vax.transaction_hash">✙</span>
+                                                         <span x-show="vax.transaction_signature && !vax.transaction_hash">💉</span>
+                                                         <span x-text="vax.vaccine_name"></span>
+                                                     </td>
+                                                     <td class="px-3 py-2 text-xs" x-text="new Date(vax.vaccination_date).toLocaleDateString()"></td>
+                                                     <td class="px-3 py-2">
+                                                         <span x-show="vax.transaction_hash" class="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">⛓ Token</span>
+                                                         <span x-show="vax.transaction_signature && !vax.transaction_hash" class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">📝 Signed</span>
+                                                     </td>
+                                                     <td class="px-3 py-2 font-mono text-xs text-gray-600 break-all">
+                                                         <a :href="`https://solscan.io/account/${vax.vet_address}?cluster=devnet`" target="_blank" class="text-blue-600 hover:text-blue-800 underline" x-text="vax.vet_address.substring(0, 6) + '...' + vax.vet_address.substring(vax.vet_address.length - 4)"></a>
+                                                     </td>
+                                                 </tr>
+                                             </template>
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </template>
+                             <template x-if="petDetailsVaccinations.length === 0">
+                                 <p class="text-gray-500 text-sm italic bg-gray-50 p-3 rounded">No vaccination records yet</p>
+                             </template>
+                         </div>
+
+                         <!-- Timestamps -->
+                         <div class="space-y-3 border-t pt-4">
+                             <h3 class="text-sm font-semibold text-gray-800">Record Information</h3>
+                             <div class="text-xs text-gray-600 space-y-1 bg-gray-50 p-3 rounded">
+                                 <p>Created: <span x-text="new Date(selectedPetForDetails?.created_at).toLocaleDateString('en-US', {weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})"></span></p>
+                                 <p>Updated: <span x-text="new Date(selectedPetForDetails?.updated_at).toLocaleDateString('en-US', {weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'})"></span></p>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+
+             <!-- Wallet Modal -->
             <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showWalletModal = false">
                 <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
                     <h3 class="text-xl font-bold mb-4">Select a Wallet</h3>
@@ -498,11 +655,16 @@
                  availableWallets: [],
                  documentationContent: '',
                  
-                 // Veterinary authorization
-                 selectedPetForVetAuth: '',
-                 newVetAddress: '',
-                 isAuthorizingVet: false,
-                 vetAuthMessage: null,
+                  // Veterinary authorization
+                  selectedPetForVetAuth: '',
+                  newVetAddress: '',
+                  isAuthorizingVet: false,
+                  vetAuthMessage: null,
+                  
+                  // Pet Details Modal
+                  showPetDetailsModal: false,
+                  selectedPetForDetails: null,
+                  petDetailsVaccinations: [],
                  
                 async init() {
                     await this.detectWallets();
@@ -779,11 +941,23 @@
                         const response = await fetch(`/api/v1/pettracker/get?id=${id}`);
                         if (response.ok) {
                             const pet = await response.json();
-                            const isOwner = pet.owner === this.ownerAddress;
-                            const hasMandate = pet.mandate_authority === this.ownerAddress;
-                            const mandateStatus = isOwner ? 'Owner (full control)' : hasMandate ? 'Authorized to manage' : 'View-only (not authorized)';
+                            this.selectedPetForDetails = pet;
                             
-                            alert(`Pet Details:\nName: ${pet.name}\nSpecies: ${pet.species}\nBreed: ${pet.breed || 'N/A'}\nAge: ${pet.age || 'N/A'}\n\nOwner: ${pet.owner}\nMandate Authority: ${pet.mandate_authority}\nYour Status: ${mandateStatus}`);
+                            // Load vaccinations for this pet
+                            try {
+                                const vaxResponse = await fetch(`/api/v1/petvax/list?petId=${id}`);
+                                if (vaxResponse.ok) {
+                                    this.petDetailsVaccinations = await vaxResponse.json();
+                                } else {
+                                    this.petDetailsVaccinations = [];
+                                }
+                            } catch (error) {
+                                console.error('Error loading vaccinations:', error);
+                                this.petDetailsVaccinations = [];
+                            }
+                            
+                            // Show modal
+                            this.showPetDetailsModal = true;
                         } else {
                             const error = await response.json();
                             alert('Failed to load pet: ' + error.error);
@@ -860,6 +1034,43 @@
                     }
                 },
                 
+                // Parse vet authorizations to handle both string and object formats
+                parseVetAuthorizations(authorizedVetsJson) {
+                    try {
+                        const vets = JSON.parse(authorizedVetsJson || '[]');
+                        return vets.map(vet => {
+                            // Handle both string format (address only) and object format
+                            if (typeof vet === 'string') {
+                                return { address: vet, transactionHash: null };
+                            } else if (typeof vet === 'object' && vet.address) {
+                                return { address: vet.address, transactionHash: vet.transactionHash || null };
+                            } else {
+                                return { address: String(vet), transactionHash: null };
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Failed to parse authorized vets:', error);
+                        return [];
+                    }
+                },
+                
+                // Get pet access status for the current user
+                getPetAccessStatus() {
+                    if (!this.selectedPetForDetails) {
+                        return 'Unknown';
+                    }
+                    const isOwner = this.selectedPetForDetails.owner === this.ownerAddress;
+                    const hasMandate = this.selectedPetForDetails.mandate_authority === this.ownerAddress;
+                    
+                    if (isOwner) {
+                        return 'Owner (full control)';
+                    } else if (hasMandate) {
+                        return 'Authorized to manage';
+                    } else {
+                        return 'View-only (not authorized)';
+                    }
+                },
+                
                 // Submit veterinary authorization
                 async submitAuthorizeVet() {
                     if (!this.ownerAddress) {
@@ -930,11 +1141,6 @@
                                 isHtml: true,
                                 credential: data.sasCredential
                             };
-                            
-                            // Clear message after 3 seconds
-                            setTimeout(() => {
-                                this.vetAuthMessage = null;
-                            }, 3000);
                         } else {
                             this.vetAuthMessage = {
                                 type: 'error',
