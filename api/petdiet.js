@@ -142,6 +142,9 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
      console.log(`[PetDiet] Token minted, signature:`, signature);
 
+     // Create nutrition plan ID upfront so we can use it in memo
+     const planId = 'diet_' + Date.now();
+
      // Create memo transaction with nutrition plan details
      console.log(`[PetDiet] Creating memo transaction with nutrition plan data...`);
      const transaction = new web3.Transaction();
@@ -149,7 +152,7 @@ router.post('/create-plan', express.json(), async (req, res) => {
      // Create memo data with nutrition plan information
      const memoData = JSON.stringify({
        type: 'nutrition_plan',
-       planId: 'diet_' + Date.now(),
+       planId: planId,
        petId: petId,
        petName: pet.name,
        planName: planName,
@@ -185,16 +188,20 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
      // Sign and send transaction
      transaction.sign(payer);
-     const memoTxSignature = await connection.sendRawTransaction(transaction.serialize());
-     
-     // Wait for confirmation
-     await connection.confirmTransaction(memoTxSignature, 'confirmed');
-     console.log(`[PetDiet] Memo transaction confirmed:`, memoTxSignature);
-
-     // Create nutrition plan record in database
-     const planId = 'diet_' + Date.now();
-
+     let memoTxSignature;
      try {
+       memoTxSignature = await connection.sendRawTransaction(transaction.serialize());
+       
+       // Wait for confirmation
+       await connection.confirmTransaction(memoTxSignature, 'confirmed');
+       console.log(`[PetDiet] Memo transaction confirmed:`, memoTxSignature);
+     } catch (memoError) {
+       console.error(`[PetDiet] Error creating memo transaction:`, memoError.message);
+       console.error(`[PetDiet] Will fall back to using token signature`);
+       memoTxSignature = signature; // Fallback to token signature if memo fails
+     }
+
+      try {
        // Auto-fill empty ingredient days with the last filled day's ingredients
        let lastFilledIngredients = '';
        const filledIngredients = [
