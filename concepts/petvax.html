@@ -296,17 +296,17 @@
                              Hash: <span x-text="transactionHash.substring(0, 40) + '...'"></span>
                          </p>
                      </div>
-                     <button 
-                         type="submit" 
-                         :disabled="!selectedPetId || !userAddress || (!!signingStatus && signingStatus.length > 0)"
-                         :class="(!selectedPetId || !userAddress || (!!signingStatus && signingStatus.length > 0)) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
-                         class="bg-green-600 text-white px-4 py-2 rounded-md">
-                             <span x-show="!signingStatus || signingStatus.length == 0">Record Vaccination with On-Chain Proof</span>
-                         <span x-show="signingStatus === 'signing'">Signing...</span>
-                         <span x-show="signingStatus === 'signed'">Submitting Transaction...</span>
-                         <span x-show="signingStatus === 'submitted'">Confirming...</span>
-                         <span x-show="signingStatus === 'confirmed'">Transaction Confirmed!</span>
-                     </button>
+                      <button 
+                          type="submit" 
+                          :disabled="!selectedPetId || !userAddress || !vaccinationForm.vaccineName || !vaccinationForm.vaccinationDate || !vaccinationForm.vetAddress || (!!signingStatus && signingStatus.length > 0)"
+                          :class="(!selectedPetId || !userAddress || !vaccinationForm.vaccineName || !vaccinationForm.vaccinationDate || !vaccinationForm.vetAddress || (!!signingStatus && signingStatus.length > 0)) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'"
+                          class="bg-green-600 text-white px-4 py-2 rounded-md">
+                              <span x-show="!signingStatus || signingStatus.length == 0">Record Vaccination with On-Chain Proof</span>
+                          <span x-show="signingStatus === 'signing'">Signing...</span>
+                          <span x-show="signingStatus === 'signed'">Submitting Transaction...</span>
+                          <span x-show="signingStatus === 'submitted'">Confirming...</span>
+                          <span x-show="signingStatus === 'confirmed'">Transaction Confirmed!</span>
+                      </button>
                 </form>
              </section>
 
@@ -677,7 +677,24 @@
                     try {
                         const response = await fetch('/api/v1/pettracker/list');
                         if (response.ok) {
-                            this.availablePets = await response.json();
+                            const allPets = await response.json();
+                            // Filter pets: only show pets that are owned or authorized for the current user
+                            this.availablePets = allPets.filter(pet => {
+                                // Include if user is the owner
+                                if (pet.owner === this.userAddress) {
+                                    return true;
+                                }
+                                // Include if user is an authorized veterinarian
+                                try {
+                                    const authorizedVets = JSON.parse(pet.authorizedVets || '[]');
+                                    const vets = authorizedVets.map(vet => 
+                                        typeof vet === 'string' ? vet : vet.address
+                                    );
+                                    return vets.includes(this.userAddress);
+                                } catch (error) {
+                                    return false;
+                                }
+                            });
                         } else {
                             alert('Failed to load pets');
                         }
