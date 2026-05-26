@@ -346,7 +346,8 @@ describe('PetDiet API Endpoints', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.onChain.mint).toBeDefined();
       expect(res.body.onChain.tokenAccount).toBeDefined();
-      expect(res.body.onChain.transactionSignature).toBeDefined();
+      expect(res.body.onChain.tokenTransactionSignature).toBeDefined();
+      expect(res.body.onChain.memoTransactionSignature).toBeDefined();
       expect(res.body.metadata.solscanUrl).toContain('solscan.io');
     });
   });
