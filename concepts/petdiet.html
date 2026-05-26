@@ -542,7 +542,7 @@
                     if (!this.userAddress) return;
 
                     try {
-                        const response = await fetch('/api/v1/pettracker/pets');
+                        const response = await fetch('/api/v1/pettracker/list');
                         const data = await response.json();
                         
                         this.availablePets = data.filter(pet => 
@@ -578,7 +578,7 @@
                     }
 
                     try {
-                        const response = await fetch(`/api/v1/pettracker/pets/${this.selectedPetId}`);
+                        const response = await fetch(`/api/v1/pettracker/get?id=${this.selectedPetId}`);
                         if (response.ok) {
                             this.selectedPet = await response.json();
                             await this.loadNutritionPlans();
