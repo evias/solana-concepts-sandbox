@@ -69,6 +69,57 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);
   `);
   
+  // Create nutrition_plans table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS nutrition_plans (
+      id TEXT PRIMARY KEY,
+      pet_id TEXT NOT NULL,
+      plan_name TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      ingredients_monday TEXT NOT NULL,
+      ingredients_tuesday TEXT NOT NULL,
+      ingredients_wednesday TEXT NOT NULL,
+      ingredients_thursday TEXT NOT NULL,
+      ingredients_friday TEXT NOT NULL,
+      ingredients_saturday TEXT NOT NULL,
+      ingredients_sunday TEXT NOT NULL,
+      duration TEXT NOT NULL,
+      duration_end_date TEXT NOT NULL,
+      authorized_nutritioner TEXT,
+      mint_address TEXT,
+      transaction_signature TEXT,
+      transaction_hash TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_diet_pet_id ON nutrition_plans(pet_id);
+    CREATE INDEX IF NOT EXISTS idx_diet_nutritioner ON nutrition_plans(authorized_nutritioner);
+    CREATE INDEX IF NOT EXISTS idx_diet_mint ON nutrition_plans(mint_address);
+  `);
+  
+  // Create feeding_actions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS feeding_actions (
+      id TEXT PRIMARY KEY,
+      nutrition_plan_id TEXT NOT NULL,
+      pet_id TEXT NOT NULL,
+      ingredients TEXT NOT NULL,
+      pet_signature TEXT NOT NULL,
+      transaction_signature TEXT,
+      transaction_hash TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (nutrition_plan_id) REFERENCES nutrition_plans(id) ON DELETE CASCADE,
+      FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_feeding_plan_id ON feeding_actions(nutrition_plan_id);
+    CREATE INDEX IF NOT EXISTS idx_feeding_pet_id ON feeding_actions(pet_id);
+    CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
+  `);
+  
   console.log('Database schema created at:', dbPath);
 }
 
@@ -374,5 +425,180 @@ const vaccinationDb = {
   }
 };
 
+// Nutrition plan database operations
+const nutritionPlanDb = {
+  // Create a new nutrition plan
+  createNutritionPlan(planData) {
+    const { 
+      id, 
+      petId, 
+      planName, 
+      startDate, 
+      ingredientsMonday, 
+      ingredientsTuesday, 
+      ingredientsWednesday, 
+      ingredientsThursday, 
+      ingredientsFriday, 
+      ingredientsSaturday, 
+      ingredientsSunday, 
+      duration, 
+      durationEndDate, 
+      authorizedNutritioner, 
+      mintAddress, 
+      transactionSignature, 
+      transactionHash 
+    } = planData;
+    const now = new Date().toISOString();
+    
+    // Verify pet exists
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      throw new Error(`Pet not found: ${petId}`);
+    }
+    
+    const stmt = db.prepare(`
+      INSERT INTO nutrition_plans (
+        id, pet_id, plan_name, start_date, ingredients_monday, ingredients_tuesday, 
+        ingredients_wednesday, ingredients_thursday, ingredients_friday, ingredients_saturday, 
+        ingredients_sunday, duration, duration_end_date, authorized_nutritioner, 
+        mint_address, transaction_signature, transaction_hash, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id, petId, planName, startDate, ingredientsMonday, ingredientsTuesday, 
+      ingredientsWednesday, ingredientsThursday, ingredientsFriday, ingredientsSaturday, 
+      ingredientsSunday, duration, durationEndDate, authorizedNutritioner || null, 
+      mintAddress, transactionSignature || null, transactionHash || null, now, now
+    );
+    
+    return nutritionPlanDb.getNutritionPlanById(id);
+  },
+  
+  // Get nutrition plan by ID
+  getNutritionPlanById(id) {
+    const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  // Get all nutrition plans for a pet
+  getNutritionPlansByPetId(petId) {
+    const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE pet_id = ? ORDER BY start_date DESC');
+    return stmt.all(petId);
+  },
+  
+  // Get nutrition plans by authorized nutritioner
+  getNutritionPlansByNutritioner(nutritionerAddress) {
+    const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE authorized_nutritioner = ? ORDER BY start_date DESC');
+    return stmt.all(nutritionerAddress);
+  },
+  
+  // Get ingredients for a specific day (day: 0=Monday, 1=Tuesday, ..., 6=Sunday)
+  getIngredientsForDay(planId, dayIndex) {
+    const plan = nutritionPlanDb.getNutritionPlanById(planId);
+    if (!plan) return null;
+    
+    const dayColumns = [
+      'ingredients_monday',
+      'ingredients_tuesday',
+      'ingredients_wednesday',
+      'ingredients_thursday',
+      'ingredients_friday',
+      'ingredients_saturday',
+      'ingredients_sunday'
+    ];
+    
+    return plan[dayColumns[dayIndex]] || null;
+  },
+  
+  // Get all ingredients for a plan (as array)
+  getAllIngredients(planId) {
+    const plan = nutritionPlanDb.getNutritionPlanById(planId);
+    if (!plan) return [];
+    
+    return [
+      plan.ingredients_monday,
+      plan.ingredients_tuesday,
+      plan.ingredients_wednesday,
+      plan.ingredients_thursday,
+      plan.ingredients_friday,
+      plan.ingredients_saturday,
+      plan.ingredients_sunday
+    ];
+  }
+};
+
+// Feeding action database operations
+const feedingActionDb = {
+  // Create a new feeding action
+  createFeedingAction(feedingData) {
+    const { 
+      id, 
+      nutritionPlanId, 
+      petId, 
+      ingredients, 
+      petSignature, 
+      transactionSignature, 
+      transactionHash 
+    } = feedingData;
+    const now = new Date().toISOString();
+    
+    // Verify nutrition plan exists
+    const plan = nutritionPlanDb.getNutritionPlanById(nutritionPlanId);
+    if (!plan) {
+      throw new Error(`Nutrition plan not found: ${nutritionPlanId}`);
+    }
+    
+    // Verify pet exists
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      throw new Error(`Pet not found: ${petId}`);
+    }
+    
+    // Verify plan is linked to pet
+    if (plan.pet_id !== petId) {
+      throw new Error(`Nutrition plan ${nutritionPlanId} not linked to pet ${petId}`);
+    }
+    
+    const stmt = db.prepare(`
+      INSERT INTO feeding_actions (
+        id, nutrition_plan_id, pet_id, ingredients, pet_signature, 
+        transaction_signature, transaction_hash, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id, nutritionPlanId, petId, ingredients, petSignature, 
+      transactionSignature || null, transactionHash || null, now, now
+    );
+    
+    return feedingActionDb.getFeedingActionById(id);
+  },
+  
+  // Get feeding action by ID
+  getFeedingActionById(id) {
+    const stmt = db.prepare('SELECT * FROM feeding_actions WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  // Get all feeding actions for a nutrition plan
+  getFeedingActionsByPlanId(nutritionPlanId) {
+    const stmt = db.prepare('SELECT * FROM feeding_actions WHERE nutrition_plan_id = ? ORDER BY created_at DESC');
+    return stmt.all(nutritionPlanId);
+  },
+  
+  // Get all feeding actions for a pet
+  getFeedingActionsByPetId(petId) {
+    const stmt = db.prepare('SELECT * FROM feeding_actions WHERE pet_id = ? ORDER BY created_at DESC');
+    return stmt.all(petId);
+  },
+  
+  // Get feeding action by transaction hash
+  getFeedingActionByTransactionHash(transactionHash) {
+    const stmt = db.prepare('SELECT * FROM feeding_actions WHERE transaction_hash = ?');
+    return stmt.get(transactionHash);
+  }
+};
+
 // Export database and helper functions (do NOT initialize on require)
-module.exports = { db, petDb, vaccinationDb, initializeDatabase, runMigrations };
+module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, initializeDatabase, runMigrations };

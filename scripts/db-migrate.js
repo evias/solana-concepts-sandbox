@@ -111,31 +111,107 @@ try {
       }
     },
     
-    // Migration 4: Update mint_address for existing vaccinations
-    {
-      name: 'Update mint_address for existing vaccinations from SPL token recording',
-      up: (db) => {
-        try {
-          // Update vaccination vax_1779533855468 with mint address
-          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
-            '9XoXMYBMYZs51w9EpyQt9aELMAGReLHZiuo3KYbFvxj',
-            'vax_1779533855468'
-          );
-          
-          // Update vaccination vax_1779448067318 with mint address
-          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
-            'CGNQGjhDyoSCsrv4RLbrVBdutHLX9xjqgzZsnEt1V1oa',
-            'vax_1779448067318'
-          );
-          
-          console.log('    ✓ Updated mint addresses for 2 vaccinations');
-          return true;
-        } catch (error) {
-          console.error('    Error updating mint addresses:', error.message);
-          throw error;
-        }
-      }
-    }
+     // Migration 4: Update mint_address for existing vaccinations
+     {
+       name: 'Update mint_address for existing vaccinations from SPL token recording',
+       up: (db) => {
+         try {
+           // Update vaccination vax_1779533855468 with mint address
+           db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+             '9XoXMYBMYZs51w9EpyQt9aELMAGReLHZiuo3KYbFvxj',
+             'vax_1779533855468'
+           );
+           
+           // Update vaccination vax_1779448067318 with mint address
+           db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+             'CGNQGjhDyoSCsrv4RLbrVBdutHLX9xjqgzZsnEt1V1oa',
+             'vax_1779448067318'
+           );
+           
+           console.log('    ✓ Updated mint addresses for 2 vaccinations');
+           return true;
+         } catch (error) {
+           console.error('    Error updating mint addresses:', error.message);
+           throw error;
+         }
+       }
+     },
+     
+     // Migration 5: Create nutrition_plans and feeding_actions tables
+     {
+       name: 'Create nutrition_plans and feeding_actions tables for PetDiet',
+       up: (db) => {
+         try {
+           // Check if tables already exist
+           const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+           const tableNames = tables.map(t => t.name);
+           
+           let created = false;
+           
+           if (!tableNames.includes('nutrition_plans')) {
+             db.exec(`
+               CREATE TABLE nutrition_plans (
+                 id TEXT PRIMARY KEY,
+                 pet_id TEXT NOT NULL,
+                 plan_name TEXT NOT NULL,
+                 start_date TEXT NOT NULL,
+                 ingredients_monday TEXT NOT NULL,
+                 ingredients_tuesday TEXT NOT NULL,
+                 ingredients_wednesday TEXT NOT NULL,
+                 ingredients_thursday TEXT NOT NULL,
+                 ingredients_friday TEXT NOT NULL,
+                 ingredients_saturday TEXT NOT NULL,
+                 ingredients_sunday TEXT NOT NULL,
+                 duration TEXT NOT NULL,
+                 duration_end_date TEXT NOT NULL,
+                 authorized_nutritioner TEXT,
+                 mint_address TEXT,
+                 transaction_signature TEXT,
+                 transaction_hash TEXT,
+                 created_at TEXT NOT NULL,
+                 updated_at TEXT NOT NULL,
+                 FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+               );
+               
+               CREATE INDEX IF NOT EXISTS idx_diet_pet_id ON nutrition_plans(pet_id);
+               CREATE INDEX IF NOT EXISTS idx_diet_nutritioner ON nutrition_plans(authorized_nutritioner);
+               CREATE INDEX IF NOT EXISTS idx_diet_mint ON nutrition_plans(mint_address);
+             `);
+             created = true;
+           }
+           
+           if (!tableNames.includes('feeding_actions')) {
+             db.exec(`
+               CREATE TABLE feeding_actions (
+                 id TEXT PRIMARY KEY,
+                 nutrition_plan_id TEXT NOT NULL,
+                 pet_id TEXT NOT NULL,
+                 ingredients TEXT NOT NULL,
+                 pet_signature TEXT NOT NULL,
+                 transaction_signature TEXT,
+                 transaction_hash TEXT,
+                 created_at TEXT NOT NULL,
+                 updated_at TEXT NOT NULL,
+                 FOREIGN KEY (nutrition_plan_id) REFERENCES nutrition_plans(id) ON DELETE CASCADE,
+                 FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+               );
+               
+               CREATE INDEX IF NOT EXISTS idx_feeding_plan_id ON feeding_actions(nutrition_plan_id);
+               CREATE INDEX IF NOT EXISTS idx_feeding_pet_id ON feeding_actions(pet_id);
+               CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
+             `);
+             created = true;
+           }
+           
+           return created;
+         } catch (error) {
+           if (error.message.includes('already exists')) {
+             return false;
+           }
+           throw error;
+         }
+       }
+     }
   ];
   
   console.log(`   Total migrations defined: ${migrations.length}`);
