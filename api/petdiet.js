@@ -217,7 +217,133 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
 // POST /api/v1/petdiet/feed - Record a feeding action
 router.post('/feed', express.json(), async (req, res) => {
-  res.status(501).json({ error: 'Not implemented yet' });
+  try {
+    const { 
+      nutritionPlanId,
+      petId,
+      ingredients,
+      userAddress,
+      petSignature
+    } = req.body;
+
+    if (!nutritionPlanId || !petId || !ingredients || !userAddress || !petSignature) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Validate Solana addresses
+    try {
+      new web3.PublicKey(userAddress);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid Solana address format' });
+    }
+
+    // Verify nutrition plan exists
+    const plan = nutritionPlanDb.getNutritionPlanById(nutritionPlanId);
+    if (!plan) {
+      return res.status(404).json({ error: 'Nutrition plan not found' });
+    }
+
+    // Verify pet exists
+    const pet = petDb.getPetById(petId);
+    if (!pet) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    // Verify plan is linked to pet
+    if (plan.pet_id !== petId) {
+      return res.status(400).json({ error: 'Nutrition plan is not linked to this pet' });
+    }
+
+    console.log(`[PetDiet] Recording feeding action for plan ${nutritionPlanId}...`);
+
+    // Create memo transaction for feeding action
+    console.log(`[PetDiet] Creating memo transaction...`);
+    
+    const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+    const transaction = new web3.Transaction();
+
+    // Create memo data with feeding information
+    const memoData = JSON.stringify({
+      type: 'feeding_action',
+      nutritionPlanId: nutritionPlanId,
+      petId: petId,
+      petName: pet.name,
+      ingredients: ingredients,
+      petSignature: petSignature,
+      recordedBy: userAddress,
+      recordedAt: new Date().toISOString()
+    });
+
+    console.log('[PetDiet] Memo data:', memoData);
+
+    // Create memo instruction
+    const memoInstruction = new web3.TransactionInstruction({
+      programId: MEMO_PROGRAM_ID,
+      keys: [],
+      data: Buffer.from(memoData, 'utf8')
+    });
+    transaction.add(memoInstruction);
+
+    // Set transaction properties
+    const latestBlockhash = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = latestBlockhash.blockhash;
+    transaction.feePayer = new web3.PublicKey(userAddress);
+
+    console.log('[PetDiet] Transaction prepared for signing');
+
+    // Sign transaction with payer
+    transaction.sign(payer);
+    const signature = transaction.signature?.toString() || Buffer.from(transaction.signatures[0].signature || '').toString('hex');
+
+    // Send transaction
+    console.log(`[PetDiet] Sending transaction...`);
+    const txSignature = await connection.sendRawTransaction(transaction.serialize());
+    
+    // Wait for confirmation
+    const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
+    console.log(`[PetDiet] Transaction confirmed:`, txSignature);
+
+    // Create feeding action record
+    const feedingActionId = 'action_' + Date.now();
+
+    try {
+      const feedingAction = feedingActionDb.createFeedingAction({
+        id: feedingActionId,
+        nutritionPlanId: nutritionPlanId,
+        petId: petId,
+        ingredients: ingredients,
+        petSignature: petSignature,
+        transactionSignature: txSignature,
+        transactionHash: txSignature
+      });
+
+      console.log(`[PetDiet] Feeding action recorded:`, feedingActionId);
+
+      res.json({
+        success: true,
+        feedingAction: feedingAction,
+        message: 'Feeding action recorded on-chain',
+        onChain: {
+          transactionSignature: txSignature
+        },
+        metadata: {
+          petId: pet.id,
+          petName: pet.name,
+          planId: nutritionPlanId,
+          transactionHash: txSignature,
+          solscanUrl: `https://solscan.io/tx/${txSignature}?cluster=devnet`
+        }
+      });
+    } catch (error) {
+      if (error.message.includes('Nutrition plan not found')) {
+        return res.status(404).json({ error: 'Nutrition plan not found' });
+      }
+      throw error;
+    }
+  } catch (error) {
+    console.error('[PetDiet] Error recording feeding action:', error);
+    res.status(500).json({ error: `Failed to record feeding action: ${error.message}` });
+  }
 });
 
 // GET /api/v1/petdiet/feeding-history - Get feeding actions for a nutrition plan
