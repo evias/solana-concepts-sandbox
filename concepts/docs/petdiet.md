@@ -1,257 +1,182 @@
-# PetDiet - Nutrition Plans & Feeding Logs
+# PetDiet - Manage Your Pet's Nutrition
 
-## Overview
+Create custom nutrition plans and track your pet's daily feeding with PetDiet, a decentralized nutrition management system for pets.
 
-PetDiet is a decentralized nutrition management system for pets, integrated with PetTracker. It enables pet owners to create customized nutrition plans and log daily feeding actions on-chain using Solana blockchain technology.
+## Getting Started
 
-Each nutrition plan is backed by an SPL token mint, and feeding actions are recorded as on-chain transactions with cryptographically verified signatures.
+### 1. Connect Your Wallet
 
-## Features
+Click **"Connect Wallet"** to get started:
+- Use Phantom wallet (recommended)
+- Or enter your Solana account address manually
 
-### 1. Nutrition Plan Management
+### 2. Select Your Pet
 
-#### Create a Nutrition Plan
+Choose a pet from the dropdown list:
+- Your own registered pets appear automatically
+- You can also manage pets where you're an authorized veterinarian
 
-Pet owners can create custom nutrition plans with the following details:
+## Creating a Nutrition Plan
 
-- **Plan Name**: A descriptive name for the nutrition plan (e.g., "Summer Wellness Plan")
-- **Start Date**: When the nutrition plan begins
-- **Ingredients Per Day**: Specify ingredients for each day of the week:
-  - Monday through Sunday (7 text fields)
-  - If a day is left empty, it will automatically inherit the ingredients from the last filled day
-  - At least one day must have ingredients specified
-- **Duration**: Select from pre-defined durations:
-  - 2 weeks
-  - 1 month
-  - 2 months
-  - 3 months
-  - 6 months
-  - 1 year
-- **Authorized Nutritioner** (Optional): A Solana account address with permission to record feeding actions for this pet
+### Step 1: Plan Details
 
-#### Blockchain Integration
+Fill in these required fields:
 
-When a nutrition plan is created:
+- **Plan Name**: Give your plan a descriptive name (e.g., "Summer Wellness Plan")
+- **Start Date**: When this nutrition plan begins
+- **Duration**: How long the plan lasts (choose from 2 weeks to 1 year)
 
-1. An SPL Token Mint is generated on Solana devnet
-2. A token is minted to represent the nutrition plan
-3. The plan metadata is stored on-chain
-4. A record is maintained in the local database with:
-   - Plan details
-   - Mint address (SPL Token)
-   - Transaction hash for Solscan verification
+### Step 2: Daily Ingredients
 
-### 2. Feeding Action Logging
+Enter ingredients for each day of the week:
 
-#### Record a Feeding Event
+- **Monday through Sunday**: 7 text fields for daily meals
+- **Auto-fill feature**: Leave a day empty and it will automatically use the last filled day's ingredients
+- **At least one day required**: You must specify ingredients for at least one day
 
-Pet owners (or authorized nutritioners) can log daily feeding actions:
+### Step 3: Optional Nutritioner
 
-1. **Select a Pet**: Choose from your registered pets
-2. **Select a Nutrition Plan**: Choose which plan the feeding falls under
-3. **Enter Ingredients Given**: The actual ingredients fed to the pet today
-   - Pre-filled with today's ingredients from the nutrition plan
-   - Can be modified if actual feeding differed from the plan
-4. **Sign with Wallet**: The app requires a message signature proving ownership
-   - Message format: "Hello, I am the pet named {PetName}, this is my noseprint!"
-   - This cryptographic signature is stored with the feeding record
-5. **Confirm Transaction**: Sign the transaction to record the feeding on-chain
+Assign an authorized nutritioner (optional):
 
-#### Transaction Details
+- Enter their Solana wallet address
+- They'll be able to record feeding actions for this pet
 
-Each feeding action recorded includes:
+### Step 4: Submit
 
-- **Pet Signature**: Cryptographic proof from message signing
-- **Ingredients**: What was actually fed to the pet
-- **Timestamp**: When the feeding was recorded
-- **Transaction Hash**: Solscan link for verification
+Click **"Create Nutrition Plan"** to:
+1. Sign the transaction with your wallet
+2. Create a blockchain record of your nutrition plan
+3. Get a unique token to represent this plan on-chain
 
-### 3. Feeding History
+Once created, you'll see a success message with a link to verify the plan on Solscan.
 
-View all feeding actions for a nutrition plan:
+## Recording Feeding Actions
 
-- Lists all recorded feeding events chronologically
-- Shows ingredients, timestamp, and signatures
-- Provides Solscan links for on-chain verification
-- Helps track nutritional compliance over time
+### How to Log a Feeding
 
-## How to Use
+1. Click **"🍽️ Feed Now"** on any nutrition plan card
+2. The form appears with today's ingredients pre-filled
+3. Modify ingredients if needed (optional)
+4. Click **"Sign & Submit Feeding"**
+5. Sign the message with your wallet (cryptographic proof)
+6. Wait for transaction confirmation
 
-### Getting Started
+The feeding is now recorded on-chain with:
+- Your signature as proof
+- The ingredients you fed
+- A timestamp
+- A blockchain transaction link for verification
 
-1. **Connect Your Wallet**
-   - Click "Connect Wallet" button
-   - Use Phantom wallet for HTTPS connections
-   - Or manually enter your Solana account address
+### View Feeding History
 
-2. **Select a Pet**
-   - Choose a registered pet from the dropdown
-   - You can select pets you own or pets where you're an authorized veterinarian
+1. Click **"📋 View History"** on a nutrition plan
+2. See all past feeding events in reverse chronological order
+3. Each entry shows:
+   - When the feeding was recorded
+   - What ingredients were given
+   - A Solscan link to verify on-chain
 
-### Creating a Nutrition Plan
+## Nutrition Plan Card
 
-1. Fill in the plan details (name, start date, duration)
-2. Specify ingredients for each day of the week
-   - Provide at least one day's ingredients
-   - Empty days will auto-fill from the last filled day
-3. Optionally specify an authorized nutritioner address
-4. Click "Create Nutrition Plan"
-5. Approve the wallet signature request
-6. Wait for transaction confirmation on devnet
-7. View your SPL Token and Solscan link in the success message
+On the main screen, each nutrition plan shows:
 
-### Logging Feeding Actions
+- **Plan Name**: The name you gave it
+- **Start Date**: When it began
+- **Duration**: How long it runs
+- **Mint Address**: Click to see the SPL token on Solscan
+- **Ingredients Transaction**: Click to view the complete plan details on Solscan
+- **"🍽️ Feed Now"**: Quick button to record today's feeding
+- **"📋 View History"**: See all past feeding records
 
-1. Select a nutrition plan from the list
-2. Click "Feed Now" button
-3. Review the pre-filled ingredients for today
-4. Modify ingredients if needed
-5. Click "Sign & Submit Feeding"
-6. Approve the message signature (proves pet ownership/authorization)
-7. Approve the transaction
-8. Wait for confirmation and view the Solscan link
+## Understanding Auto-Fill
 
-### Viewing Feeding History
+When creating a plan, if you only fill some days:
 
-1. Select a nutrition plan
-2. Click "View Feeding History"
-3. Browse all recorded feeding events
-4. Click Solscan links to verify on-chain
+**Example:**
+- Monday: "Chicken, Rice, Carrots"
+- Tuesday through Thursday: *empty*
+- Friday: "Fish, Oats"
 
-## Blockchain Details
+**Result:**
+- Monday: "Chicken, Rice, Carrots"
+- Tuesday: "Chicken, Rice, Carrots" (auto-filled from Monday)
+- Wednesday: "Chicken, Rice, Carrots" (auto-filled from Monday)
+- Thursday: "Chicken, Rice, Carrots" (auto-filled from Monday)
+- Friday: "Fish, Oats"
+- Saturday: "Fish, Oats" (auto-filled from Friday)
+- Sunday: "Fish, Oats" (auto-filled from Friday)
 
-### Solana Network
+## Verification on Solscan
 
-- **Network**: Solana devnet (development/testing)
-- **Memo Program**: `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`
-- **SPL Token Program**: Used for nutrition plan mints
+Every nutrition plan and feeding action is recorded on the Solana blockchain:
 
-### On-Chain Data
-
-**Nutrition Plans** contain:
-- `type`: "nutrition_plan"
-- `planId`: Unique identifier
-- `petId`: Associated pet
-- `planName`: Display name
-- `ingredients`: All weekly ingredients
-- `duration`: Plan duration (2 weeks to 1 year)
-- `authorizedNutritioner`: Optional nutritioner address
-
-**Feeding Actions** contain:
-- `type`: "feeding_action"
-- `nutritionPlanId`: Linked plan
-- `petId`: Pet being fed
-- `ingredients`: Actfully fed to the pet
-- `petSignature`: Cryptographic proof
-- `timestamp`: When feeding was recorded
-
-### Verification
-
-All on-chain activities can be verified on **Solscan**:
-
-- Paste transaction hashes into: https://solscan.io/?cluster=devnet
-- Verify SPL token mints for nutrition plans
-- Review memo data for plan and feeding details
-- Confirm signatures and timestamps
-
-## Data Storage
-
-### Local Database (SQLite)
-
-Stores metadata for faster display:
-- Nutrition plan summaries
-- Feeding action records
-- Pet ownership relationships
-- Authorization mappings
-
-### On-Chain (Solana Devnet)
-
-Stores immutable records via:
-- SPL Token Mint (nutrition plan representation)
-- Memo Program Transactions (detailed data)
-
-## Authorization & Permissions
-
-- **Pet Owner**: Can create plans, log feedings, manage authorizations
-- **Authorized Nutritioner**: Can log feeding actions for assigned pets
-- **Both**: Can view nutrition plans and feeding history
-
-## Troubleshooting
-
-### Connection Issues
-
-**Problem**: "Phantom wallet not found"
-- **Solution**: Install Phantom from phantom.app
-- **Alternative**: Use manual address entry
-
-### Transaction Failures
-
-**Problem**: Transaction rejected or timeout
-- **Solution**: Ensure sufficient SOL balance in devnet wallet
-- **Get Devnet SOL**: Use Solana CLI `solana airdrop 2` or web faucet
-
-### Missing Pets
-
-**Problem**: Pet not appearing in dropdown
-- **Solution**: Register pet in PetTracker first
-- **Check**: Ensure you're the owner or an authorized veterinarian
-
-### SPL Token Issues
-
-**Problem**: Token mint showing undefined
-- **Solution**: Wait for backend to confirm transaction
-- **Check**: Verify Solscan link for on-chain status
+1. Click the **Mint Address** link to see your SPL token on Solscan
+2. Click the **Ingredients Transaction** link to view the complete plan details stored on-chain
+3. Click **Solscan** links on feeding actions to verify when and what was fed
+4. All data is immutable and transparent on the blockchain
 
 ## Best Practices
 
-1. **Plan Diversity**: Create multiple plans for different seasons or health goals
-2. **Regular Logging**: Log feeding actions daily for accurate health records
-3. **Documentation**: Include specific ingredients and quantities for veterinary reference
-4. **Backup**: Keep Solscan links for permanent records
-5. **Authorization**: Only authorize trusted nutritioners for your pets
+### Creating Plans
 
-## Limitations
+- **Be specific with ingredients**: Include quantities when possible
+- **Plan ahead**: Consider seasonal changes and nutritional needs
+- **Assign nutritioners**: Delegate feeding tasks to trusted veterinarians
 
-- **Devnet Only**: Not for production/real pets (devnet data resets)
-- **Solana Address Format**: Must be valid base58-encoded public key
-- **Plan Duration**: Pre-defined options (cannot set custom durations)
-- **Weekly Granularity**: Ingredients defined per day, not per meal
+### Recording Feedings
 
-## Integration with Other Concepts
+- **Log promptly**: Record feedings the same day for accuracy
+- **Track deviations**: If you deviate from the plan, note what you actually fed
+- **Review history**: Regularly check past feedings to ensure consistency
 
-### PetTracker
+### Managing Multiple Plans
 
-- Nutrition plans created for PetTracker-registered pets
-- Respects PetTracker authorization mappings
-- Uses pet ownership from PetTracker
+- Create different plans for different seasons
+- Use plans for special diets (weight loss, allergy management)
+- Keep archived plans for reference
 
-### PetVax
+## Common Questions
 
-- Similar on-chain architecture for vaccination records
-- Both use SPL Token Mints and Memo program
-- Complementary health record systems
+**Q: What if I forget to fill in some days?**
+A: Empty days will automatically use the last filled day's ingredients. This allows for simplified planning.
 
-## Technical Stack
+**Q: Can I change a plan after creating it?**
+A: Plans are immutable once created on-chain. Create a new plan if you need different ingredients.
 
-- **Frontend**: Alpine.js (Alpine.js data binding and reactivity)
-- **Backend**: Express.js (API endpoints)
-- **Blockchain**: Solana devnet
-- **Tokens**: @solana/spl-token library
-- **Storage**: SQLite (local) + Solana (immutable)
-- **Signatures**: Phantom wallet (message + transaction signing)
+**Q: Who can record feedings?**
+A: You (the pet owner) and any authorized nutritioners you specified can record feedings.
 
-## Support
+**Q: Are my feedinges really on the blockchain?**
+A: Yes! Each feeding is recorded as a transaction on the Solana blockchain. You can verify each one on Solscan.
 
-For issues or questions:
-- Check Solscan for on-chain verification
-- Review browser console for debugging
-- Verify Phantom wallet connection
-- Ensure devnet wallet has sufficient SOL
+**Q: What happens when a plan expires?**
+A: Plans persist indefinitely. Create a new plan for the next period.
+
+## Troubleshooting
+
+**"Phantom wallet not found"**
+- Install Phantom from https://phantom.app
+- Or use manual address entry as alternative
+
+**"Only pet owner can create nutrition plans"**
+- You must be the registered owner of the pet
+- Contact the owner if you need to manage their pet's nutrition
+
+**"Failed to create nutrition plan"**
+- Ensure all required fields are filled
+- At least one day of ingredients is needed
+- Check your Solana wallet has sufficient balance for fees
+
+**Missing pets in dropdown**
+- Pets must be registered in PetTracker first
+- Only pets you own or are authorized for appear
+
+## Need Help?
+
+- Check the FAQ section above
+- Review Solscan transaction links for details
+- Ensure your Phantom wallet is properly connected with the right account
 
 ---
 
-*PetDiet: On-Chain Nutrition for Your Pets*
-
-**Version**: 1.0.0  
-**Network**: Solana Devnet  
-**Last Updated**: May 2026
+**PetDiet** - Bringing transparency and security to your pet's nutrition management.

@@ -218,37 +218,43 @@ router.post('/create-plan', express.json(), async (req, res) => {
      }
 
       try {
-       // Auto-fill empty ingredient days with the last filled day's ingredients
-       let lastFilledIngredients = '';
-       const filledIngredients = [
-         ingredientsMonday || null,
-         ingredientsTuesday || null,
-         ingredientsWednesday || null,
-         ingredientsThursday || null,
-         ingredientsFriday || null,
-         ingredientsSaturday || null,
-         ingredientsSunday || null
-       ];
+        // Auto-fill empty ingredient days with forward-fill (each empty day inherits from previous non-empty day)
+        const days = [
+          { key: 'Monday', value: ingredientsMonday },
+          { key: 'Tuesday', value: ingredientsTuesday },
+          { key: 'Wednesday', value: ingredientsWednesday },
+          { key: 'Thursday', value: ingredientsThursday },
+          { key: 'Friday', value: ingredientsFriday },
+          { key: 'Saturday', value: ingredientsSaturday },
+          { key: 'Sunday', value: ingredientsSunday }
+        ];
 
-       for (let i = filledIngredients.length - 1; i >= 0; i--) {
-         if (filledIngredients[i]) {
-           lastFilledIngredients = filledIngredients[i];
-           break;
-         }
-       }
+        // Forward-fill: iterate through week, carrying forward the last non-empty value
+        let currentIngredients = '';
+        const filledDays = {};
+        
+        for (const day of days) {
+          if (day.value) {
+            currentIngredients = day.value;
+          } else if (currentIngredients) {
+            // Use the last seen non-empty value
+            filledDays[day.key] = currentIngredients;
+          }
+          filledDays[day.key] = day.value || currentIngredients;
+        }
 
-       const plan = nutritionPlanDb.createNutritionPlan({
-         id: planId,
-         petId: petId,
-         planName: planName,
-         startDate: startDate,
-         ingredientsMonday: ingredientsMonday || lastFilledIngredients,
-         ingredientsTuesday: ingredientsTuesday || lastFilledIngredients,
-         ingredientsWednesday: ingredientsWednesday || lastFilledIngredients,
-         ingredientsThursday: ingredientsThursday || lastFilledIngredients,
-         ingredientsFriday: ingredientsFriday || lastFilledIngredients,
-         ingredientsSaturday: ingredientsSaturday || lastFilledIngredients,
-         ingredientsSunday: ingredientsSunday || lastFilledIngredients,
+        const plan = nutritionPlanDb.createNutritionPlan({
+          id: planId,
+          petId: petId,
+          planName: planName,
+          startDate: startDate,
+          ingredientsMonday: filledDays['Monday'] || '',
+          ingredientsTuesday: filledDays['Tuesday'] || '',
+          ingredientsWednesday: filledDays['Wednesday'] || '',
+          ingredientsThursday: filledDays['Thursday'] || '',
+          ingredientsFriday: filledDays['Friday'] || '',
+          ingredientsSaturday: filledDays['Saturday'] || '',
+          ingredientsSunday: filledDays['Sunday'] || '',
          duration: duration,
          durationEndDate: durationEndDate,
          authorizedNutritioner: authorizedNutritioner || null,
