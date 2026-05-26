@@ -465,6 +465,7 @@
                 manualAddress: '',
                 showWalletModal: false,
                 showDocumentation: false,
+                documentationContent: '',
                 showFeedNowModal: false,
                 showFeedingHistoryModal: false,
                 formSubmitInProgress: false,
@@ -757,11 +758,7 @@
                         this.feedingStatus = 'Requesting signature...';
                         const message = new TextEncoder().encode(messageToSign);
                         
-                        if (!window.phantom?.solana) {
-                            throw new Error('Phantom wallet not available');
-                        }
-
-                        const { signature } = await window.phantom.solana.signMessage(message);
+                        const { signature } = await window.solana.signMessage(message);
                         const signatureHex = Buffer.from(signature).toString('hex');
 
                         this.feedingStatus = 'Submitting feeding action...';
