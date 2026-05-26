@@ -173,13 +173,26 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
      console.log('[PetDiet] Memo data:', memoData);
 
-     // Create memo instruction
-     const memoInstruction = new web3.TransactionInstruction({
-       programId: MEMO_PROGRAM_ID,
-       keys: [],
-       data: Buffer.from(memoData, 'utf8')
-     });
-     transaction.add(memoInstruction);
+      // Add compute budget instruction to increase units for large memo
+      const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+      const modifyComputeUnitsInstruction = new web3.TransactionInstruction({
+        programId: computeBudgetProgram,
+        keys: [],
+        data: Buffer.concat([
+          Buffer.from([0x02]),  // SetComputeUnitLimit instruction
+          Buffer.alloc(4, 0),   // Padding
+          Buffer.from([0x00, 0x00, 0x01, 0x00])  // 65536 compute units (in little-endian)
+        ])
+      });
+      transaction.add(modifyComputeUnitsInstruction);
+
+      // Create memo instruction
+      const memoInstruction = new web3.TransactionInstruction({
+        programId: MEMO_PROGRAM_ID,
+        keys: [],
+        data: Buffer.from(memoData, 'utf8')
+      });
+      transaction.add(memoInstruction);
 
       // Set transaction properties
       const latestBlockhash = await connection.getLatestBlockhash();
@@ -334,15 +347,28 @@ router.post('/feed', express.json(), async (req, res) => {
       recordedAt: new Date().toISOString()
     });
 
-    console.log('[PetDiet] Memo data:', memoData);
+     console.log('[PetDiet] Memo data:', memoData);
 
-    // Create memo instruction
-    const memoInstruction = new web3.TransactionInstruction({
-      programId: MEMO_PROGRAM_ID,
-      keys: [],
-      data: Buffer.from(memoData, 'utf8')
-    });
-    transaction.add(memoInstruction);
+     // Add compute budget instruction to increase units for large memo
+     const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+     const modifyComputeUnitsInstruction = new web3.TransactionInstruction({
+       programId: computeBudgetProgram,
+       keys: [],
+       data: Buffer.concat([
+         Buffer.from([0x02]),  // SetComputeUnitLimit instruction
+         Buffer.alloc(4, 0),   // Padding
+         Buffer.from([0x00, 0x00, 0x01, 0x00])  // 65536 compute units (in little-endian)
+       ])
+     });
+     transaction.add(modifyComputeUnitsInstruction);
+
+     // Create memo instruction
+     const memoInstruction = new web3.TransactionInstruction({
+       programId: MEMO_PROGRAM_ID,
+       keys: [],
+       data: Buffer.from(memoData, 'utf8')
+     });
+     transaction.add(memoInstruction);
 
      // Set transaction properties
      const latestBlockhash = await connection.getLatestBlockhash();
