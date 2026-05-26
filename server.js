@@ -19,6 +19,10 @@ app.use('/api/v1/pettracker', pettrackerApi);
 const petvaxApi = require('./api/petvax');
 app.use('/api/v1/petvax', petvaxApi);
 
+// PetDiet API routes
+const petdietApi = require('./api/petdiet');
+app.use('/api/v1/petdiet', petdietApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
