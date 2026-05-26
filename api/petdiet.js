@@ -175,13 +175,16 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
       // Add compute budget instruction to increase units for large memo
       const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+      const computeUnits = 100000;  // Request 100k compute units
+      const computeUnitsBuffer = Buffer.alloc(4);
+      computeUnitsBuffer.writeUInt32LE(computeUnits, 0);
+      
       const modifyComputeUnitsInstruction = new web3.TransactionInstruction({
         programId: computeBudgetProgram,
         keys: [],
         data: Buffer.concat([
           Buffer.from([0x02]),  // SetComputeUnitLimit instruction
-          Buffer.alloc(4, 0),   // Padding
-          Buffer.from([0x00, 0x00, 0x01, 0x00])  // 65536 compute units (in little-endian)
+          computeUnitsBuffer
         ])
       });
       transaction.add(modifyComputeUnitsInstruction);
@@ -351,13 +354,16 @@ router.post('/feed', express.json(), async (req, res) => {
 
      // Add compute budget instruction to increase units for large memo
      const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+     const computeUnits = 100000;  // Request 100k compute units
+     const computeUnitsBuffer = Buffer.alloc(4);
+     computeUnitsBuffer.writeUInt32LE(computeUnits, 0);
+     
      const modifyComputeUnitsInstruction = new web3.TransactionInstruction({
        programId: computeBudgetProgram,
        keys: [],
        data: Buffer.concat([
          Buffer.from([0x02]),  // SetComputeUnitLimit instruction
-         Buffer.alloc(4, 0),   // Padding
-         Buffer.from([0x00, 0x00, 0x01, 0x00])  // 65536 compute units (in little-endian)
+         computeUnitsBuffer
        ])
      });
      transaction.add(modifyComputeUnitsInstruction);
