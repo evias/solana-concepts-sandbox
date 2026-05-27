@@ -172,18 +172,38 @@ function runMigrations() {
       }
     }
     
-    // Migration 3: Add authorizedVets to pets
-    const petTableInfo2 = db.prepare("PRAGMA table_info(pets)").all();
-    const hasAuthorizedVets = petTableInfo2.some(col => col.name === 'authorizedVets');
-    
-    if (!hasAuthorizedVets) {
-      console.log('Running migration: Adding authorizedVets column to pets...');
-      
-      db.exec(`ALTER TABLE pets ADD COLUMN authorizedVets TEXT;`);
-      db.prepare(`UPDATE pets SET authorizedVets = '[]' WHERE authorizedVets IS NULL`).run();
-      
-      console.log('Migration completed: authorizedVets column added');
-    }
+     // Migration 3: Add authorizedVets to pets
+     const petTableInfo2 = db.prepare("PRAGMA table_info(pets)").all();
+     const hasAuthorizedVets = petTableInfo2.some(col => col.name === 'authorizedVets');
+     
+     if (!hasAuthorizedVets) {
+       console.log('Running migration: Adding authorizedVets column to pets...');
+       
+       db.exec(`ALTER TABLE pets ADD COLUMN authorizedVets TEXT;`);
+       db.prepare(`UPDATE pets SET authorizedVets = '[]' WHERE authorizedVets IS NULL`).run();
+       
+       console.log('Migration completed: authorizedVets column added');
+     }
+
+     // Migration 4: Add recorded_by column to feeding_actions
+     try {
+       const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
+       const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
+       
+       if (!hasRecordedBy) {
+         console.log('Running migration: Adding recorded_by column to feeding_actions...');
+         
+         db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
+         
+         console.log('Migration completed: recorded_by column added');
+       }
+     } catch (error) {
+       if (error.message.includes('no such table')) {
+         // feeding_actions table doesn't exist yet, will be created on init
+       } else {
+         throw error;
+       }
+     }
   } catch (error) {
     console.error('Migration error:', error.message);
     // If migration fails, log but don't crash
@@ -539,7 +559,8 @@ const feedingActionDb = {
       ingredients, 
       petSignature, 
       transactionSignature, 
-      transactionHash 
+      transactionHash,
+      recordedBy
     } = feedingData;
     const now = new Date().toISOString();
     
@@ -563,13 +584,13 @@ const feedingActionDb = {
     const stmt = db.prepare(`
       INSERT INTO feeding_actions (
         id, nutrition_plan_id, pet_id, ingredients, pet_signature, 
-        transaction_signature, transaction_hash, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        transaction_signature, transaction_hash, recorded_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
       id, nutritionPlanId, petId, ingredients, petSignature, 
-      transactionSignature || null, transactionHash || null, now, now
+      transactionSignature || null, transactionHash || null, recordedBy || null, now, now
     );
     
     return feedingActionDb.getFeedingActionById(id);
