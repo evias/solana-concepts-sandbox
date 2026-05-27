@@ -6,9 +6,9 @@
     <title>HealthCred - Healthcare Worker Credentials</title>
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
-    <script src="/assets/alpinejs.min.js" defer></script>
-    <!-- Markdown parser -->
+    <!-- Markdown parser - load before Alpine -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="/assets/alpinejs.min.js" defer></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto px-4 py-8" x-data="healthCred()">
@@ -50,7 +50,7 @@
                         :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
                         class="text-white px-4 py-2 rounded-md transition-colors">
                         <span x-show="!userAddress">Connect Wallet</span>
-                        <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+                        <span x-show="userAddress" x-text="userAddress ? 'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4) : 'Connect Wallet'"></span>
                     </button>
                     <button 
                         type="button"
@@ -454,11 +454,24 @@
 
                 async loadDocumentation() {
                     try {
+                        // Wait for marked to be available
+                        let attempts = 0;
+                        while (typeof window.marked !== 'function' && attempts < 20) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            attempts++;
+                        }
+
+                        if (typeof window.marked !== 'function') {
+                            this.documentationContent = '<p>Error: Markdown parser not loaded</p>';
+                            return;
+                        }
+
                         const res = await fetch('/concepts/docs/healthcred.md');
                         const md = await res.text();
-                        this.documentationContent = marked(md);
+                        this.documentationContent = window.marked(md);
                     } catch (err) {
                         console.error('Error loading documentation:', err);
+                        this.documentationContent = '<p>Error loading documentation: ' + err.message + '</p>';
                     }
                 },
 
