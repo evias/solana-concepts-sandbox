@@ -12,7 +12,7 @@ Healthcare workers can register their professional credentials by providing:
 - **Email Address**: Contact information
 - **Professional Title**: Your role (e.g., Dentist, Nurse, Doctor)
 - **DID Document**: A W3C-compliant DID document containing:
-  - Unique `id` field (e.g., `did:example:12345abc`)
+  - Unique `id` field (e.g., `did:healthcred:12345abc`)
   - `authentication` array with your authentication keys
 
 Upon registration, a unique credential is created and:
@@ -84,10 +84,10 @@ All HealthCred data is recorded on Solana devnet with:
 
 ```json
 {
-  "id": "did:example:healthcare:nurse123",
+  "id": "did:healthcred:nurse123",
   "authentication": [
-    "did:example:healthcare:nurse123#key-1",
-    "did:example:healthcare:nurse123#key-2"
+    "did:healthcred:nurse123#key-1",
+    "did:healthcred:nurse123#key-2"
   ],
   "context": "https://www.w3.org/ns/did/v1"
 }
