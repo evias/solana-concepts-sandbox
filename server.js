@@ -23,6 +23,10 @@ app.use('/api/v1/petvax', petvaxApi);
 const petdietApi = require('./api/petdiet');
 app.use('/api/v1/petdiet', petdietApi);
 
+// HealthCred API routes
+const healthcredApi = require('./api/healthcred');
+app.use('/api/v1/healthcred', healthcredApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
