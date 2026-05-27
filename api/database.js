@@ -126,90 +126,13 @@ function initializeDatabase() {
 // Database migrations
 function runMigrations() {
   try {
-    // Migration 1: Add mandate_authority to pets
-    const petTableInfo = db.prepare("PRAGMA table_info(pets)").all();
-    const hasMandate = petTableInfo.some(col => col.name === 'mandate_authority');
-    
-    if (!hasMandate) {
-      console.log('Running migration: Adding mandate_authority column to pets...');
-      
-      db.exec(`ALTER TABLE pets ADD COLUMN mandate_authority TEXT;`);
-      db.prepare(`UPDATE pets SET mandate_authority = owner WHERE mandate_authority IS NULL`).run();
-      
-      console.log('Migration completed: mandate_authority column added');
-    }
-    
-    // Migration 2: Add transaction_signature to vaccinations
-    try {
-      const vaxTableInfo = db.prepare("PRAGMA table_info(vaccinations)").all();
-      const hasTxSig = vaxTableInfo.some(col => col.name === 'transaction_signature');
-      
-      if (!hasTxSig) {
-        console.log('Running migration: Adding transaction_signature column to vaccinations...');
-        
-        db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_signature TEXT;`);
-        db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);`);
-        
-        console.log('Migration completed: transaction_signature column added');
-      }
-      
-      // Migration 2b: Add transaction_hash to vaccinations
-      const hasTxHash = vaxTableInfo.some(col => col.name === 'transaction_hash');
-      
-      if (!hasTxHash) {
-        console.log('Running migration: Adding transaction_hash column to vaccinations...');
-        
-        db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_hash TEXT;`);
-        db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);`);
-        
-        console.log('Migration completed: transaction_hash column added');
-      }
-    } catch (error) {
-      if (error.message.includes('no such table')) {
-        // vaccinations table doesn't exist yet, will be created on init
-      } else {
-        throw error;
-      }
-    }
-    
-     // Migration 3: Add authorizedVets to pets
-     const petTableInfo2 = db.prepare("PRAGMA table_info(pets)").all();
-     const hasAuthorizedVets = petTableInfo2.some(col => col.name === 'authorizedVets');
-     
-     if (!hasAuthorizedVets) {
-       console.log('Running migration: Adding authorizedVets column to pets...');
-       
-       db.exec(`ALTER TABLE pets ADD COLUMN authorizedVets TEXT;`);
-       db.prepare(`UPDATE pets SET authorizedVets = '[]' WHERE authorizedVets IS NULL`).run();
-       
-       console.log('Migration completed: authorizedVets column added');
-     }
-
-     // Migration 4: Add recorded_by column to feeding_actions
-     try {
-       const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
-       const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
-       
-       if (!hasRecordedBy) {
-         console.log('Running migration: Adding recorded_by column to feeding_actions...');
-         
-         db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
-         
-         console.log('Migration completed: recorded_by column added');
-       }
-     } catch (error) {
-       if (error.message.includes('no such table')) {
-         // feeding_actions table doesn't exist yet, will be created on init
-       } else {
-         throw error;
-       }
-     }
+    // Note: All database migrations are now managed in scripts/db-migrate.js
+    // This function is kept for backward compatibility but is no longer needed
+    // Migrations should be run via: npm run db:migrate
+    console.log('ℹ️  Migrations are managed by scripts/db-migrate.js');
+    console.log('  Run: npm run db:migrate');
   } catch (error) {
     console.error('Migration error:', error.message);
-    // If migration fails, log but don't crash
-    if (error.message.includes('duplicate column')) {
-      console.log('Column already exists, skipping migration');
-    }
   }
 }
 
