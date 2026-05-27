@@ -401,19 +401,20 @@ router.post('/feed', express.json(), async (req, res) => {
     const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
     console.log(`[PetDiet] Transaction confirmed:`, txSignature);
 
-    // Create feeding action record
-    const feedingActionId = 'action_' + Date.now();
+     // Create feeding action record
+     const feedingActionId = 'action_' + Date.now();
 
-    try {
-      const feedingAction = feedingActionDb.createFeedingAction({
-        id: feedingActionId,
-        nutritionPlanId: nutritionPlanId,
-        petId: petId,
-        ingredients: ingredients,
-        petSignature: petSignature,
-        transactionSignature: txSignature,
-        transactionHash: txSignature
-      });
+     try {
+       const feedingAction = feedingActionDb.createFeedingAction({
+         id: feedingActionId,
+         nutritionPlanId: nutritionPlanId,
+         petId: petId,
+         ingredients: ingredients,
+         petSignature: petSignature,
+         transactionSignature: txSignature,
+         transactionHash: txSignature,
+         recordedBy: userAddress
+       });
 
       console.log(`[PetDiet] Feeding action recorded:`, feedingActionId);
 
