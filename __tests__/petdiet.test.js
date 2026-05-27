@@ -89,18 +89,64 @@ app.use('/api/v1/petdiet', petdietRouter);
 
 describe('PetDiet API Endpoints', () => {
   let testPet, testPlan;
+  const createdPetIds = [];
 
   beforeAll(() => {
     // Create a test pet
     testPet = petDb.createPet({
-      id: `pet_test_${Date.now()}`,
+      id: `pet_jest_petdiet_${Date.now()}_${Math.random()}`,
       name: 'Test Pet',
       species: 'Dog',
       breed: 'Labrador',
       age: 3,
-      owner: 'test_owner_simple',
-      mandateAuthority: 'test_authority_' + Date.now()
+      owner: `jest_owner_${Date.now()}`,
+      mandateAuthority: `jest_authority_${Date.now()}`
     });
+    createdPetIds.push(testPet.id);
+  });
+
+  afterAll(() => {
+    // Cleanup: Delete all test data created during this test run
+    const allCreatedPetIds = [testPet.id, ...createdPetIds];
+    
+    for (const petId of allCreatedPetIds) {
+      try {
+        // Delete feeding actions
+        const feedingActions = feedingActionDb.getFeedingActionsByPetId(petId);
+        if (feedingActions && Array.isArray(feedingActions)) {
+          for (const action of feedingActions) {
+            try {
+              const db = require('better-sqlite3');
+              const dbInstance = db('./pettracker.db');
+              dbInstance.prepare('DELETE FROM feeding_actions WHERE id = ?').run(action.id);
+            } catch (err) {
+              // Silently ignore delete errors
+            }
+          }
+        }
+        
+        // Delete nutrition plans
+        const plans = nutritionPlanDb.getNutritionPlansByPetId(petId);
+        if (plans && Array.isArray(plans)) {
+          for (const plan of plans) {
+            try {
+              const db = require('better-sqlite3');
+              const dbInstance = db('./pettracker.db');
+              dbInstance.prepare('DELETE FROM nutrition_plans WHERE id = ?').run(plan.id);
+            } catch (err) {
+              // Silently ignore delete errors
+            }
+          }
+        }
+        
+        // Delete the pet itself
+        const db = require('better-sqlite3');
+        const dbInstance = db('./pettracker.db');
+        dbInstance.prepare('DELETE FROM pets WHERE id = ?').run(petId);
+      } catch (err) {
+        // Silently ignore cleanup errors
+      }
+    }
   });
 
   // GET /plans tests
@@ -417,16 +463,17 @@ describe('PetDiet API Endpoints', () => {
       expect(res.body.error).toContain('Pet not found');
     });
 
-    test('should return 400 if plan is not linked to pet', async () => {
-      const otherPet = petDb.createPet({
-        id: `pet_other_${Date.now()}`,
-        name: 'Other Pet',
-        species: 'Cat',
-        breed: 'Siamese',
-        age: 2,
-        owner: 'other_owner_' + Date.now(),
-        mandateAuthority: 'other_authority_' + Date.now()
-      });
+     test('should return 400 if plan is not linked to pet', async () => {
+       const otherPet = petDb.createPet({
+         id: `pet_jest_other_${Date.now()}_${Math.random()}`,
+         name: 'Other Pet',
+         species: 'Cat',
+         breed: 'Siamese',
+         age: 2,
+         owner: `jest_other_owner_${Date.now()}`,
+         mandateAuthority: `jest_other_authority_${Date.now()}`
+       });
+       createdPetIds.push(otherPet.id);
 
       const res = await request(app)
         .post('/api/v1/petdiet/feed')
