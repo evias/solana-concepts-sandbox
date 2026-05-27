@@ -4,52 +4,121 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HealthCred - Healthcare Worker Credentials</title>
-    <link rel="stylesheet" href="/assets/base.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="/assets/base.min.css" rel="stylesheet">
+    <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Markdown parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen">
-        <!-- Header with back button and documentation -->
-        <header class="bg-white shadow-sm sticky top-0 z-40">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <a href="/" class="inline-flex items-center text-blue-600 hover:text-blue-700">
-                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                        </svg>
-                        Back
-                    </a>
-                    <h1 class="text-2xl font-bold text-gray-900">HealthCred</h1>
-                </div>
-                <a href="/concepts/docs/healthcred.md" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                    📖 Documentation
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8" x-data="healthCred()">
+        <!-- Header -->
+        <header class="mb-8 flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">HealthCred</h1>
+                <p class="text-gray-600">Healthcare Worker Credentials with Badges & Certifications</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                    ← Back
                 </a>
+                <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    📚 Documentation
+                </button>
             </div>
         </header>
 
-        <!-- Wallet Connection -->
-        <div class="bg-white border-b" x-data="walletConnection()" @load.window="init()">
-            <div class="max-w-7xl mx-auto px-4 py-4">
-                <button @click="connect()" v-if="!walletAddress" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
-                    <span v-if="!connecting">Connect Wallet</span>
-                    <span v-else>Connecting...</span>
-                </button>
-                <div v-else class="flex items-center gap-2">
-                    <span class="text-sm text-gray-600">Connected:</span>
-                    <code class="bg-gray-100 px-3 py-1 rounded text-sm font-mono" @click="copy" style="cursor: pointer;" title="Click to copy">
-                        <span x-text="walletAddress.slice(0, 6) + '...' + walletAddress.slice(-6)"></span>
-                    </code>
-                    <button @click="disconnect()" class="text-red-600 hover:text-red-700 text-sm ml-2">Disconnect</button>
+        <!-- Documentation Modal -->
+        <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+            <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">HealthCred Documentation</h2>
+                    <button @click="showDocumentation = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
                 </div>
+                <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
             </div>
         </div>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 py-8" x-data=" HealthCredApp()">
+        <div class="space-y-8">
+            <!-- Wallet Connection -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <button 
+                        type="button"
+                        @click="showWalletModal = true"
+                        :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                        class="text-white px-4 py-2 rounded-md transition-colors">
+                        <span x-show="!userAddress">Connect Wallet</span>
+                        <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+                    </button>
+                    <button 
+                        type="button"
+                        x-show="userAddress"
+                        @click="disconnectWallet"
+                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                        Disconnect
+                    </button>
+                </div>
+                <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to register credentials, send badges, or upload certifications</p>
+            </section>
+
+            <!-- Wallet Connection Modal -->
+            <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h3 class="text-xl font-bold mb-4">Connect Your Wallet</h3>
+                    <div class="space-y-2">
+                        <button 
+                            @click="connectPhantom()"
+                            class="w-full bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition">
+                            🌙 Phantom Wallet
+                        </button>
+                        <button 
+                            @click="connectManualAddress()"
+                            class="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition">
+                            📝 Enter Address Manually
+                        </button>
+                    </div>
+                    <button 
+                        @click="showWalletModal = false"
+                        class="w-full mt-4 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Manual Address Input Modal -->
+            <div x-show="showManualAddressModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showManualAddressModal = false">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h3 class="text-xl font-bold mb-4">Enter Wallet Address</h3>
+                    <input 
+                        x-model="manualAddress"
+                        type="text"
+                        placeholder="11111111111111111111111111111111"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md mb-4"
+                    >
+                    <div x-show="manualAddressError" class="bg-red-100 text-red-700 p-3 rounded mb-4 text-sm">
+                        <span x-text="manualAddressError"></span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button 
+                            @click="confirmManualAddress()"
+                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                            Connect
+                        </button>
+                        <button 
+                            @click="showManualAddressModal = false"
+                            class="flex-1 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Registration Form -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-bold mb-4">Register Healthcare Credential</h2>
-                <form @submit.prevent="registerCredential()" class="space-y-4">
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">Register Healthcare Credential</h2>
+                <form @submit.prevent="submitRegistration()" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
@@ -57,9 +126,8 @@
                                 x-model="form.fullName" 
                                 type="text" 
                                 required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline- none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Dr. Jane Smith"
-                            >
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Dr. Jane Smith">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
@@ -67,8 +135,7 @@
                                 x-model="form.dateOfBirth" 
                                 type="date" 
                                 required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
 
@@ -80,8 +147,7 @@
                                 type="email" 
                                 required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="jane@healthcare.com"
-                            >
+                                placeholder="jane@healthcare.com">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Profession *</label>
@@ -90,8 +156,7 @@
                                 type="text" 
                                 required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="e.g.: Dentist or Nurse"
-                            >
+                                placeholder="e.g.: Dentist or Nurse">
                         </div>
                     </div>
 
@@ -102,39 +167,38 @@
                             required
                             rows="6"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                            placeholder='{"id":"did:example:123","authentication":["key-1"]}'
-                        ></textarea>
+                            placeholder='{"id":"did:example:123","authentication":["key-1"]}'></textarea>
                         <p class="text-xs text-gray-500 mt-1">Must be valid JSON with "id" and "authentication" fields</p>
                     </div>
 
-                    <button 
-                        @click="submitRegistration()"
-                        :disabled="!walletAddress || !form.fullName || !form.email || !form.profession || !form.didDocument"
-                        class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <span x-show="!registering">Register Credential</span>
-                        <span x-show="registering">Registering...</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button 
+                            type="submit"
+                            :disabled="!userAddress || !form.fullName || !form.email || !form.profession || !form.didDocument || registering"
+                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!registering">Register Credential</span>
+                            <span x-show="registering">Registering...</span>
+                        </button>
+                    </div>
 
-                    <div v-show="registerError" class="bg-red-100 text-red-700 p-3 rounded">
+                    <div x-show="registerError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                         <span x-text="registerError"></span>
                     </div>
                 </form>
-            </div>
+            </section>
 
             <!-- Upload Certification Form -->
-            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-xl font-bold mb-4">Upload a Certification</h2>
-                <form @submit.prevent="uploadCertification()" class="space-y-4">
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">Upload a Certification</h2>
+                <form @submit.prevent="submitCertification()" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Credential *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Select Your Credential *</label>
                             <select 
                                 x-model="certForm.credentialId"
                                 required
-                                :disabled="!walletAddress"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
+                                :disabled="!userAddress || credentials.length === 0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select credential...</option>
                                 <template x-for="cred in credentials" :key="cred.id">
                                     <option :value="cred.id" x-text="`${cred.full_name} (${cred.profession})`"></option>
@@ -148,45 +212,45 @@
                                 type="file" 
                                 accept="application/pdf,image/png,image/jpeg"
                                 required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                            >
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                             <p class="text-xs text-gray-500 mt-1">Accepted: PDF, PNG, JPG</p>
                         </div>
                     </div>
 
-                    <button 
-                        @click="submitCertification()"
-                        :disabled="!walletAddress || !certForm.credentialId || !certForm.file"
-                        class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <span x-show="!uploadingCert">Upload Certification</span>
-                        <span x-show="uploadingCert">Uploading...</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button 
+                            type="submit"
+                            :disabled="!userAddress || !certForm.credentialId || !certForm.file || uploadingCert"
+                            class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!uploadingCert">Upload Certification</span>
+                            <span x-show="uploadingCert">Uploading...</span>
+                        </button>
+                    </div>
 
-                    <div v-show="certError" class="bg-red-100 text-red-700 p-3 rounded">
+                    <div x-show="certError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                         <span x-text="certError"></span>
                     </div>
                 </form>
-            </div>
+            </section>
 
             <!-- Credentials Listing -->
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <section class="bg-white rounded-lg shadow-md p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Registered Credentials</h2>
+                    <h2 class="text-2xl font-bold">Registered Credentials</h2>
                     <button @click="loadCredentials()" class="text-blue-600 hover:text-blue-700 text-sm">
                         🔄 Refresh
                     </button>
                 </div>
 
-                <div v-if="loading" class="text-center py-8">
+                <div x-show="loading" class="text-center py-8">
                     <p class="text-gray-500">Loading credentials...</p>
                 </div>
 
-                <div v-else-if="credentials.length === 0" class="text-center py-8 text-gray-500">
+                <div x-show="!loading && credentials.length === 0" class="text-center py-8 text-gray-500">
                     <p>No credentials registered yet</p>
                 </div>
 
-                <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div x-show="!loading && credentials.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <template x-for="cred in credentials" :key="cred.id">
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
                             <div class="font-semibold text-lg mb-2" x-text="cred.full_name"></div>
@@ -197,15 +261,13 @@
                             <div class="flex gap-2">
                                 <button 
                                     @click="openBadgeModal(cred.id)"
-                                    class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition"
-                                >
+                                    class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition">
                                     🎖️ Send Badge
                                 </button>
                                 <button 
                                     @click="viewCredentialDetails(cred.id)"
-                                    class="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600 transition"
-                                >
-                                    View Details
+                                    class="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600 transition">
+                                    Details
                                 </button>
                             </div>
                         </div>
@@ -213,29 +275,27 @@
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="pagination.total > pagination.limit" class="flex justify-center gap-2 mt-4">
+                <div x-show="!loading && credentials.length > 0 && pagination.total > pagination.limit" class="flex justify-center gap-2 mt-4">
                     <button 
                         @click="loadCredentials(Math.max(0, pagination.offset - pagination.limit))"
                         :disabled="pagination.offset === 0"
-                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-                    >
+                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">
                         ← Previous
                     </button>
                     <span class="px-3 py-1" x-text="`Page ${Math.floor(pagination.offset / pagination.limit) + 1}`"></span>
                     <button 
                         @click="loadCredentials(pagination.offset + pagination.limit)"
                         :disabled="!pagination.hasMore"
-                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
-                    >
+                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">
                         Next →
                     </button>
                 </div>
-            </div>
-        </main>
+            </section>
+        </div>
 
         <!-- Badge Modal -->
-        <div x-show="showBadgeModal" @click.self="showBadgeModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div x-show="showBadgeModal" @click.self="showBadgeModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full">
                 <h3 class="text-lg font-bold mb-4">Send a Badge</h3>
                 <form @submit.prevent="submitBadge()" class="space-y-4">
                     <div>
@@ -246,9 +306,9 @@
                                     type="button"
                                     @click="badgeForm.emoji = emoji"
                                     :class="{'bg-blue-100 border-2 border-blue-500': badgeForm.emoji === emoji, 'border-2 border-gray-300': badgeForm.emoji !== emoji}"
-                                    class="p-2 text-2xl rounded transition hover:border-blue-500"
-                                    x-text="emoji"
-                                ></button>
+                                    class="p-2 text-2xl rounded transition hover:border-blue-500">
+                                    <span x-text="emoji"></span>
+                                </button>
                             </template>
                         </div>
                     </div>
@@ -260,28 +320,25 @@
                             type="text" 
                             required
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="e.g., Excellent patient care"
-                        >
+                            placeholder="e.g., Excellent patient care">
                     </div>
 
                     <div class="flex gap-2">
                         <button 
                             type="button"
                             @click="showBadgeModal = false"
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
-                        >
+                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
                             Cancel
                         </button>
                         <button 
                             type="submit"
                             :disabled="!badgeForm.emoji || !badgeForm.description"
-                            class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50"
-                        >
+                            class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50">
                             Send Badge
                         </button>
                     </div>
 
-                    <div v-show="badgeError" class="bg-red-100 text-red-700 p-3 rounded text-sm">
+                    <div x-show="badgeError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
                         <span x-text="badgeError"></span>
                     </div>
                 </form>
@@ -290,54 +347,16 @@
     </div>
 
     <script>
-        function walletConnection() {
+        function healthCred() {
             return {
-                walletAddress: null,
-                connecting: false,
+                userAddress: null,
+                showWalletModal: false,
+                showManualAddressModal: false,
+                manualAddress: '',
+                manualAddressError: '',
+                showDocumentation: false,
+                documentationContent: '',
 
-                async init() {
-                    if (window.solana) {
-                        try {
-                            const resp = await window.solana.connect({ onlyIfTrusted: true });
-                            this.walletAddress = resp.publicKey.toString();
-                        } catch (err) {
-                            console.log('Not auto-connecting');
-                        }
-                    }
-                },
-
-                async connect() {
-                    if (!window.solana) {
-                        alert('Please install Phantom wallet');
-                        return;
-                    }
-                    try {
-                        this.connecting = true;
-                        const resp = await window.solana.connect();
-                        this.walletAddress = resp.publicKey.toString();
-                    } catch (err) {
-                        alert('Failed to connect wallet: ' + err.message);
-                    } finally {
-                        this.connecting = false;
-                    }
-                },
-
-                disconnect() {
-                    if (window.solana) {
-                        window.solana.disconnect();
-                    }
-                    this.walletAddress = null;
-                },
-
-                copy() {
-                    navigator.clipboard.writeText(this.walletAddress);
-                    alert('Address copied!');
-                }
-            };
-        }
-
-        function HealthCredApp() {
-            return {
                 form: {
                     fullName: '',
                     dateOfBirth: '',
@@ -363,7 +382,61 @@
                 registerError: '',
                 certError: '',
                 badgeError: '',
-                walletAddress: '',
+
+                async init() {
+                    this.autoConnectWallet();
+                    this.loadCredentials();
+                    this.loadDocumentation();
+                },
+
+                autoConnectWallet() {
+                    if (window.solana) {
+                        window.solana.connect({ onlyIfTrusted: true }).catch(() => {});
+                    }
+                },
+
+                async connectPhantom() {
+                    if (!window.solana) {
+                        alert('Please install Phantom wallet');
+                        return;
+                    }
+                    try {
+                        const resp = await window.solana.connect();
+                        this.userAddress = resp.publicKey.toString();
+                        this.showWalletModal = false;
+                        this.loadCredentials();
+                    } catch (err) {
+                        alert('Failed to connect: ' + err.message);
+                    }
+                },
+
+                connectManualAddress() {
+                    this.showWalletModal = false;
+                    this.showManualAddressModal = true;
+                },
+
+                confirmManualAddress() {
+                    this.manualAddressError = '';
+                    if (!this.manualAddress) {
+                        this.manualAddressError = 'Please enter a wallet address';
+                        return;
+                    }
+                    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(this.manualAddress)) {
+                        this.manualAddressError = 'Invalid Solana address';
+                        return;
+                    }
+                    this.userAddress = this.manualAddress;
+                    this.manualAddress = '';
+                    this.showManualAddressModal = false;
+                    this.loadCredentials();
+                },
+
+                disconnectWallet() {
+                    if (window.solana) {
+                        window.solana.disconnect();
+                    }
+                    this.userAddress = null;
+                },
 
                 async loadCredentials(offset = 0) {
                     this.loading = true;
@@ -379,12 +452,24 @@
                     }
                 },
 
-                async registerCredential() {
+                async loadDocumentation() {
+                    try {
+                        const res = await fetch('/concepts/docs/healthcred.md');
+                        const md = await res.text();
+                        this.documentationContent = marked(md);
+                    } catch (err) {
+                        console.error('Error loading documentation:', err);
+                    }
+                },
+
+                openDocumentation() {
+                    this.showDocumentation = true;
+                },
+
+                async submitRegistration() {
                     this.registerError = '';
-                    const parentApp = this.$el.closest('[x-data]').__x_scope.__x_data;
-                    const walletAddress = document.querySelector('[x-data*="walletConnection"]')?.__x_scope?.walletAddress;
                     
-                    if (!walletAddress) {
+                    if (!this.userAddress) {
                         this.registerError = 'Please connect your wallet first';
                         return;
                     }
@@ -395,7 +480,7 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                walletAddress,
+                                walletAddress: this.userAddress,
                                 fullName: this.form.fullName,
                                 dateOfBirth: this.form.dateOfBirth,
                                 email: this.form.email,
@@ -409,7 +494,6 @@
                             throw new Error(error.error || 'Registration failed');
                         }
 
-                        const result = await res.json();
                         alert('Credential registered successfully!');
                         this.form = { fullName: '', dateOfBirth: '', email: '', profession: '', didDocument: '' };
                         this.loadCredentials();
@@ -420,19 +504,14 @@
                     }
                 },
 
-                submitRegistration() {
-                    this.registerCredential();
-                },
-
                 onCertFileSelected(e) {
                     this.certForm.file = e.target.files[0];
                 },
 
                 async submitCertification() {
                     this.certError = '';
-                    const walletAddress = document.querySelector('[x-data*="walletConnection"]')?.__x_scope?.walletAddress;
                     
-                    if (!walletAddress) {
+                    if (!this.userAddress) {
                         this.certError = 'Please connect your wallet first';
                         return;
                     }
@@ -444,13 +523,13 @@
 
                     this.uploadingCert = true;
                     try {
-                        const fileBuffer = Buffer.from(await this.certForm.file.arrayBuffer());
+                        const fileBuffer = new Uint8Array(await this.certForm.file.arrayBuffer());
                         const res = await fetch('/api/v1/healthcred/certifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 credentialId: this.certForm.credentialId,
-                                issuerWallet: walletAddress,
+                                issuerWallet: this.userAddress,
                                 filename: this.certForm.file.name,
                                 fileBuffer: Array.from(fileBuffer),
                                 fileSize: this.certForm.file.size,
@@ -482,9 +561,8 @@
 
                 async submitBadge() {
                     this.badgeError = '';
-                    const walletAddress = document.querySelector('[x-data*="walletConnection"]')?.__x_scope?.walletAddress;
                     
-                    if (!walletAddress) {
+                    if (!this.userAddress) {
                         this.badgeError = 'Please connect your wallet first';
                         return;
                     }
@@ -495,7 +573,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 credentialId: this.badgeForm.credentialId,
-                                issuerWallet: walletAddress,
+                                issuerWallet: this.userAddress,
                                 emoji: this.badgeForm.emoji,
                                 description: this.badgeForm.description
                             })
@@ -514,7 +592,6 @@
                 },
 
                 async viewCredentialDetails(credentialId) {
-                    // Could expand this to show full details
                     try {
                         const res = await fetch(`/api/v1/healthcred/credentials/${credentialId}`);
                         const cred = await res.json();
@@ -522,10 +599,6 @@
                     } catch (err) {
                         alert('Error loading credential details');
                     }
-                },
-
-                init() {
-                    this.loadCredentials();
                 }
             };
         }
