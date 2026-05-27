@@ -544,5 +544,199 @@ const feedingActionDb = {
   }
 };
 
+// HealthCred database helpers
+const credentialDb = {
+  // Create new credential
+  createCredential({
+    id,
+    walletAddress,
+    fullName,
+    dateOfBirth,
+    email,
+    profession,
+    didDocumentJson,
+    didDocumentHash,
+    didId,
+    authenticationMethods,
+    sasCredentialId,
+    mintAddress,
+    transactionSignature,
+    transactionHash
+  }) {
+    const now = new Date().toISOString();
+    
+    const stmt = db.prepare(`
+      INSERT INTO credentials (
+        id, wallet_address, full_name, date_of_birth, email, profession,
+        did_document_json, did_document_hash, did_id, authentication_methods,
+        sas_credential_id, mint_address, transaction_signature, transaction_hash,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id, walletAddress, fullName, dateOfBirth, email, profession,
+      didDocumentJson, didDocumentHash, didId, authenticationMethods || null,
+      sasCredentialId || null, mintAddress || null,
+      transactionSignature || null, transactionHash || null, now, now
+    );
+    
+    return credentialDb.getCredentialById(id);
+  },
+  
+  // Get credential by ID
+  getCredentialById(id) {
+    const stmt = db.prepare('SELECT * FROM credentials WHERE id = ?');
+    const row = stmt.get(id);
+    if (row && row.did_document_json) {
+      row.did_document_json = JSON.parse(row.did_document_json);
+      row.authentication_methods = row.authentication_methods ? JSON.parse(row.authentication_methods) : [];
+    }
+    return row;
+  },
+  
+  // Get credential by wallet address
+  getCredentialByWallet(walletAddress) {
+    const stmt = db.prepare('SELECT * FROM credentials WHERE wallet_address = ?');
+    const row = stmt.get(walletAddress);
+    if (row && row.did_document_json) {
+      row.did_document_json = JSON.parse(row.did_document_json);
+      row.authentication_methods = row.authentication_methods ? JSON.parse(row.authentication_methods) : [];
+    }
+    return row;
+  },
+  
+  // Get credential by DID ID
+  getCredentialByDidId(didId) {
+    const stmt = db.prepare('SELECT * FROM credentials WHERE did_id = ?');
+    const row = stmt.get(didId);
+    if (row && row.did_document_json) {
+      row.did_document_json = JSON.parse(row.did_document_json);
+      row.authentication_methods = row.authentication_methods ? JSON.parse(row.authentication_methods) : [];
+    }
+    return row;
+  },
+  
+  // Get all credentials with pagination
+  getAllCredentials(limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM credentials ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(limit, offset);
+    return rows.map(row => {
+      if (row.did_document_json) {
+        row.did_document_json = JSON.parse(row.did_document_json);
+        row.authentication_methods = row.authentication_methods ? JSON.parse(row.authentication_methods) : [];
+      }
+      return row;
+    });
+  },
+  
+  // Get total credential count
+  getCredentialCount() {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM credentials');
+    return stmt.get().count;
+  }
+};
+
+// Badge database helpers
+const badgeDb = {
+  // Create new badge
+  createBadge({
+    id,
+    credentialId,
+    issuerWallet,
+    emoji,
+    description,
+    mintAddress,
+    transactionSignature,
+    transactionHash
+  }) {
+    const now = new Date().toISOString();
+    
+    const stmt = db.prepare(`
+      INSERT INTO badges (
+        id, credential_id, issuer_wallet, emoji, description,
+        mint_address, transaction_signature, transaction_hash, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id, credentialId, issuerWallet, emoji, description,
+      mintAddress || null, transactionSignature || null, transactionHash || null, now
+    );
+    
+    return badgeDb.getBadgeById(id);
+  },
+  
+  // Get badge by ID
+  getBadgeById(id) {
+    const stmt = db.prepare('SELECT * FROM badges WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  // Get all badges for a credential
+  getBadgesByCredentialId(credentialId) {
+    const stmt = db.prepare('SELECT * FROM badges WHERE credential_id = ? ORDER BY created_at DESC');
+    return stmt.all(credentialId);
+  },
+  
+  // Get all badges by issuer wallet
+  getBadgesByIssuer(issuerWallet) {
+    const stmt = db.prepare('SELECT * FROM badges WHERE issuer_wallet = ? ORDER BY created_at DESC');
+    return stmt.all(issuerWallet);
+  }
+};
+
+// Certification database helpers
+const certificationDb = {
+  // Create new certification
+  createCertification({
+    id,
+    credentialId,
+    issuerWallet,
+    filename,
+    fileHash,
+    fileSize,
+    fileType,
+    mintAddress,
+    transactionSignature,
+    transactionHash
+  }) {
+    const now = new Date().toISOString();
+    
+    const stmt = db.prepare(`
+      INSERT INTO certifications (
+        id, credential_id, issuer_wallet, filename, file_hash,
+        file_size, file_type, mint_address, transaction_signature, transaction_hash, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      id, credentialId, issuerWallet, filename, fileHash,
+      fileSize || null, fileType || null, mintAddress || null,
+      transactionSignature || null, transactionHash || null, now
+    );
+    
+    return certificationDb.getCertificationById(id);
+  },
+  
+  // Get certification by ID
+  getCertificationById(id) {
+    const stmt = db.prepare('SELECT * FROM certifications WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  // Get all certifications for a credential
+  getCertificationsByCredentialId(credentialId) {
+    const stmt = db.prepare('SELECT * FROM certifications WHERE credential_id = ? ORDER BY created_at DESC');
+    return stmt.all(credentialId);
+  },
+  
+  // Get all certifications by issuer wallet
+  getCertificationsByIssuer(issuerWallet) {
+    const stmt = db.prepare('SELECT * FROM certifications WHERE issuer_wallet = ? ORDER BY created_at DESC');
+    return stmt.all(issuerWallet);
+  }
+};
+
 // Export database and helper functions (do NOT initialize on require)
-module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, initializeDatabase, runMigrations };
+module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, initializeDatabase, runMigrations };

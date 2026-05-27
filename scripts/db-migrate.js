@@ -213,28 +213,122 @@ try {
         }
       },
       
-      // Migration 6: Add recorded_by column to feeding_actions
-      {
-        name: 'Add recorded_by column to feeding_actions',
-        up: (db) => {
-          try {
-            const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
-            const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
-            
-            if (!hasRecordedBy) {
-              db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
-              return true;
-            }
-            return false;
-          } catch (error) {
-            if (error.message.includes('duplicate column')) {
-              return false;
-            }
-            throw error;
-          }
-        }
-      }
-  ];
+       // Migration 6: Add recorded_by column to feeding_actions
+       {
+         name: 'Add recorded_by column to feeding_actions',
+         up: (db) => {
+           try {
+             const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
+             const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
+             
+             if (!hasRecordedBy) {
+               db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
+               return true;
+             }
+             return false;
+           } catch (error) {
+             if (error.message.includes('duplicate column')) {
+               return false;
+             }
+             throw error;
+           }
+         }
+       },
+       
+       // Migration 7: Create HealthCred tables (credentials, badges, certifications)
+       {
+         name: 'Create HealthCred credentials, badges, and certifications tables',
+         up: (db) => {
+           try {
+             const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+             const tableNames = tables.map(t => t.name);
+             
+             let created = false;
+             
+             if (!tableNames.includes('credentials')) {
+               db.exec(`
+                 CREATE TABLE credentials (
+                   id TEXT PRIMARY KEY,
+                   wallet_address TEXT NOT NULL UNIQUE,
+                   full_name TEXT NOT NULL,
+                   date_of_birth TEXT NOT NULL,
+                   email TEXT NOT NULL,
+                   profession TEXT NOT NULL,
+                   did_document_json TEXT NOT NULL,
+                   did_document_hash TEXT NOT NULL,
+                   did_id TEXT NOT NULL,
+                   authentication_methods TEXT,
+                   sas_credential_id TEXT,
+                   mint_address TEXT,
+                   transaction_signature TEXT,
+                   transaction_hash TEXT,
+                   created_at TEXT NOT NULL,
+                   updated_at TEXT NOT NULL
+                 );
+                 
+                 CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
+                 CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
+                 CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
+               `);
+               created = true;
+             }
+             
+             if (!tableNames.includes('badges')) {
+               db.exec(`
+                 CREATE TABLE badges (
+                   id TEXT PRIMARY KEY,
+                   credential_id TEXT NOT NULL,
+                   issuer_wallet TEXT NOT NULL,
+                   emoji TEXT NOT NULL,
+                   description TEXT NOT NULL,
+                   mint_address TEXT,
+                   transaction_signature TEXT,
+                   transaction_hash TEXT,
+                   created_at TEXT NOT NULL,
+                   FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
+                 );
+                 
+                 CREATE INDEX IF NOT EXISTS idx_badge_credential ON badges(credential_id);
+                 CREATE INDEX IF NOT EXISTS idx_badge_issuer ON badges(issuer_wallet);
+                 CREATE INDEX IF NOT EXISTS idx_badge_tx_sig ON badges(transaction_signature);
+               `);
+               created = true;
+             }
+             
+             if (!tableNames.includes('certifications')) {
+               db.exec(`
+                 CREATE TABLE certifications (
+                   id TEXT PRIMARY KEY,
+                   credential_id TEXT NOT NULL,
+                   issuer_wallet TEXT NOT NULL,
+                   filename TEXT NOT NULL,
+                   file_hash TEXT NOT NULL,
+                   file_size INTEGER,
+                   file_type TEXT,
+                   mint_address TEXT,
+                   transaction_signature TEXT,
+                   transaction_hash TEXT,
+                   created_at TEXT NOT NULL,
+                   FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
+                 );
+                 
+                 CREATE INDEX IF NOT EXISTS idx_cert_credential ON certifications(credential_id);
+                 CREATE INDEX IF NOT EXISTS idx_cert_issuer ON certifications(issuer_wallet);
+                 CREATE INDEX IF NOT EXISTS idx_cert_tx_sig ON certifications(transaction_signature);
+               `);
+               created = true;
+             }
+             
+             return created;
+           } catch (error) {
+             if (error.message.includes('already exists')) {
+               return false;
+             }
+             throw error;
+           }
+         }
+       }
+   ];
   
   console.log(`   Total migrations defined: ${migrations.length}`);
   
