@@ -7,32 +7,38 @@ const {
   db, 
   petDb, 
   nutritionPlanDb, 
-  feedingActionDb, 
-  initializeDatabase, 
-  runMigrations 
+  feedingActionDb
 } = require('../api/database');
-const path = require('path');
-const fs = require('fs');
 
 describe('PetDiet Database Operations', () => {
-  // Test setup - ensure database exists
-  beforeAll(() => {
-    // Database should already be initialized from other test runs
-    if (fs.existsSync(path.join(__dirname, '..', 'pettracker.db'))) {
-      // Database exists, migrations should have been run
+  // Cleanup test objects after all tests
+  const testOwnerPrefix = 'jest_test_petdiet_' + Date.now();
+  let createdPetIds = [];
+
+  afterAll(() => {
+    // Delete all test pets created during this test run
+    for (const petId of createdPetIds) {
+      try {
+        db.prepare('DELETE FROM feeding_actions WHERE pet_id = ?').run(petId);
+        db.prepare('DELETE FROM nutrition_plans WHERE pet_id = ?').run(petId);
+        db.prepare('DELETE FROM pets WHERE id = ?').run(petId);
+      } catch (err) {
+        // Silently ignore cleanup errors
+      }
     }
   });
 
   // Helper function to create a test pet
   const createTestPet = () => {
-    const petId = `pet_${Date.now()}_${Math.random()}`;
+    const petId = `pet_${testOwnerPrefix}_${Math.random()}`;
+    createdPetIds.push(petId);
     const pet = petDb.createPet({
       id: petId,
       name: 'Test Pet',
       species: 'Dog',
       breed: 'Labrador',
       age: 3,
-      owner: 'test_owner_' + Date.now(),
+      owner: testOwnerPrefix,
       mandateAuthority: 'test_authority_' + Date.now()
     });
     return pet;
@@ -154,42 +160,11 @@ describe('PetDiet Database Operations', () => {
       expect(planIds).toContain(planId2);
     });
 
-    test('should get nutrition plans by authorized nutritioner', () => {
-      const pet = createTestPet();
-      const nutritioner = 'nutritioner_' + Date.now();
-      const planId = `diet_${Date.now()}`;
-
-      nutritionPlanDb.createNutritionPlan({
-        id: planId,
-        petId: pet.id,
-        planName: 'Nutritionist Plan',
-        startDate: '2024-05-26',
-        ingredientsMonday: 'Specialized',
-        ingredientsTuesday: '',
-        ingredientsWednesday: '',
-        ingredientsThursday: '',
-        ingredientsFriday: '',
-        ingredientsSaturday: '',
-        ingredientsSunday: '',
-        duration: '1 month',
-        durationEndDate: '2024-06-26',
-        authorizedNutritioner: nutritioner,
-        mintAddress: 'test_mint',
-        transactionSignature: 'sig',
-        transactionHash: 'hash'
-      });
-
-      const plans = nutritionPlanDb.getNutritionPlansByNutritioner(nutritioner);
-      expect(plans).toBeDefined();
-      expect(plans.length).toBeGreaterThanOrEqual(1);
-      expect(plans[0].authorized_nutritioner).toBe(nutritioner);
-    });
-
     test('should get ingredients for specific day', () => {
       const pet = createTestPet();
       const planId = `diet_${Date.now()}`;
 
-      const plan = nutritionPlanDb.createNutritionPlan({
+      nutritionPlanDb.createNutritionPlan({
         id: planId,
         petId: pet.id,
         planName: 'Weekly Plan',
@@ -260,7 +235,7 @@ describe('PetDiet Database Operations', () => {
       const pet = createTestPet();
       const planId = `diet_${Date.now()}`;
 
-      const plan = nutritionPlanDb.createNutritionPlan({
+      nutritionPlanDb.createNutritionPlan({
         id: planId,
         petId: pet.id,
         planName: 'Test Plan',

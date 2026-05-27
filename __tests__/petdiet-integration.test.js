@@ -87,17 +87,36 @@ app.use('/api/v1/petdiet', petdietRouter);
 
 describe('PetDiet Integration Tests', () => {
   let testPet;
+  const testOwnerPrefix = 'jest_petdiet_integration_' + Date.now();
 
   beforeAll(() => {
     testPet = petDb.createPet({
-      id: `pet_integration_${Date.now()}`,
+      id: `pet_${testOwnerPrefix}_${Date.now()}`,
       name: 'Integration Test Pet',
       species: 'Dog',
       breed: 'Test Breed',
       age: 5,
-      owner: 'test_owner_integration',
+      owner: testOwnerPrefix,
       mandateAuthority: 'test_authority_integration'
     });
+  });
+
+  afterAll(() => {
+    // Cleanup test data
+    try {
+      const plans = nutritionPlanDb.getNutritionPlansByPetId(testPet.id);
+      if (plans) {
+        for (const plan of plans) {
+          const db = require('../api/database').db;
+          db.prepare('DELETE FROM feeding_actions WHERE nutrition_plan_id = ?').run(plan.id);
+          db.prepare('DELETE FROM nutrition_plans WHERE id = ?').run(plan.id);
+        }
+      }
+      const db = require('../api/database').db;
+      db.prepare('DELETE FROM pets WHERE id = ?').run(testPet.id);
+    } catch (err) {
+      // Silently ignore cleanup errors
+    }
   });
 
   describe('Nutrition Plan Workflow', () => {
