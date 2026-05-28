@@ -282,7 +282,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
         console.log('[HealthCred] Token mint created:', mintAddress);
 
         // Wait for RPC to index the mint
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        
 
         // Create associated token account for credential owner
         console.log('[HealthCred] Creating associated token account...');
@@ -296,7 +296,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
         console.log('[HealthCred] Token account created:', associatedTokenAccount.address.toBase58());
 
         // Wait for RPC to index the ATA
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        
 
         // Mint 1 token to represent this credential
         console.log('[HealthCred] Minting credential token...');
@@ -568,7 +568,7 @@ router.post('/badges', async (req, res) => {
        console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
        
        // Wait for RPC to index the mint
-       await new Promise(resolve => setTimeout(resolve, 1000));
+       
        
        // Create associated token account for credential owner (badge recipient)
        console.log('[HealthCred] Creating associated token account for credential owner...');
@@ -581,7 +581,7 @@ router.post('/badges', async (req, res) => {
        console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
        
        // Wait for RPC to index the ATA
-       await new Promise(resolve => setTimeout(resolve, 1000));
+       
        
        // Mint 1 badge token to credential owner (the person receiving the badge)
        console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
@@ -903,7 +903,7 @@ router.post('/certifications', async (req, res) => {
        console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
        
        // Wait for RPC to index the mint
-       await new Promise(resolve => setTimeout(resolve, 1000));
+       
        
        // Create associated token account for credential owner (certification recipient)
        console.log('[HealthCred] Creating associated token account for credential owner...');
@@ -916,7 +916,7 @@ router.post('/certifications', async (req, res) => {
        console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
        
        // Wait for RPC to index the ATA
-       await new Promise(resolve => setTimeout(resolve, 1000));
+       
        
        // Mint 1 certification token to credential owner (the person receiving the certification)
        console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
