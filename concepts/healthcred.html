@@ -580,19 +580,27 @@
                     try {
                         // Wait for marked to be available
                         let attempts = 0;
-                        while (typeof window.marked !== 'function' && attempts < 20) {
+                        while (typeof window.marked === 'undefined' && attempts < 20) {
                             await new Promise(resolve => setTimeout(resolve, 100));
                             attempts++;
                         }
 
-                        if (typeof window.marked !== 'function') {
+                        if (typeof window.marked === 'undefined') {
                             this.documentationContent = '<p>Error: Markdown parser not loaded</p>';
                             return;
                         }
 
                         const res = await fetch('/concepts/docs/healthcred.md');
                         const md = await res.text();
-                        this.documentationContent = window.marked(md);
+                        
+                        // Try marked.parse() first (newer API), fall back to window.marked()
+                        if (typeof window.marked.parse === 'function') {
+                            this.documentationContent = window.marked.parse(md);
+                        } else if (typeof window.marked === 'function') {
+                            this.documentationContent = window.marked(md);
+                        } else {
+                            this.documentationContent = '<p>Error: Markdown parser not available</p>';
+                        }
                     } catch (err) {
                         console.error('Error loading documentation:', err);
                         this.documentationContent = '<p>Error loading documentation: ' + err.message + '</p>';
@@ -661,6 +669,10 @@
 
                         const txBuffer = Buffer.from(base64Tx, 'base64');
                         const transaction = Transaction.from(txBuffer);
+                        
+                        // Set fee payer to user's wallet
+                        transaction.feePayer = new window.solanaWeb3.PublicKey(this.userAddress);
+                        console.log('[HealthCred] Set transaction fee payer to user wallet');
                         
                         console.log('[HealthCred] Deserialized unsigned transaction');
 
