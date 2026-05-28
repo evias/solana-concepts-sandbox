@@ -56,7 +56,7 @@ describe('HealthCred Database Operations', () => {
       email: 'test@example.com',
       profession: 'Nurse',
       didDocumentJson: JSON.stringify(didDoc),
-      didDocumentHash: '0xabc123def456',
+      didDocumentHash: `hash_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       didId: didDoc.id,
       authenticationMethods: JSON.stringify(didDoc.authentication),
       sasCredentialId: 'sas_' + Date.now(),
@@ -141,13 +141,24 @@ describe('HealthCred Database Operations', () => {
   });
 
   describe('Credential Validation', () => {
-    test('should enforce unique wallet address', () => {
-      const walletAddress = `wallet_unique2_${Date.now()}`;
-      createTestCredential({ walletAddress });
+    test('should enforce unique DID document hash', () => {
+      const didDocHash = `unique_hash_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      createTestCredential({ didDocumentHash: didDocHash });
       
       expect(() => {
-        createTestCredential({ walletAddress });
+        createTestCredential({ didDocumentHash: didDocHash });
       }).toThrow();
+    });
+    
+    test('should allow multiple credentials with same wallet address but different DIDs', () => {
+      const walletAddress = `wallet_multi_${Date.now()}`;
+      const cred1 = createTestCredential({ walletAddress });
+      const cred2 = createTestCredential({ walletAddress });
+      
+      // Both credentials should exist with same wallet
+      expect(cred1.wallet_address).toBe(cred2.wallet_address);
+      expect(cred1.id).not.toBe(cred2.id);
+      expect(cred1.did_document_hash).not.toBe(cred2.did_document_hash);
     });
     
     test('should store DID document JSON correctly', () => {
