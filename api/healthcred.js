@@ -292,11 +292,14 @@ router.post('/submit-signed-transaction', async (req, res) => {
          payer,
          mint,
          credentialOwnerPublicKey
-       );
-       console.log('[HealthCred] Token account created:', associatedTokenAccount.address.toBase58());
+        );
+        console.log('[HealthCred] Token account created:', associatedTokenAccount.address.toBase58());
 
-       // Mint 1 token to represent this credential
-       console.log('[HealthCred] Minting credential token...');
+        // Wait for RPC to index the ATA
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Mint 1 token to represent this credential
+        console.log('[HealthCred] Minting credential token...');
        const mintSig = await mintTo(
          connection,
          payer,
@@ -574,11 +577,14 @@ router.post('/badges', async (req, res) => {
         payer,
         mint,
         credentialOwnerPublicKey
-      );
-      console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
-      
-      // Mint 1 badge token to credential owner (the person receiving the badge)
-      console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
+       );
+       console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
+       
+       // Wait for RPC to index the ATA
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       // Mint 1 badge token to credential owner (the person receiving the badge)
+       console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
       const badgeMintSig = await mintTo(
         connection,
         payer,
@@ -906,11 +912,14 @@ router.post('/certifications', async (req, res) => {
         payer,
         mint,
         credentialOwnerPublicKey
-      );
-      console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
-      
-      // Mint 1 certification token to credential owner (the person receiving the certification)
-      console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
+       );
+       console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
+       
+       // Wait for RPC to index the ATA
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       // Mint 1 certification token to credential owner (the person receiving the certification)
+       console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
       const certMintSig = await mintTo(
         connection,
         payer,

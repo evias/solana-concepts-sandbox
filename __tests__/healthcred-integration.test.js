@@ -310,7 +310,7 @@ describe('HealthCred Integration Tests', () => {
       expect(res.body.credential_id).toBe(testCredential.id);
       expect(Array.isArray(res.body.badges)).toBe(true);
       expect(res.body.badges.length).toBeGreaterThanOrEqual(3);
-    });
+    }, 30000);
 
     test('should return 404 if credential not found for badges', async () => {
       const res = await request(app)
