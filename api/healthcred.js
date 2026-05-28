@@ -270,18 +270,43 @@ router.post('/submit-signed-transaction', async (req, res) => {
      console.log('[HealthCred] Creating NFT mint for credential...');
      let mintAddress = null;
      try {
+       console.log('[HealthCred] Creating SPL token mint...');
        const mint = await createMint(
          connection,
-         payer,                      // Backend payer
-         new web3.PublicKey(regData.walletAddress),  // User is mint authority
-         null,                       // No freeze authority
-         0                           // 0 decimals = NFT
+         payer,
+         payer.publicKey,      // Mint authority (backend payer)
+         payer.publicKey,      // Freeze authority (backend payer)
+         0                     // 0 decimals = NFT
        );
        mintAddress = mint.toBase58();
-       console.log('[HealthCred] NFT mint created:', mintAddress);
+       console.log('[HealthCred] Token mint created:', mintAddress);
+
+       // Create associated token account for credential owner
+       console.log('[HealthCred] Creating associated token account...');
+       const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
+       const associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+         connection,
+         payer,
+         mint,
+         credentialOwnerPublicKey
+       );
+       console.log('[HealthCred] Token account created:', associatedTokenAccount.address.toBase58());
+
+       // Mint 1 token to represent this credential
+       console.log('[HealthCred] Minting credential token...');
+       const mintSig = await mintTo(
+         connection,
+         payer,
+         mint,
+         associatedTokenAccount.address,
+         payer,
+         1
+       );
+       console.log('[HealthCred] Token minted, signature:', mintSig);
      } catch (mintErr) {
-       console.error('[HealthCred] Error creating NFT mint:', mintErr.message);
-       console.error('[HealthCred] Continuing without mint (can be created later)');
+       console.error('[HealthCred] Error creating NFT mint or minting:', mintErr.message);
+       console.error('[HealthCred] Error stack:', mintErr.stack);
+       console.error('[HealthCred] Full error:', mintErr);
        // Don't fail the whole registration if mint creation fails
        mintAddress = null;
      }
