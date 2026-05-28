@@ -620,7 +620,7 @@
                         console.log('[HealthCred] Profession:', this.form.profession);
                         console.log('[HealthCred] Email:', this.form.email);
 
-                        this.registerProgress = '📤 Sending registration request to server...';
+                        this.registerProgress = '📤 Creating unsigned transaction...';
                         const res = await fetch('/api/v1/healthcred/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -640,13 +640,64 @@
                             throw new Error(error.error || 'Registration failed');
                         }
 
+                        const result = await res.json();
+                        const { registrationId, transaction: base64Tx } = result;
+                        
+                        console.log('[HealthCred] Unsigned transaction created');
+                        console.log('[HealthCred] Registration ID:', registrationId);
+
+                        // Sign transaction with Phantom
+                        this.registerProgress = '🔐 Waiting for wallet signature...';
+                        
+                        if (!window.solana) {
+                            throw new Error('Phantom wallet not available');
+                        }
+
+                        // Deserialize unsigned transaction
+                        const { Connection, Transaction } = window.solanaWeb3 || {};
+                        if (!Connection || !Transaction) {
+                            throw new Error('Solana Web3 library not available');
+                        }
+
+                        const txBuffer = Buffer.from(base64Tx, 'base64');
+                        const transaction = Transaction.from(txBuffer);
+                        
+                        console.log('[HealthCred] Deserialized unsigned transaction');
+
+                        // Sign with Phantom
+                        this.registerProgress = '✍️ Please approve signature in Phantom...';
+                        const signedTx = await window.solana.signTransaction(transaction);
+                        
+                        console.log('[HealthCred] Transaction signed by wallet');
+                        
+                        // Serialize signed transaction
+                        const signedTxBuffer = signedTx.serialize();
+                        const signedBase64 = signedTxBuffer.toString('base64');
+
+                        // Submit signed transaction
+                        this.registerProgress = '📡 Broadcasting transaction...';
+                        const submitRes = await fetch('/api/v1/healthcred/submit-signed-transaction', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                registrationId,
+                                signedTransaction: signedBase64
+                            })
+                        });
+
+                        if (!submitRes.ok) {
+                            const error = await submitRes.json();
+                            console.error('[HealthCred] Submission error:', error);
+                            throw new Error(error.error || 'Transaction submission failed');
+                        }
+
                         this.registerProgress = '✅ Credential registered successfully!';
                         console.log('[HealthCred] Registration successful!');
                         
-                        const result = await res.json();
-                        console.log('[HealthCred] Credential ID:', result.credential.id);
-                        console.log('[HealthCred] SPL Mint:', result.onChain.mint);
-                        console.log('[HealthCred] Transaction:', result.onChain.transactionSignature);
+                        const submitResult = await submitRes.json();
+                        console.log('[HealthCred] Credential ID:', submitResult.credential.id);
+                        console.log('[HealthCred] SPL Mint:', submitResult.onChain.mint);
+                        console.log('[HealthCred] Transaction:', submitResult.onChain.transactionSignature);
                         
                         setTimeout(() => {
                             alert('✅ Credential registered successfully!\n\nView it in the "Registered Credentials" section below.');
@@ -683,6 +734,8 @@
                     this.uploadingCert = true;
                     try {
                         const fileBuffer = new Uint8Array(await this.certForm.file.arrayBuffer());
+                        
+                        // Step 1: Create unsigned transaction
                         const res = await fetch('/api/v1/healthcred/certifications', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -699,6 +752,45 @@
                         if (!res.ok) {
                             const error = await res.json();
                             throw new Error(error.error || 'Upload failed');
+                        }
+
+                        const result = await res.json();
+                        const { certificationRegistrationId, transaction: base64Tx } = result;
+                        
+                        console.log('[HealthCred] Unsigned certification transaction created');
+
+                        // Step 2: Sign with Phantom
+                        if (!window.solana) {
+                            throw new Error('Phantom wallet not available');
+                        }
+
+                        const { Transaction } = window.solanaWeb3 || {};
+                        if (!Transaction) {
+                            throw new Error('Solana Web3 library not available');
+                        }
+
+                        const txBuffer = Buffer.from(base64Tx, 'base64');
+                        const transaction = Transaction.from(txBuffer);
+                        
+                        const signedTx = await window.solana.signTransaction(transaction);
+                        const signedTxBuffer = signedTx.serialize();
+                        const signedBase64 = signedTxBuffer.toString('base64');
+
+                        console.log('[HealthCred] Certification transaction signed');
+
+                        // Step 3: Submit signed transaction
+                        const submitRes = await fetch('/api/v1/healthcred/submit-signed-certification-transaction', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                certificationRegistrationId,
+                                signedTransaction: signedBase64
+                            })
+                        });
+
+                        if (!submitRes.ok) {
+                            const error = await submitRes.json();
+                            throw new Error(error.error || 'Transaction submission failed');
                         }
 
                         alert('Certification uploaded successfully!');
@@ -727,6 +819,7 @@
                     }
 
                     try {
+                        // Step 1: Create unsigned transaction
                         const res = await fetch('/api/v1/healthcred/badges', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -741,6 +834,45 @@
                         if (!res.ok) {
                             const error = await res.json();
                             throw new Error(error.error || 'Badge creation failed');
+                        }
+
+                        const result = await res.json();
+                        const { badgeRegistrationId, transaction: base64Tx } = result;
+                        
+                        console.log('[HealthCred] Unsigned badge transaction created');
+
+                        // Step 2: Sign with Phantom
+                        if (!window.solana) {
+                            throw new Error('Phantom wallet not available');
+                        }
+
+                        const { Transaction } = window.solanaWeb3 || {};
+                        if (!Transaction) {
+                            throw new Error('Solana Web3 library not available');
+                        }
+
+                        const txBuffer = Buffer.from(base64Tx, 'base64');
+                        const transaction = Transaction.from(txBuffer);
+                        
+                        const signedTx = await window.solana.signTransaction(transaction);
+                        const signedTxBuffer = signedTx.serialize();
+                        const signedBase64 = signedTxBuffer.toString('base64');
+
+                        console.log('[HealthCred] Badge transaction signed');
+
+                        // Step 3: Submit signed transaction
+                        const submitRes = await fetch('/api/v1/healthcred/submit-signed-badge-transaction', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                badgeRegistrationId,
+                                signedTransaction: signedBase64
+                            })
+                        });
+
+                        if (!submitRes.ok) {
+                            const error = await submitRes.json();
+                            throw new Error(error.error || 'Transaction submission failed');
                         }
 
                         alert('Badge sent successfully!');

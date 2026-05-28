@@ -30,8 +30,17 @@ jest.mock('@solana/web3.js', () => ({
       this.signatures.push({ publicKey: {} });
       return this;
     }
-    serialize() {
-      return { toString: () => Buffer.from('mock').toString('base64') };
+    serialize(options = {}) {
+      // Return valid buffer that can be deserialized
+      return Buffer.from([0, 1, 2, 3, 4]);
+    }
+    static from(buffer) {
+      // Create a Transaction from buffer
+      const tx = new this();
+      tx.recentBlockhash = 'test_blockhash';
+      tx.feePayer = { toString: () => 'payer_address_test' };
+      tx.signatures = [];
+      return tx;
     }
   },
   TransactionInstruction: class {
@@ -239,7 +248,7 @@ describe('HealthCred API Endpoints', () => {
       expect(res.body.error).toContain('must contain "authentication" array');
     });
 
-    test('should successfully register a new credential', async () => {
+    test('should return unsigned transaction for valid registration request', async () => {
       const walletAddress = genValidAddress();
       const didDoc = {
         id: `did:test:${testPrefix}_${Math.random()}`,
@@ -255,26 +264,18 @@ describe('HealthCred API Endpoints', () => {
           email: 'jane@healthcare.com',
           profession: 'Cardiologist',
           didDocumentJson: JSON.stringify(didDoc)
-        });
+        })
+        .expect(200);
 
-      if (res.status !== 200) {
-        console.error('Response:', res.body);
-      }
-      expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(res.body.credential).toBeDefined();
-      expect(res.body.credential.wallet_address).toBe(walletAddress);
-      expect(res.body.credential.full_name).toBe('Dr. Jane Smith');
-      expect(res.body.credential.profession).toBe('Cardiologist');
-      expect(res.body.credential.did_id).toBe(didDoc.id);
-      expect(res.body.onChain.mint).toBeDefined();
-      expect(res.body.onChain.transactionSignature).toBeDefined();
-      expect(res.body.metadata.didDocumentHash).toBeDefined();
-
-      createdCredentialIds.push(res.body.credential.id);
+      expect(res.body.registrationId).toBeDefined();
+      expect(res.body.transaction).toBeDefined();
+      expect(res.body.metadata).toBeDefined();
+      expect(res.body.metadata.walletAddress).toBe(walletAddress);
+      expect(res.body.metadata.mint).toBeDefined();
     });
 
-    test('should return 409 if credential already exists for wallet', async () => {
+    test('should return 409 if credential already exists for wallet after registration', async () => {
       const walletAddress = genValidAddress();
       const didDoc1 = {
         id: `did:test:${testPrefix}_dupe1_${Math.random()}`,
@@ -298,9 +299,19 @@ describe('HealthCred API Endpoints', () => {
         })
         .expect(200);
 
-      createdCredentialIds.push(res1.body.credential.id);
+      // Complete the first registration by submitting signed transaction
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: res1.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
 
-      // Second registration with same wallet
+      createdCredentialIds.push(submitRes.body.credential.id);
+
+      // Second registration with same wallet should fail
       const res2 = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
@@ -363,14 +374,14 @@ describe('HealthCred API Endpoints', () => {
 
   describe('GET /credentials/:id', () => {
     test('should return a specific credential', async () => {
-      // Create a credential first
+      // Create a credential first by completing both steps
       const walletAddress = genValidAddress();
       const didDoc = {
         id: `did:test:${testPrefix}_get_${Math.random()}`,
         authentication: ['key-1']
       };
 
-      const createRes = await request(app)
+      const registerRes = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
           walletAddress,
@@ -382,7 +393,17 @@ describe('HealthCred API Endpoints', () => {
         })
         .expect(200);
 
-      const credentialId = createRes.body.credential.id;
+      // Submit signed transaction to complete registration
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: registerRes.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      const credentialId = submitRes.body.credential.id;
       createdCredentialIds.push(credentialId);
 
       // Get the credential
@@ -405,14 +426,14 @@ describe('HealthCred API Endpoints', () => {
     });
 
     test('should include badge count in response', async () => {
-      // Create a credential
+      // Create a credential first by completing both steps
       const walletAddress = genValidAddress();
       const didDoc = {
         id: `did:test:${testPrefix}_badge_${Math.random()}`,
         authentication: ['key-1']
       };
 
-      const createRes = await request(app)
+      const registerRes = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
           walletAddress,
@@ -424,7 +445,17 @@ describe('HealthCred API Endpoints', () => {
         })
         .expect(200);
 
-      const credentialId = createRes.body.credential.id;
+      // Submit signed transaction to complete registration
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: registerRes.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      const credentialId = submitRes.body.credential.id;
       createdCredentialIds.push(credentialId);
 
       // Get the credential
