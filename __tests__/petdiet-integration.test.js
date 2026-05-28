@@ -88,6 +88,7 @@ app.use('/api/v1/petdiet', petdietRouter);
 describe('PetDiet Integration Tests', () => {
   let testPet;
   const testOwnerPrefix = 'jest_petdiet_integration_' + Date.now();
+  let createdPetIds = []; // Track all created pets for cleanup
 
   beforeAll(() => {
     testPet = petDb.createPet({
@@ -99,21 +100,30 @@ describe('PetDiet Integration Tests', () => {
       owner: testOwnerPrefix,
       mandateAuthority: 'test_authority_integration'
     });
+    createdPetIds.push(testPet.id); // Track for cleanup
   });
 
   afterAll(() => {
-    // Cleanup test data
+    // Cleanup all test data (including other_owner pets)
     try {
-      const plans = nutritionPlanDb.getNutritionPlansByPetId(testPet.id);
-      if (plans) {
-        for (const plan of plans) {
-          const db = require('../api/database').db;
-          db.prepare('DELETE FROM feeding_actions WHERE nutrition_plan_id = ?').run(plan.id);
-          db.prepare('DELETE FROM nutrition_plans WHERE id = ?').run(plan.id);
-        }
-      }
       const db = require('../api/database').db;
-      db.prepare('DELETE FROM pets WHERE id = ?').run(testPet.id);
+      
+      // Cleanup all created pets and related data
+      for (const petId of createdPetIds) {
+        const plans = nutritionPlanDb.getNutritionPlansByPetId(petId);
+        if (plans) {
+          for (const plan of plans) {
+            db.prepare('DELETE FROM feeding_actions WHERE nutrition_plan_id = ?').run(plan.id);
+            db.prepare('DELETE FROM nutrition_plans WHERE id = ?').run(plan.id);
+          }
+        }
+        db.prepare('DELETE FROM pets WHERE id = ?').run(petId);
+      }
+      
+      // Cleanup any other_owner pets that may have been created during tests
+      db.prepare("DELETE FROM nutrition_plans WHERE pet_id IN (SELECT id FROM pets WHERE owner = 'other_owner')").run();
+      db.prepare("DELETE FROM feeding_actions WHERE pet_id IN (SELECT id FROM pets WHERE owner = 'other_owner')").run();
+      db.prepare("DELETE FROM pets WHERE owner = 'other_owner'").run();
     } catch (err) {
       // Silently ignore cleanup errors
     }
@@ -470,6 +480,7 @@ describe('PetDiet Integration Tests', () => {
         owner: 'other_owner',
         mandateAuthority: 'other_authority'
       });
+      createdPetIds.push(otherPet.id); // Track for cleanup
 
       const plan = nutritionPlanDb.createNutritionPlan({
         id: `diet_mismatch_${Date.now()}`,
