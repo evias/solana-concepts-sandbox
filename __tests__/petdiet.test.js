@@ -176,8 +176,8 @@ describe('PetDiet API Endpoints', () => {
     });
 
     test('should return nutrition plans for a pet', async () => {
-      // Create a test plan
-      const planId = `diet_${Date.now()}`;
+      // Create a test plan with unique ID to prevent UNIQUE constraint errors
+      const planId = `diet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       testPlan = nutritionPlanDb.createNutritionPlan({
         id: planId,
         petId: testPet.id,
@@ -228,7 +228,7 @@ describe('PetDiet API Endpoints', () => {
     });
 
     test('should return empty array for plan with no feeding actions', async () => {
-      const planId = `diet_${Date.now()}`;
+      const planId = `diet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       nutritionPlanDb.createNutritionPlan({
         id: planId,
         petId: testPet.id,
@@ -257,7 +257,7 @@ describe('PetDiet API Endpoints', () => {
     });
 
     test('should return feeding actions for a plan', async () => {
-      const planId = `diet_${Date.now()}`;
+      const planId = `diet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const plan = nutritionPlanDb.createNutritionPlan({
         id: planId,
         petId: testPet.id,
@@ -279,7 +279,7 @@ describe('PetDiet API Endpoints', () => {
       });
 
       // Create some feeding actions
-      const actionId = `action_${Date.now()}`;
+      const actionId = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       feedingActionDb.createFeedingAction({
         id: actionId,
         nutritionPlanId: planId,

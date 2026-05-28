@@ -142,8 +142,8 @@ router.post('/create-plan', express.json(), async (req, res) => {
 
      console.log(`[PetDiet] Token minted, signature:`, signature);
 
-     // Create nutrition plan ID upfront so we can use it in memo
-     const planId = 'diet_' + Date.now();
+     // Create nutrition plan ID upfront so we can use it in memo (with random component to ensure uniqueness)
+      const planId = 'diet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
      // Create memo transaction with nutrition plan details
      console.log(`[PetDiet] Creating memo transaction with nutrition plan data...`);
