@@ -529,10 +529,10 @@ router.post('/badges', async (req, res) => {
         payer,
         issuerPublicKey,
         null,
-        9
+        0  // 0 decimals = NFT (badges are single tokens)
       );
       mintAddress = mint.toBase58();
-      console.log('[HealthCred] Badge SPL token mint created:', mintAddress);
+      console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for badge:', err.message);
       return res.status(500).json({ error: 'Failed to create SPL token mint' });
@@ -704,6 +704,7 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
     delete global.healthCredBadges[badgeRegistrationId];
     
     console.log('[HealthCred] Badge creation completed!');
+    console.log('[HealthCred] Solscan URL: https://solscan.io/tx/' + transactionSignature + '?cluster=devnet');
     
     return res.status(200).json({
       success: true,
@@ -716,7 +717,7 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
       onChain: {
         mint: badgeData.mintAddress,
         transactionSignature,
-        memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
+        solscanUrl: `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
       }
     });
   } catch (error) {
@@ -812,10 +813,10 @@ router.post('/certifications', async (req, res) => {
         payer,
         issuerPublicKey,
         null,
-        9
+        0  // 0 decimals = NFT (certifications are single tokens)
       );
       mintAddress = mint.toBase58();
-      console.log('[HealthCred] Certification SPL token mint created:', mintAddress);
+      console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for certification:', err.message);
       return res.status(500).json({ error: 'Failed to create SPL token mint' });
