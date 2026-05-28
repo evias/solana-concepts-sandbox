@@ -127,6 +127,10 @@ router.post('/register', async (req, res) => {
     // Create associated token account for user and mint 1 token
     console.log('[HealthCred] Creating associated token account for user...');
     try {
+      console.log('[HealthCred] User PublicKey:', userPublicKey.toBase58());
+      console.log('[HealthCred] Mint PublicKey:', mintAddress);
+      console.log('[HealthCred] Payer PublicKey:', payer.publicKey.toBase58());
+      
       const userTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
@@ -148,6 +152,8 @@ router.post('/register', async (req, res) => {
       console.log('[HealthCred] NFT minted, signature:', mintSig);
     } catch (err) {
       console.error('[HealthCred] Error creating token account or minting:', err.message);
+      console.error('[HealthCred] Error stack:', err.stack);
+      console.error('[HealthCred] Full error:', err);
       return res.status(500).json({ error: 'Failed to mint NFT token', details: err.message });
     }
     
