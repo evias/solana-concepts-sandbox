@@ -519,42 +519,48 @@ router.post('/badges', async (req, res) => {
       return res.status(404).json({ error: 'Credential not found' });
     }
     
-    // Create SPL Token Mint for badge (issuer-owned)
+    // Get credential owner's wallet (recipient of the badge NFT)
+    const credentialOwnerWallet = credential.wallet_address;
+    console.log('[HealthCred] Credential owner (badge recipient):', credentialOwnerWallet);
+    
+    // Create SPL Token Mint for badge (backend-controlled, mints to credential owner)
     console.log('[HealthCred] Creating SPL token mint for badge...');
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
+    const credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
     let mintAddress;
     try {
+      // Create mint with backend payer as mint authority (backend controls minting)
       const mint = await createMint(
         connection,
         payer,
-        issuerPublicKey,
+        payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
         null,
         0  // 0 decimals = NFT (badges are single tokens)
       );
       mintAddress = mint.toBase58();
       console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
       
-      // Create associated token account for issuer and mint 1 token
-      console.log('[HealthCred] Creating associated token account for badge issuer...');
-      const issuerTokenAccount = await getOrCreateAssociatedTokenAccount(
+      // Create associated token account for credential owner (badge recipient)
+      console.log('[HealthCred] Creating associated token account for credential owner...');
+      const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
         mint,
-        issuerPublicKey
+        credentialOwnerPublicKey
       );
-      console.log('[HealthCred] Issuer token account:', issuerTokenAccount.address.toBase58());
+      console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
       
-      // Mint 1 badge token to issuer
-      console.log('[HealthCred] Minting 1 badge NFT token to issuer...');
+      // Mint 1 badge token to credential owner (the person receiving the badge)
+      console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
       const badgeMintSig = await mintTo(
         connection,
         payer,
         mint,
-        issuerTokenAccount.address,
-        payer,
+        recipientTokenAccount.address,
+        payer,  // payer is the mint authority, so they authorize the mint
         1  // Mint 1 token
       );
-      console.log('[HealthCred] Badge NFT minted, signature:', badgeMintSig);
+      console.log('[HealthCred] Badge NFT minted to recipient, signature:', badgeMintSig);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for badge:', err.message);
       return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
@@ -825,42 +831,52 @@ router.post('/certifications', async (req, res) => {
       .digest('hex');
     console.log('[HealthCred] File hash:', fileHash);
     
-    // Create SPL Token Mint for certification (issuer-owned)
+    // Get credential owner's wallet (recipient of the certification NFT)
+    const certCredential = credentialDb.getCredentialById(credentialId);
+    if (!certCredential) {
+      return res.status(404).json({ error: 'Credential not found' });
+    }
+    const credentialOwnerWallet = certCredential.wallet_address;
+    console.log('[HealthCred] Credential owner (certification recipient):', credentialOwnerWallet);
+    
+    // Create SPL Token Mint for certification (backend-controlled, mints to credential owner)
     console.log('[HealthCred] Creating SPL token mint for certification...');
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
+    const credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
     let mintAddress;
     try {
+      // Create mint with backend payer as mint authority (backend controls minting)
       const mint = await createMint(
         connection,
         payer,
-        issuerPublicKey,
+        payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
         null,
         0  // 0 decimals = NFT (certifications are single tokens)
       );
       mintAddress = mint.toBase58();
       console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
       
-      // Create associated token account for issuer and mint 1 token
-      console.log('[HealthCred] Creating associated token account for certification issuer...');
-      const issuerTokenAccount = await getOrCreateAssociatedTokenAccount(
+      // Create associated token account for credential owner (certification recipient)
+      console.log('[HealthCred] Creating associated token account for credential owner...');
+      const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
         mint,
-        issuerPublicKey
+        credentialOwnerPublicKey
       );
-      console.log('[HealthCred] Issuer token account:', issuerTokenAccount.address.toBase58());
+      console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
       
-      // Mint 1 certification token to issuer
-      console.log('[HealthCred] Minting 1 certification NFT token to issuer...');
+      // Mint 1 certification token to credential owner (the person receiving the certification)
+      console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
       const certMintSig = await mintTo(
         connection,
         payer,
         mint,
-        issuerTokenAccount.address,
-        payer,
+        recipientTokenAccount.address,
+        payer,  // payer is the mint authority, so they authorize the mint
         1  // Mint 1 token
       );
-      console.log('[HealthCred] Certification NFT minted, signature:', certMintSig);
+      console.log('[HealthCred] Certification NFT minted to recipient, signature:', certMintSig);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for certification:', err.message);
       return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
