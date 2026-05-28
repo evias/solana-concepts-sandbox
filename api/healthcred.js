@@ -9,7 +9,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const web3 = require('@solana/web3.js');
-const { createMint, getOrCreateAssociatedTokenAccount, mintTo } = require('@solana/spl-token');
+const { createMint, getOrCreateAssociatedTokenAccount, mintTo, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress } = require('@solana/spl-token');
 const { payer } = require('./payer');
 const { credentialDb, badgeDb, certificationDb } = require('./database');
 
@@ -282,14 +282,33 @@ router.post('/submit-signed-transaction', async (req, res) => {
        mintAddress = mint.toBase58();
        console.log('[HealthCred] NFT mint created:', mintAddress);
        
+       // Wait a bit for the mint to be indexed
+       console.log('[HealthCred] Waiting for mint to be indexed...');
+       await new Promise(resolve => setTimeout(resolve, 2000));
+       
        console.log('[HealthCred] Creating associated token account for user...');
-       const userTokenAccount = await getOrCreateAssociatedTokenAccount(
-         connection,
-         payer,
-         new web3.PublicKey(mintAddress),
-         userPublicKey
-       );
-       console.log('[HealthCred] User token account:', userTokenAccount.address.toBase58());
+       let retries = 3;
+       let userTokenAccount = null;
+       while (retries > 0) {
+         try {
+           userTokenAccount = await getOrCreateAssociatedTokenAccount(
+             connection,
+             payer,
+             new web3.PublicKey(mintAddress),
+             userPublicKey
+           );
+           console.log('[HealthCred] User token account:', userTokenAccount.address.toBase58());
+           break;
+         } catch (err) {
+           retries--;
+           if (retries > 0) {
+             console.log('[HealthCred] Retry ATA creation, retries left:', retries);
+             await new Promise(resolve => setTimeout(resolve, 1500));
+           } else {
+             throw err;
+           }
+         }
+       }
        
        console.log('[HealthCred] Minting 1 NFT token to user...');
        const mintSig = await mintTo(
