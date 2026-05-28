@@ -455,10 +455,15 @@
                         </button>
                         <button 
                             type="submit"
-                            :disabled="!badgeForm.emoji || !badgeForm.description"
-                            class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50">
-                            Send Badge
+                            :disabled="!badgeForm.emoji || !badgeForm.description || sendingBadge"
+                            class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!sendingBadge">🎖️ Send Badge</span>
+                            <span x-show="sendingBadge" x-text="badgeProgress || '⏳ Sending...'"></span>
                         </button>
+                    </div>
+
+                    <div x-show="badgeProgress && sendingBadge" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded text-sm">
+                        <span x-text="badgeProgress"></span>
                     </div>
 
                     <div x-show="badgeError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
@@ -500,12 +505,14 @@
                 pagination: { total: 0, limit: 10, offset: 0, hasMore: false },
                 loading: false,
                 registering: false,
+                registerProgress: '',
                 uploadingCert: false,
+                sendingBadge: false,
+                badgeProgress: '',
                 showBadgeModal: false,
                 showCredentialDetailsModal: false,
                 selectedCredential: null,
                 registerError: '',
-                registerProgress: '',
                 certError: '',
                 badgeError: '',
 
@@ -824,14 +831,18 @@
 
                 async submitBadge() {
                     this.badgeError = '';
+                    this.sendingBadge = true; // Prevent re-clicks
                     
                     if (!this.userAddress) {
                         this.badgeError = 'Please connect your wallet first';
+                        this.sendingBadge = false;
                         return;
                     }
 
                     try {
                         // Step 1: Create unsigned transaction
+                        this.badgeProgress = '📝 Creating badge transaction...';
+                        console.log('[HealthCred] Step 1: Creating unsigned badge transaction');
                         const res = await fetch('/api/v1/healthcred/badges', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -854,6 +865,9 @@
                         console.log('[HealthCred] Unsigned badge transaction created');
 
                         // Step 2: Sign with Phantom
+                        this.badgeProgress = '🔑 Waiting for Phantom signature...';
+                        console.log('[HealthCred] Step 2: Requesting Phantom signature');
+                        
                         if (!window.solana) {
                             throw new Error('Phantom wallet not available');
                         }
@@ -873,32 +887,45 @@
                             throw new Error('Failed to deserialize transaction: ' + txErr.message);
                         }
                         
-                        const signedTx = await window.solana.signTransaction(transaction);
-                        const signedTxBuffer = signedTx.serialize();
-                        const signedBase64 = signedTxBuffer.toString('base64');
+                        try {
+                            console.log('[HealthCred] Calling window.solana.signTransaction()...');
+                            const signedTx = await window.solana.signTransaction(transaction);
+                            console.log('[HealthCred] Phantom signature received');
+                            const signedTxBuffer = signedTx.serialize();
+                            const signedBase64 = signedTxBuffer.toString('base64');
 
-                        console.log('[HealthCred] Badge transaction signed');
+                            console.log('[HealthCred] Badge transaction signed, size:', signedBase64.length);
 
-                        // Step 3: Submit signed transaction
-                        const submitRes = await fetch('/api/v1/healthcred/submit-signed-badge-transaction', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                badgeRegistrationId,
-                                signedTransaction: signedBase64
-                            })
-                        });
+                            // Step 3: Submit signed transaction
+                            this.badgeProgress = '📡 Broadcasting transaction...';
+                            console.log('[HealthCred] Step 3: Submitting signed transaction');
+                            const submitRes = await fetch('/api/v1/healthcred/submit-signed-badge-transaction', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    badgeRegistrationId,
+                                    signedTransaction: signedBase64
+                                })
+                            });
 
-                        if (!submitRes.ok) {
-                            const error = await submitRes.json();
-                            throw new Error(error.error || 'Transaction submission failed');
+                            if (!submitRes.ok) {
+                                const error = await submitRes.json();
+                                throw new Error(error.error || 'Transaction submission failed');
+                            }
+
+                            alert('Badge sent successfully!');
+                            this.showBadgeModal = false;
+                            this.badgeProgress = '';
+                        } catch (signErr) {
+                            console.error('[HealthCred] Phantom signing error:', signErr);
+                            throw new Error('Phantom signing failed: ' + (signErr.message || signErr.toString()));
                         }
-
-                        alert('Badge sent successfully!');
-                        this.showBadgeModal = false;
                     } catch (err) {
                         console.error('[HealthCred] Badge error:', err);
                         this.badgeError = err.message || err.toString() || 'Unexpected error';
+                        this.badgeProgress = '';
+                    } finally {
+                        this.sendingBadge = false; // Re-enable button
                     }
                 },
 
