@@ -277,15 +277,12 @@ router.post('/submit-signed-transaction', async (req, res) => {
          payer.publicKey,      // Mint authority (backend payer)
          payer.publicKey,      // Freeze authority (backend payer)
          0                     // 0 decimals = NFT
-       );
-       mintAddress = mint.toBase58();
-       console.log('[HealthCred] Token mint created:', mintAddress);
+        );
+        mintAddress = mint.toBase58();
+        console.log('[HealthCred] Token mint created:', mintAddress);
 
-       // Wait for RPC to index the mint
-       await new Promise(resolve => setTimeout(resolve, 1000));
-
-       // Create associated token account for credential owner
-       console.log('[HealthCred] Creating associated token account...');
+        // Create associated token account for credential owner
+        console.log('[HealthCred] Creating associated token account...');
        const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
        const associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
          connection,
