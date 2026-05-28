@@ -8,6 +8,8 @@
     <link href="/assets/base.min.css" rel="stylesheet">
     <!-- Markdown parser - load before Alpine -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Solana Web3.js library for transaction handling -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.0/lib/index.iife.js"></script>
     <script src="/assets/alpinejs.min.js" defer></script>
 </head>
 <body class="bg-gray-100">
@@ -651,18 +653,36 @@
                         const result = await res.json();
                         const { registrationId, transaction: base64Tx } = result;
                         
-                        console.log('[HealthCred] Transaction prepared by backend');
+                        console.log('[HealthCred] Unsigned transaction prepared by backend');
                         console.log('[HealthCred] Registration ID:', registrationId);
 
-                        // Transaction is already signed by backend payer (for memo)
-                        // Just submit it directly to complete registration
+                        // Step 2: Sign with Phantom
+                        if (!window.solana) {
+                            throw new Error('Phantom wallet not available');
+                        }
+
+                        if (!window.solanaWeb3) {
+                            throw new Error('Solana Web3 library not available - please refresh the page');
+                        }
+
+                        this.registerProgress = '🔑 Waiting for Phantom signature...';
+                        const txBuffer = Buffer.from(base64Tx, 'base64');
+                        const transaction = window.solanaWeb3.Transaction.from(txBuffer);
+                        
+                        const signedTx = await window.solana.signTransaction(transaction);
+                        const signedTxBuffer = signedTx.serialize();
+                        const signedBase64 = signedTxBuffer.toString('base64');
+                        
+                        console.log('[HealthCred] Registration transaction signed by user');
+
+                        // Step 3: Submit signed transaction
                         this.registerProgress = '📡 Broadcasting transaction...';
                         const submitRes = await fetch('/api/v1/healthcred/submit-signed-transaction', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 registrationId,
-                                signedTransaction: base64Tx
+                                signedTransaction: signedBase64
                             })
                         });
 
@@ -738,20 +758,19 @@
                         const result = await res.json();
                         const { certificationRegistrationId, transaction: base64Tx } = result;
                         
-                        console.log('[HealthCred] Unsigned certification transaction created');
+                         console.log('[HealthCred] Unsigned certification transaction created');
 
                         // Step 2: Sign with Phantom
                         if (!window.solana) {
                             throw new Error('Phantom wallet not available');
                         }
 
-                        const { Transaction } = window.solanaWeb3 || {};
-                        if (!Transaction) {
-                            throw new Error('Solana Web3 library not available');
+                        if (!window.solanaWeb3) {
+                            throw new Error('Solana Web3 library not available - please refresh the page');
                         }
 
                         const txBuffer = Buffer.from(base64Tx, 'base64');
-                        const transaction = Transaction.from(txBuffer);
+                        const transaction = window.solanaWeb3.Transaction.from(txBuffer);
                         
                         const signedTx = await window.solana.signTransaction(transaction);
                         const signedTxBuffer = signedTx.serialize();
@@ -827,13 +846,12 @@
                             throw new Error('Phantom wallet not available');
                         }
 
-                        const { Transaction } = window.solanaWeb3 || {};
-                        if (!Transaction) {
-                            throw new Error('Solana Web3 library not available');
+                        if (!window.solanaWeb3) {
+                            throw new Error('Solana Web3 library not available - please refresh the page');
                         }
 
                         const txBuffer = Buffer.from(base64Tx, 'base64');
-                        const transaction = Transaction.from(txBuffer);
+                        const transaction = window.solanaWeb3.Transaction.from(txBuffer);
                         
                         const signedTx = await window.solana.signTransaction(transaction);
                         const signedTxBuffer = signedTx.serialize();

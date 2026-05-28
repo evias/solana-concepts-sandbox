@@ -67,7 +67,13 @@ jest.mock('@solana/web3.js', () => ({
 jest.mock('@solana/spl-token', () => ({
   createMint: jest.fn().mockResolvedValue({
     toBase58: () => 'mock_mint_' + Date.now()
-  })
+  }),
+  getOrCreateAssociatedTokenAccount: jest.fn().mockResolvedValue({
+    address: {
+      toBase58: () => 'mock_ata_' + Date.now()
+    }
+  }),
+  mintTo: jest.fn().mockResolvedValue('mock_mint_sig_' + Date.now())
 }));
 
 jest.mock('../api/payer', () => ({

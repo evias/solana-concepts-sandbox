@@ -107,7 +107,7 @@ router.post('/register', async (req, res) => {
     
     // Create NFT Mint (0 decimals) for this credential, owned by user wallet
     console.log('[HealthCred] Creating NFT mint (owned by user wallet)...');
-    const userPublicKey = new web3.PublicKey(walletAddress);
+     const userPublicKey = new web3.PublicKey(walletAddress);
     let mintAddress;
     try {
       const mint = await createMint(
@@ -124,8 +124,35 @@ router.post('/register', async (req, res) => {
       return res.status(500).json({ error: 'Failed to create NFT mint' });
     }
     
-    // Create unsigned transaction with user as fee payer
-    console.log('[HealthCred] Creating unsigned transaction (user as payer)...');
+    // Create associated token account for user and mint 1 token
+    console.log('[HealthCred] Creating associated token account for user...');
+    try {
+      const userTokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer,
+        new web3.PublicKey(mintAddress),
+        userPublicKey
+      );
+      console.log('[HealthCred] User token account:', userTokenAccount.address.toBase58());
+      
+      // Mint 1 token to user
+      console.log('[HealthCred] Minting 1 NFT token to user...');
+      const mintSig = await mintTo(
+        connection,
+        payer,
+        new web3.PublicKey(mintAddress),
+        userTokenAccount.address,
+        payer,
+        1  // Mint 1 token
+      );
+      console.log('[HealthCred] NFT minted, signature:', mintSig);
+    } catch (err) {
+      console.error('[HealthCred] Error creating token account or minting:', err.message);
+      return res.status(500).json({ error: 'Failed to mint NFT token', details: err.message });
+    }
+    
+    // Create unsigned transaction with user as fee payer (2-step: user signs in Phantom)
+    console.log('[HealthCred] Creating unsigned transaction for user to sign...');
     const transaction = new web3.Transaction();
     
     // Add compute budget instruction (300k for large DID docs)
@@ -156,21 +183,19 @@ router.post('/register', async (req, res) => {
     transaction.recentBlockhash = blockhash.blockhash;
     console.log('[HealthCred] Recent blockhash:', blockhash.blockhash);
     
-    // Set backend payer as fee payer (backend pays for transaction)
-    transaction.feePayer = payer.publicKey;
-    console.log('[HealthCred] Set transaction fee payer to backend payer:', payer.publicKey.toBase58());
+    // Set user wallet as fee payer (user pays for transaction)
+    transaction.feePayer = userPublicKey;
+    console.log('[HealthCred] Set transaction fee payer to user wallet:', userPublicKey.toBase58());
     
-    // Sign with backend payer (backend pays for the memo transaction)
-    console.log('[HealthCred] Signing transaction with backend payer...');
-    transaction.sign(payer);
-    console.log('[HealthCred] Transaction signed');
-    
-    // Serialize signed transaction
+    // Serialize unsigned transaction for user to sign via Phantom
     let serializedTx;
     try {
-      console.log('[HealthCred] Serializing signed transaction...');
-      serializedTx = transaction.serialize();
-      console.log('[HealthCred] Transaction serialized, size:', serializedTx.length);
+      console.log('[HealthCred] Serializing unsigned transaction for user to sign...');
+      serializedTx = transaction.serialize({
+        requireAllSignatures: false,
+        verifySignatures: false
+      });
+      console.log('[HealthCred] Unsigned transaction serialized, size:', serializedTx.length);
     } catch (err) {
       console.error('[HealthCred] Error serializing transaction:', err.message);
       console.error('[HealthCred] Error stack:', err.stack);
