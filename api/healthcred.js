@@ -585,9 +585,7 @@ router.post('/badges', async (req, res) => {
     }
     const base64Tx = serializedTx.toString('base64');
     
-    console.log('[HealthCred] Unsigned badge transaction prepared');
-    
-    console.log('[HealthCred] Unsigned badge transaction prepared');
+    console.log('[HealthCred] Unsigned badge transaction prepared, size:', base64Tx.length);
     
     // Store temporary badge data (expires in 15 minutes)
     const badgeRegistrationId = uuidv4();
