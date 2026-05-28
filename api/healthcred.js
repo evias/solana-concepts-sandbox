@@ -281,6 +281,9 @@ router.post('/submit-signed-transaction', async (req, res) => {
        mintAddress = mint.toBase58();
        console.log('[HealthCred] Token mint created:', mintAddress);
 
+       // Wait for RPC to index the mint
+       await new Promise(resolve => setTimeout(resolve, 1000));
+
        // Create associated token account for credential owner
        console.log('[HealthCred] Creating associated token account...');
        const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
@@ -554,12 +557,15 @@ router.post('/badges', async (req, res) => {
         payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
         null,
         0  // 0 decimals = NFT (badges are single tokens)
-      );
-      mintAddress = mint.toBase58();
-      console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
-      
-      // Create associated token account for credential owner (badge recipient)
-      console.log('[HealthCred] Creating associated token account for credential owner...');
+       );
+       mintAddress = mint.toBase58();
+       console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
+       
+       // Wait for RPC to index the mint
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       // Create associated token account for credential owner (badge recipient)
+       console.log('[HealthCred] Creating associated token account for credential owner...');
       const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
@@ -883,12 +889,15 @@ router.post('/certifications', async (req, res) => {
         payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
         null,
         0  // 0 decimals = NFT (certifications are single tokens)
-      );
-      mintAddress = mint.toBase58();
-      console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
-      
-      // Create associated token account for credential owner (certification recipient)
-      console.log('[HealthCred] Creating associated token account for credential owner...');
+       );
+       mintAddress = mint.toBase58();
+       console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
+       
+       // Wait for RPC to index the mint
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       // Create associated token account for credential owner (certification recipient)
+       console.log('[HealthCred] Creating associated token account for credential owner...');
       const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         payer,
