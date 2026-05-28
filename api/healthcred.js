@@ -266,8 +266,27 @@ router.post('/submit-signed-transaction', async (req, res) => {
        return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
      }
      
-     // Create credential record in database (without minting NFT during registration)
-     // NFTs (badges/certifications) are minted separately through dedicated endpoints
+     // Create NFT mint for this credential
+     console.log('[HealthCred] Creating NFT mint for credential...');
+     let mintAddress = null;
+     try {
+       const mint = await createMint(
+         connection,
+         payer,                      // Backend payer
+         new web3.PublicKey(regData.walletAddress),  // User is mint authority
+         null,                       // No freeze authority
+         0                           // 0 decimals = NFT
+       );
+       mintAddress = mint.toBase58();
+       console.log('[HealthCred] NFT mint created:', mintAddress);
+     } catch (mintErr) {
+       console.error('[HealthCred] Error creating NFT mint:', mintErr.message);
+       console.error('[HealthCred] Continuing without mint (can be created later)');
+       // Don't fail the whole registration if mint creation fails
+       mintAddress = null;
+     }
+     
+     // Create credential record in database
      console.log('[HealthCred] Creating credential record in database...');
      const credentialId = `hc_${uuidv4()}`;
      let credential;
@@ -283,8 +302,8 @@ router.post('/submit-signed-transaction', async (req, res) => {
          didDocumentHash: regData.didDocumentHash,
          didId: regData.didId,
          authenticationMethods: JSON.stringify(regData.authenticationMethods),
-         sasCredentialId: `sas_${Date.now()}`,
-         mintAddress: null,      // Registration doesn't create a mint; badges/certs do
+         sasCredentialId: `sas_${uuidv4()}`,    // Unique credential ID
+         mintAddress,                           // NFT mint address (or null if creation failed)
          transactionSignature,
          transactionHash
        });
@@ -300,6 +319,11 @@ router.post('/submit-signed-transaction', async (req, res) => {
      
      console.log('[HealthCred] Registration completed!');
      console.log('[HealthCred] Credential ID:', credentialId);
+     console.log('[HealthCred] SAS ID:', credential.sas_credential_id);
+     if (mintAddress) {
+       console.log('[HealthCred] NFT Mint:', mintAddress);
+       console.log('[HealthCred] Mint URL: https://solscan.io/token/' + mintAddress + '?cluster=devnet');
+     }
      console.log('[HealthCred] Transaction URL: https://solscan.io/tx/' + transactionHash + '?cluster=devnet');
      
      return res.status(200).json({
@@ -313,12 +337,14 @@ router.post('/submit-signed-transaction', async (req, res) => {
          created_at: credential.created_at
        },
        onChain: {
+         mint: mintAddress,
          transactionSignature,
          memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
        },
        metadata: {
          solscanUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`,
-         didDocumentHash: regData.didDocumentHash
+         didDocumentHash: regData.didDocumentHash,
+         sasCredentialId: credential.sas_credential_id
        }
      });
   } catch (error) {
