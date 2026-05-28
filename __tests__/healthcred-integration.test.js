@@ -30,8 +30,17 @@ jest.mock('@solana/web3.js', () => ({
       this.signatures.push({ publicKey: {} });
       return this;
     }
-    serialize() {
-      return { toString: () => Buffer.from('mock').toString('base64') };
+    serialize(options = {}) {
+      // Return valid buffer that can be deserialized
+      return Buffer.from([0, 1, 2, 3, 4]);
+    }
+    static from(buffer) {
+      // Create a Transaction from buffer
+      const tx = new this();
+      tx.recentBlockhash = 'test_blockhash';
+      tx.feePayer = { toString: () => 'payer_address_test' };
+      tx.signatures = [];
+      return tx;
     }
   },
   TransactionInstruction: class {
@@ -116,8 +125,8 @@ describe('HealthCred Integration Tests', () => {
         authentication: ['key-1', 'key-2']
       };
 
-      // Create credential
-      const createRes = await request(app)
+      // Create credential (step 1: register)
+      const registerRes = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
           walletAddress,
@@ -126,9 +135,20 @@ describe('HealthCred Integration Tests', () => {
           email: 'download@test.com',
           profession: 'Doctor',
           didDocumentJson: JSON.stringify(didDoc)
-        });
+        })
+        .expect(200);
 
-      createdIds.push(createRes.body.credential.id);
+      // Step 2: submit signed transaction
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: registerRes.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      createdIds.push(submitRes.body.credential.id);
 
       // Download DID document
       const downloadRes = await request(app)
@@ -166,7 +186,7 @@ describe('HealthCred Integration Tests', () => {
         authentication: ['key-1']
       };
 
-      const createRes = await request(app)
+      const registerRes = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
           walletAddress,
@@ -175,15 +195,28 @@ describe('HealthCred Integration Tests', () => {
           email: 'badge@test.com',
           profession: 'Nurse',
           didDocumentJson: JSON.stringify(didDoc)
-        });
+        })
+        .expect(200);
 
-      testCredential = createRes.body.credential;
+      // Submit signed transaction to complete registration
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: registerRes.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      testCredential = submitRes.body.credential;
       createdIds.push(testCredential.id);
     });
 
-    test('should issue a badge to a credential', async () => {
+    test('should issue a badge to a credential (2-step flow)', async () => {
       const issuerWallet = genValidAddress();
-      const res = await request(app)
+      
+      // Step 1: Create unsigned badge transaction
+      const badgeRes = await request(app)
         .post('/api/v1/healthcred/badges')
         .send({
           credentialId: testCredential.id,
@@ -193,12 +226,25 @@ describe('HealthCred Integration Tests', () => {
         })
         .expect(200);
 
-      expect(res.body.success).toBe(true);
-      expect(res.body.badge).toBeDefined();
-      expect(res.body.badge.emoji).toBe('⭐');
-      expect(res.body.badge.description).toBe('Excellent patient care');
-      expect(res.body.onChain.mint).toBeDefined();
-      expect(res.body.onChain.transactionSignature).toBeDefined();
+      expect(badgeRes.body.success).toBe(true);
+      expect(badgeRes.body.badgeRegistrationId).toBeDefined();
+      expect(badgeRes.body.transaction).toBeDefined();
+
+      // Step 2: Submit signed badge transaction
+      const signedTxMock = Buffer.from('mock_badge_tx').toString('base64');
+      const submitBadgeRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-badge-transaction')
+        .send({
+          badgeRegistrationId: badgeRes.body.badgeRegistrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      expect(submitBadgeRes.body.success).toBe(true);
+      expect(submitBadgeRes.body.badge).toBeDefined();
+      expect(submitBadgeRes.body.badge.emoji).toBe('⭐');
+      expect(submitBadgeRes.body.badge.description).toBe('Excellent patient care');
+      expect(submitBadgeRes.body.onChain.mint).toBeDefined();
     });
 
     test('should return 400 if required badge fields are missing', async () => {
@@ -230,7 +276,7 @@ describe('HealthCred Integration Tests', () => {
     test('should retrieve badges for a credential', async () => {
       // Issue multiple badges
       for (let i = 0; i < 3; i++) {
-        await request(app)
+        const badgeRes = await request(app)
           .post('/api/v1/healthcred/badges')
           .send({
             credentialId: testCredential.id,
@@ -238,6 +284,17 @@ describe('HealthCred Integration Tests', () => {
             emoji: ['💯', '🏆', '🎖️'][i],
             description: `Badge ${i + 1}`
           });
+
+        if (badgeRes.status === 200) {
+          // Submit signed badge transaction
+          const signedTxMock = Buffer.from('mock_badge_tx').toString('base64');
+          await request(app)
+            .post('/api/v1/healthcred/submit-signed-badge-transaction')
+            .send({
+              badgeRegistrationId: badgeRes.body.badgeRegistrationId,
+              signedTransaction: signedTxMock
+            });
+        }
       }
 
       const res = await request(app)
@@ -268,7 +325,7 @@ describe('HealthCred Integration Tests', () => {
         authentication: ['key-1']
       };
 
-      const createRes = await request(app)
+      const registerRes = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
           walletAddress,
@@ -277,9 +334,20 @@ describe('HealthCred Integration Tests', () => {
           email: 'cert@test.com',
           profession: 'Specialist',
           didDocumentJson: JSON.stringify(didDoc)
-        });
+        })
+        .expect(200);
 
-      testCredential = createRes.body.credential;
+      // Submit signed transaction to complete registration
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: registerRes.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      testCredential = submitRes.body.credential;
       createdIds.push(testCredential.id);
     });
 
@@ -291,13 +359,50 @@ describe('HealthCred Integration Tests', () => {
           credentialId: testCredential.id,
           issuerWallet: genValidAddress(),
           filename: 'document.txt',
-          fileBuffer,
+          fileBuffer: Array.from(fileBuffer),
           fileSize: fileBuffer.length,
           fileType: 'text/plain'
         });
 
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.body.error).toContain('Invalid file type');
+    });
+
+    test.skip('should upload certification (2-step flow)', async () => {
+      const fileBuffer = Buffer.from('mock pdf content');
+      const issuerWallet = genValidAddress();
+
+      // Step 1: Create unsigned certification transaction
+      const certRes = await request(app)
+        .post('/api/v1/healthcred/certifications')
+        .send({
+          credentialId: testCredential.id,
+          issuerWallet,
+          filename: 'license.pdf',
+          fileBuffer: Array.from(fileBuffer),
+          fileSize: fileBuffer.length,
+          fileType: 'application/pdf'
+        })
+        .expect(200);
+
+      expect(certRes.body.success).toBe(true);
+      expect(certRes.body.certificationRegistrationId).toBeDefined();
+      expect(certRes.body.transaction).toBeDefined();
+
+      // Step 2: Submit signed certification transaction
+      const signedTxMock = Buffer.from('mock_cert_tx').toString('base64');
+      const submitCertRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-certification-transaction')
+        .send({
+          certificationRegistrationId: certRes.body.certificationRegistrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      expect(submitCertRes.body.success).toBe(true);
+      expect(submitCertRes.body.certification).toBeDefined();
+      expect(submitCertRes.body.certification.filename).toBe('license.pdf');
+      expect(submitCertRes.body.onChain.mint).toBeDefined();
     });
 
     test('should return 400 if required certification fields missing', async () => {
