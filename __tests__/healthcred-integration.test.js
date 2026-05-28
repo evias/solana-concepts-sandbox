@@ -105,21 +105,21 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
-    for (const id of createdIds) {
-      try {
-        const db = require('better-sqlite3');
-        const dbInstance = db('./pettracker.db');
+    // Clean up test data from production database
+    try {
+      const db = require('better-sqlite3');
+      const dbInstance = db('./pettracker.db');
+      for (const id of createdIds) {
         dbInstance.prepare('DELETE FROM badges WHERE credential_id = ?').run(id);
         dbInstance.prepare('DELETE FROM certifications WHERE credential_id = ?').run(id);
-      } catch (err) {}
-    }
-    
-    const db = require('better-sqlite3');
-    const dbInstance = db('./pettracker.db');
-    for (const id of createdIds) {
-      try {
         dbInstance.prepare('DELETE FROM credentials WHERE id = ?').run(id);
-      } catch (err) {}
+      }
+      if (createdIds.length > 0) {
+        console.log(`[HealthCred Integration Tests] Cleaned up ${createdIds.length} test credentials`);
+      }
+    } catch (err) {
+      console.error('[HealthCred Integration Tests] Cleanup error:', err.message);
+      throw err;
     }
   });
 
