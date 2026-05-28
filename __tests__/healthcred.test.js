@@ -275,14 +275,14 @@ describe('HealthCred API Endpoints', () => {
       expect(res.body.metadata.mint).toBeDefined();
     });
 
-    test('should return 409 if credential already exists for wallet after registration', async () => {
+    test('should allow wallet to register multiple credentials with different DIDs', async () => {
       const walletAddress = genValidAddress();
       const didDoc1 = {
-        id: `did:test:${testPrefix}_dupe1_${Math.random()}`,
+        id: `did:test:${testPrefix}_multi1_${Math.random()}`,
         authentication: ['key-1']
       };
       const didDoc2 = {
-        id: `did:test:${testPrefix}_dupe2_${Math.random()}`,
+        id: `did:test:${testPrefix}_multi2_${Math.random()}`,
         authentication: ['key-2']
       };
 
@@ -311,7 +311,7 @@ describe('HealthCred API Endpoints', () => {
 
       createdCredentialIds.push(submitRes.body.credential.id);
 
-      // Second registration with same wallet should fail
+      // Second registration with same wallet should succeed (different DID)
       const res2 = await request(app)
         .post('/api/v1/healthcred/register')
         .send({
@@ -322,9 +322,81 @@ describe('HealthCred API Endpoints', () => {
           profession: 'Doctor',
           didDocumentJson: JSON.stringify(didDoc2)
         })
-        .expect(409);
+        .expect(200);
 
-      expect(res2.body.error).toContain('already exists');
+      // Complete second registration
+      const submitRes2 = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: res2.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      createdCredentialIds.push(submitRes2.body.credential.id);
+
+      // Verify both credentials exist for this wallet
+      expect(submitRes.body.credential.wallet_address).toBe(walletAddress);
+      expect(submitRes2.body.credential.wallet_address).toBe(walletAddress);
+      expect(submitRes.body.credential.id).not.toBe(submitRes2.body.credential.id);
+      expect(submitRes.body.credential.did_id).not.toBe(submitRes2.body.credential.did_id);
+    });
+
+    test('should reject duplicate DID document hash within same wallet', async () => {
+      const walletAddress = genValidAddress();
+      const didDoc = {
+        id: `did:test:${testPrefix}_dup_${Math.random()}`,
+        authentication: ['key-1']
+      };
+
+      // First registration
+      const res1 = await request(app)
+        .post('/api/v1/healthcred/register')
+        .send({
+          walletAddress,
+          fullName: 'Worker One',
+          dateOfBirth: '1990-01-15',
+          email: 'worker1@example.com',
+          profession: 'Nurse',
+          didDocumentJson: JSON.stringify(didDoc)
+        })
+        .expect(200);
+
+      // Complete the first registration
+      const signedTxMock = Buffer.from('mock_signed_tx').toString('base64');
+      const submitRes = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: res1.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(200);
+
+      createdCredentialIds.push(submitRes.body.credential.id);
+
+      // Second registration with SAME DID document should fail
+      const res2 = await request(app)
+        .post('/api/v1/healthcred/register')
+        .send({
+          walletAddress,
+          fullName: 'Worker Two',
+          dateOfBirth: '1990-06-20',
+          email: 'worker2@example.com',
+          profession: 'Doctor',
+          didDocumentJson: JSON.stringify(didDoc)
+        })
+        .expect(200); // First step still succeeds
+
+      // Submitting with same DID should fail because did_document_hash is UNIQUE
+      const submitRes2 = await request(app)
+        .post('/api/v1/healthcred/submit-signed-transaction')
+        .send({
+          registrationId: res2.body.registrationId,
+          signedTransaction: signedTxMock
+        })
+        .expect(500);
+
+      expect(submitRes2.body.error).toContain('Failed to save credential');
     });
   });
 

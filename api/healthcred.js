@@ -73,15 +73,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
     
-    // Check if credential already exists for this wallet
-    console.log('[HealthCred] Checking for existing credential...');
-    const existing = credentialDb.getCredentialByWallet(walletAddress);
-    if (existing) {
-      console.log('[HealthCred] Credential already exists for this wallet');
-      return res.status(409).json({ error: 'Credential already exists for this wallet' });
-    }
-    
-    // Parse and validate DID document
+    // Validate DID document (no longer checking for duplicate wallet addresses)
+    // A wallet can have multiple credentials; uniqueness is on did_document_hash
     console.log('[HealthCred] Validating DID document...');
     let didDoc;
     try {
@@ -295,22 +288,30 @@ router.post('/submit-signed-transaction', async (req, res) => {
     // Create credential record in database
     console.log('[HealthCred] Creating credential record in database...');
     const credentialId = `hc_${uuidv4()}`;
-    const credential = credentialDb.createCredential({
-      id: credentialId,
-      walletAddress: regData.walletAddress,
-      fullName: regData.fullName,
-      dateOfBirth: regData.dateOfBirth,
-      email: regData.email,
-      profession: regData.profession,
-      didDocumentJson: regData.didDocumentJson,
-      didDocumentHash: regData.didDocumentHash,
-      didId: regData.didId,
-      authenticationMethods: JSON.stringify(regData.authenticationMethods),
-      sasCredentialId: `sas_${Date.now()}`,
-      mintAddress: regData.mintAddress,
-      transactionSignature,
-      transactionHash
-    });
+    let credential;
+    try {
+      credential = credentialDb.createCredential({
+        id: credentialId,
+        walletAddress: regData.walletAddress,
+        fullName: regData.fullName,
+        dateOfBirth: regData.dateOfBirth,
+        email: regData.email,
+        profession: regData.profession,
+        didDocumentJson: regData.didDocumentJson,
+        didDocumentHash: regData.didDocumentHash,
+        didId: regData.didId,
+        authenticationMethods: JSON.stringify(regData.authenticationMethods),
+        sasCredentialId: `sas_${Date.now()}`,
+        mintAddress: regData.mintAddress,
+        transactionSignature,
+        transactionHash
+      });
+    } catch (dbErr) {
+      console.error('[HealthCred] Database error creating credential:', dbErr.message);
+      // Clean up registration data even if creation fails
+      delete global.healthCredRegistrations[registrationId];
+      return res.status(500).json({ error: 'Failed to save credential', details: dbErr.message });
+    }
     
     // Clean up registration data
     delete global.healthCredRegistrations[registrationId];
