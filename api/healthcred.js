@@ -117,13 +117,12 @@ router.post('/register', async (req, res) => {
     const userPublicKey = new web3.PublicKey(walletAddress);
     let mintAddress;
     try {
-      // Create NFT (0 decimals) owned by user wallet
       const mint = await createMint(
         connection,
-        payer,
-        userPublicKey,  // Mint authority (user wallet)
-        userPublicKey,  // Freeze authority (user wallet)
-        0                // 0 decimals = NFT
+        payer,              // Backend payer (pays for transaction)
+        userPublicKey,      // Mint authority (user wallet owns the mint)
+        null,               // Freeze authority
+        0                   // 0 decimals = NFT
       );
       mintAddress = mint.toBase58();
       console.log('[HealthCred] NFT mint created (user-owned):', mintAddress);
@@ -164,18 +163,24 @@ router.post('/register', async (req, res) => {
     transaction.recentBlockhash = blockhash.blockhash;
     console.log('[HealthCred] Recent blockhash:', blockhash.blockhash);
     
-    // DON'T set feePayer yet - it will cause signature validation errors
-    // The client/Phantom will set feePayer when signing
+    // Set backend payer as fee payer (backend pays for transaction)
+    transaction.feePayer = payer.publicKey;
+    console.log('[HealthCred] Set transaction fee payer to backend payer:', payer.publicKey.toBase58());
     
-    // Serialize transaction (unsigned, without feePayer)
+    // Sign with backend payer (backend pays for the memo transaction)
+    console.log('[HealthCred] Signing transaction with backend payer...');
+    transaction.sign(payer);
+    console.log('[HealthCred] Transaction signed');
+    
+    // Serialize signed transaction
     let serializedTx;
     try {
-      serializedTx = transaction.serialize({ 
-        requireAllSignatures: false,  // Don't require signatures
-        verifySignatures: false       // Don't verify
-      });
+      console.log('[HealthCred] Serializing signed transaction...');
+      serializedTx = transaction.serialize();
+      console.log('[HealthCred] Transaction serialized, size:', serializedTx.length);
     } catch (err) {
       console.error('[HealthCred] Error serializing transaction:', err.message);
+      console.error('[HealthCred] Error stack:', err.stack);
       return res.status(500).json({ error: 'Failed to prepare transaction for signing', details: err.message });
     }
     const base64Tx = serializedTx.toString('base64');
