@@ -569,8 +569,8 @@ router.post('/badges', async (req, res) => {
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
-    // Set backend payer as feePayer for serialization (frontend issuer will sign, backend will broadcast)
-    transaction.feePayer = payer.publicKey;
+    // Set issuer (user) as feePayer - they are issuing the badge and should pay for it
+    transaction.feePayer = issuerPublicKey;
     
     // Serialize unsigned transaction - issuer will sign via Phantom
     let serializedTx;
@@ -585,7 +585,7 @@ router.post('/badges', async (req, res) => {
     }
     const base64Tx = serializedTx.toString('base64');
     
-    console.log('[HealthCred] Unsigned badge transaction prepared, size:', base64Tx.length);
+    console.log('[HealthCred] Unsigned badge transaction prepared, size:', base64Tx.length, 'bytes');
     
     // Store temporary badge data (expires in 15 minutes)
     const badgeRegistrationId = uuidv4();
@@ -852,8 +852,8 @@ router.post('/certifications', async (req, res) => {
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
-    // Set backend payer as feePayer for serialization (frontend issuer will sign, backend will broadcast)
-    transaction.feePayer = payer.publicKey;
+    // Set issuer (user) as feePayer - they are issuing the certification and should pay for it
+    transaction.feePayer = issuerPublicKey;
     
     // Serialize unsigned transaction - issuer will sign via Phantom
     let serializedTx;
@@ -868,7 +868,7 @@ router.post('/certifications', async (req, res) => {
     }
     const base64Tx = serializedTx.toString('base64');
     
-    console.log('[HealthCred] Unsigned certification transaction prepared');
+    console.log('[HealthCred] Unsigned certification transaction prepared, size:', base64Tx.length, 'bytes');
     
     // Store temporary certification data (expires in 15 minutes)
     const certRegistrationId = uuidv4();
