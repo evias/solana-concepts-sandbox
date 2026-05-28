@@ -850,8 +850,15 @@
                             throw new Error('Solana Web3 library not available - please refresh the page');
                         }
 
-                        const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
-                        const transaction = window.solanaWeb3.Transaction.from(txBuffer);
+                        try {
+                            const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
+                            console.log('[HealthCred] Deserialized transaction buffer, size:', txBuffer.length);
+                            const transaction = window.solanaWeb3.Transaction.from(txBuffer);
+                            console.log('[HealthCred] Transaction object created');
+                        } catch (txErr) {
+                            console.error('[HealthCred] Failed to deserialize transaction:', txErr);
+                            throw new Error('Failed to deserialize transaction: ' + txErr.message);
+                        }
                         
                         const signedTx = await window.solana.signTransaction(transaction);
                         const signedTxBuffer = signedTx.serialize();
@@ -877,7 +884,8 @@
                         alert('Badge sent successfully!');
                         this.showBadgeModal = false;
                     } catch (err) {
-                        this.badgeError = err.message;
+                        console.error('[HealthCred] Badge error:', err);
+                        this.badgeError = err.message || err.toString() || 'Unexpected error';
                     }
                 },
 
