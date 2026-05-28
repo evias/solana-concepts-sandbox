@@ -119,22 +119,7 @@ describe('HealthCred API Endpoints', () => {
   });
 
   afterAll(() => {
-    // Clean up test data from production database
-    try {
-      const db = require('better-sqlite3');
-      const dbInstance = db('./pettracker.db');
-      for (const credId of createdCredentialIds) {
-        dbInstance.prepare('DELETE FROM badges WHERE credential_id = ?').run(credId);
-        dbInstance.prepare('DELETE FROM certifications WHERE credential_id = ?').run(credId);
-        dbInstance.prepare('DELETE FROM credentials WHERE id = ?').run(credId);
-      }
-      if (createdCredentialIds.length > 0) {
-        console.log(`[HealthCred Tests] Cleaned up ${createdCredentialIds.length} test credentials`);
-      }
-    } catch (err) {
-      console.error('[HealthCred Tests] Cleanup error:', err.message);
-      throw err;
-    }
+    // Test database cleanup handled automatically - tests use separate pettracker.test.db
   });
 
   describe('POST /register', () => {

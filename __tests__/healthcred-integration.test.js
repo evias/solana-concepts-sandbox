@@ -105,22 +105,7 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
-    // Clean up test data from production database
-    try {
-      const db = require('better-sqlite3');
-      const dbInstance = db('./pettracker.db');
-      for (const id of createdIds) {
-        dbInstance.prepare('DELETE FROM badges WHERE credential_id = ?').run(id);
-        dbInstance.prepare('DELETE FROM certifications WHERE credential_id = ?').run(id);
-        dbInstance.prepare('DELETE FROM credentials WHERE id = ?').run(id);
-      }
-      if (createdIds.length > 0) {
-        console.log(`[HealthCred Integration Tests] Cleaned up ${createdIds.length} test credentials`);
-      }
-    } catch (err) {
-      console.error('[HealthCred Integration Tests] Cleanup error:', err.message);
-      throw err;
-    }
+    // Test database cleanup handled automatically - tests use separate pettracker.test.db
   });
 
   describe('DID Document Download', () => {
