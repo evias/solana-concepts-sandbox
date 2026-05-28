@@ -181,6 +181,10 @@
                         </button>
                     </div>
 
+                    <div x-show="registerProgress" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+                        <span x-text="registerProgress"></span>
+                    </div>
+
                     <div x-show="registerError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                         <span x-text="registerError"></span>
                     </div>
@@ -250,24 +254,58 @@
                     <p>No credentials registered yet</p>
                 </div>
 
-                <div x-show="!loading && credentials.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div x-show="!loading && credentials.length > 0" class="space-y-4">
                     <template x-for="cred in credentials" :key="cred.id">
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
-                            <div class="font-semibold text-lg mb-2" x-text="cred.full_name"></div>
-                            <div class="text-sm text-gray-600 mb-3">
-                                <div x-text="`${cred.profession}`"></div>
-                                <div x-text="`${cred.email}`" class="text-xs"></div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h3 class="font-semibold text-lg mb-2" x-text="cred.full_name"></h3>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        <div><strong>Profession:</strong> <span x-text="cred.profession"></span></div>
+                                        <div><strong>Email:</strong> <span x-text="cred.email"></span></div>
+                                        <div><strong>DID ID:</strong> <span x-text="cred.did_id" class="font-mono text-xs"></span></div>
+                                        <div><strong>Created:</strong> <span x-text="new Date(cred.created_at).toLocaleDateString()"></span></div>
+                                    </div>
+                                </div>
+                                <div class="text-sm text-gray-600 space-y-1">
+                                    <div>
+                                        <strong>SAS Credential ID:</strong>
+                                        <div class="font-mono text-xs break-all" x-text="cred.sas_credential_id || 'N/A'"></div>
+                                    </div>
+                                    <div>
+                                        <strong>Mint Address:</strong>
+                                        <div class="font-mono text-xs">
+                                            <template x-if="cred.mint_address">
+                                                <a :href="`https://solscan.io/token/${cred.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                    <span x-text="cred.mint_address.substring(0, 8) + '...' + cred.mint_address.substring(cred.mint_address.length - 8)"></span> ↗
+                                                </a>
+                                            </template>
+                                            <span x-show="!cred.mint_address">N/A</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <strong>Transaction:</strong>
+                                        <div class="font-mono text-xs">
+                                            <template x-if="cred.transaction_hash">
+                                                <a :href="`https://solscan.io/tx/${cred.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                    <span x-text="cred.transaction_hash.substring(0, 8) + '...' + cred.transaction_hash.substring(cred.transaction_hash.length - 8)"></span> ↗
+                                                </a>
+                                            </template>
+                                            <span x-show="!cred.transaction_hash">N/A</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 mt-4">
                                 <button 
                                     @click="openBadgeModal(cred.id)"
                                     class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition">
                                     🎖️ Send Badge
                                 </button>
                                 <button 
-                                    @click="viewCredentialDetails(cred.id)"
+                                    @click="openCredentialDetailsModal(cred)"
                                     class="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600 transition">
-                                    Details
+                                    View Full Details
                                 </button>
                             </div>
                         </div>
@@ -291,6 +329,89 @@
                     </button>
                 </div>
             </section>
+        </div>
+
+        <!-- Credential Details Modal -->
+        <div x-show="showCredentialDetailsModal" @click.self="showCredentialDetailsModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <h3 class="text-2xl font-bold mb-4">Credential Details</h3>
+                <template x-if="selectedCredential">
+                    <div class="space-y-4 text-sm">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <strong class="text-gray-700">Full Name:</strong>
+                                <p x-text="selectedCredential.full_name"></p>
+                            </div>
+                            <div>
+                                <strong class="text-gray-700">Profession:</strong>
+                                <p x-text="selectedCredential.profession"></p>
+                            </div>
+                            <div>
+                                <strong class="text-gray-700">Email:</strong>
+                                <p x-text="selectedCredential.email"></p>
+                            </div>
+                            <div>
+                                <strong class="text-gray-700">Date of Birth:</strong>
+                                <p x-text="selectedCredential.date_of_birth"></p>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div>
+                            <strong class="text-gray-700">DID ID:</strong>
+                            <p class="font-mono text-xs break-all" x-text="selectedCredential.did_id"></p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">SAS Credential ID:</strong>
+                            <p class="font-mono text-xs break-all" x-text="selectedCredential.sas_credential_id || 'N/A'"></p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">SPL Token Mint:</strong>
+                            <template x-if="selectedCredential.mint_address">
+                                <a :href="`https://solscan.io/token/${selectedCredential.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
+                                    <span x-text="selectedCredential.mint_address"></span> ↗
+                                </a>
+                            </template>
+                            <p x-show="!selectedCredential.mint_address">N/A</p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">Transaction Hash:</strong>
+                            <template x-if="selectedCredential.transaction_hash">
+                                <a :href="`https://solscan.io/tx/${selectedCredential.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
+                                    <span x-text="selectedCredential.transaction_hash"></span> ↗
+                                </a>
+                            </template>
+                            <p x-show="!selectedCredential.transaction_hash">N/A</p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">DID Document Hash:</strong>
+                            <p class="font-mono text-xs break-all" x-text="selectedCredential.did_document_hash"></p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">Created:</strong>
+                            <p x-text="new Date(selectedCredential.created_at).toLocaleString()"></p>
+                        </div>
+
+                        <div>
+                            <strong class="text-gray-700">Badge Count:</strong>
+                            <p x-text="selectedCredential.badges_count"></p>
+                        </div>
+                    </div>
+                </template>
+                <div class="flex gap-2 mt-6">
+                    <button 
+                        @click="showCredentialDetailsModal = false"
+                        class="flex-1 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
+                        Close
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Badge Modal -->
@@ -379,7 +500,10 @@
                 registering: false,
                 uploadingCert: false,
                 showBadgeModal: false,
+                showCredentialDetailsModal: false,
+                selectedCredential: null,
                 registerError: '',
+                registerProgress: '',
                 certError: '',
                 badgeError: '',
 
@@ -481,6 +605,7 @@
 
                 async submitRegistration() {
                     this.registerError = '';
+                    this.registerProgress = '';
                     
                     if (!this.userAddress) {
                         this.registerError = 'Please connect your wallet first';
@@ -489,6 +614,13 @@
 
                     this.registering = true;
                     try {
+                        this.registerProgress = '⏳ Validating credential data...';
+                        console.log('[HealthCred] Starting registration for wallet:', this.userAddress);
+                        console.log('[HealthCred] Full name:', this.form.fullName);
+                        console.log('[HealthCred] Profession:', this.form.profession);
+                        console.log('[HealthCred] Email:', this.form.email);
+
+                        this.registerProgress = '📤 Sending registration request to server...';
                         const res = await fetch('/api/v1/healthcred/register', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -504,14 +636,28 @@
 
                         if (!res.ok) {
                             const error = await res.json();
+                            console.error('[HealthCred] Registration error:', error);
                             throw new Error(error.error || 'Registration failed');
                         }
 
-                        alert('Credential registered successfully!');
-                        this.form = { fullName: '', dateOfBirth: '', email: '', profession: '', didDocument: '' };
-                        this.loadCredentials();
+                        this.registerProgress = '✅ Credential registered successfully!';
+                        console.log('[HealthCred] Registration successful!');
+                        
+                        const result = await res.json();
+                        console.log('[HealthCred] Credential ID:', result.credential.id);
+                        console.log('[HealthCred] SPL Mint:', result.onChain.mint);
+                        console.log('[HealthCred] Transaction:', result.onChain.transactionSignature);
+                        
+                        setTimeout(() => {
+                            alert('✅ Credential registered successfully!\n\nView it in the "Registered Credentials" section below.');
+                            this.registerProgress = '';
+                            this.form = { fullName: '', dateOfBirth: '', email: '', profession: '', didDocument: '' };
+                            this.loadCredentials();
+                        }, 1500);
                     } catch (err) {
+                        console.error('[HealthCred] Registration failed:', err);
                         this.registerError = err.message;
+                        this.registerProgress = '';
                     } finally {
                         this.registering = false;
                     }
@@ -604,11 +750,16 @@
                     }
                 },
 
+                async openCredentialDetailsModal(credential) {
+                    this.selectedCredential = credential;
+                    this.showCredentialDetailsModal = true;
+                },
+
                 async viewCredentialDetails(credentialId) {
                     try {
                         const res = await fetch(`/api/v1/healthcred/credentials/${credentialId}`);
                         const cred = await res.json();
-                        alert(`${cred.full_name}\n${cred.profession}\n${cred.email}\nBadges: ${cred.badges_count}`);
+                        this.openCredentialDetailsModal(cred);
                     } catch (err) {
                         alert('Error loading credential details');
                     }

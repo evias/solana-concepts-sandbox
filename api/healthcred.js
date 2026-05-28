@@ -38,45 +38,65 @@ router.post('/register', async (req, res) => {
   try {
     const { walletAddress, fullName, dateOfBirth, email, profession, didDocumentJson } = req.body;
     
+    console.log('[HealthCred] Received registration request');
+    console.log('[HealthCred] Wallet:', walletAddress);
+    console.log('[HealthCred] Full Name:', fullName);
+    console.log('[HealthCred] Profession:', profession);
+    console.log('[HealthCred] Email:', email);
+    
     // Validate required fields
     if (!walletAddress || !fullName || !dateOfBirth || !email || !profession || !didDocumentJson) {
+      console.log('[HealthCred] Validation failed: Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
     // Validate wallet address format
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress)) {
+      console.log('[HealthCred] Validation failed: Invalid wallet address format');
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
     
     // Check if credential already exists for this wallet
+    console.log('[HealthCred] Checking for existing credential...');
     const existing = credentialDb.getCredentialByWallet(walletAddress);
     if (existing) {
+      console.log('[HealthCred] Credential already exists for this wallet');
       return res.status(409).json({ error: 'Credential already exists for this wallet' });
     }
     
     // Parse and validate DID document
+    console.log('[HealthCred] Validating DID document...');
     let didDoc;
     try {
       didDoc = JSON.parse(didDocumentJson);
     } catch (err) {
+      console.log('[HealthCred] DID document parsing failed:', err.message);
       return res.status(400).json({ error: 'Invalid DID Document JSON' });
     }
     
     if (!didDoc.id || typeof didDoc.id !== 'string') {
+      console.log('[HealthCred] DID document missing valid id field');
       return res.status(400).json({ error: 'DID Document must contain valid "id" field' });
     }
     
     if (!Array.isArray(didDoc.authentication)) {
+      console.log('[HealthCred] DID document missing authentication array');
       return res.status(400).json({ error: 'DID Document must contain "authentication" array' });
     }
     
+    console.log('[HealthCred] DID ID:', didDoc.id);
+    console.log('[HealthCred] Authentication methods:', didDoc.authentication.length);
+    
     // Calculate SHA2-256 hash of DID document
+    console.log('[HealthCred] Calculating DID document hash...');
     const didDocumentHash = crypto
       .createHash('sha256')
       .update(didDocumentJson)
       .digest('hex');
+    console.log('[HealthCred] DID document hash:', didDocumentHash);
     
     // Create SPL Token Mint for this credential
+    console.log('[HealthCred] Creating SPL token mint...');
     let mintAddress;
     try {
       const mint = await createMint(
@@ -87,12 +107,14 @@ router.post('/register', async (req, res) => {
         9
       );
       mintAddress = mint.toBase58();
+      console.log('[HealthCred] SPL token mint created:', mintAddress);
     } catch (err) {
-      console.error('Error creating SPL token mint:', err);
+      console.error('[HealthCred] Error creating SPL token mint:', err.message);
       return res.status(500).json({ error: 'Failed to create SPL token mint' });
     }
     
     // Create transaction with memo containing DID document
+    console.log('[HealthCred] Creating transaction with memo...');
     const transaction = new web3.Transaction();
     
     // Add compute budget instruction (300k for large DID docs)
@@ -105,9 +127,10 @@ router.post('/register', async (req, res) => {
       ])
     });
     computeBudgetInstruction.data.writeUInt32LE(300000, 1);
-    transaction.add(computeBudgetInstruction);
+     transaction.add(computeBudgetInstruction);
     
     // Add memo instruction with DID document
+    console.log('[HealthCred] Adding memo instruction with DID document (', didDocumentJson.length, 'bytes)');
     const memoBuffer = Buffer.from(didDocumentJson, 'utf8');
     transaction.add(
       new web3.TransactionInstruction({
@@ -118,6 +141,7 @@ router.post('/register', async (req, res) => {
     );
     
     // Sign and send transaction
+    console.log('[HealthCred] Signing transaction...');
     transaction.feePayer = payer.publicKey;
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
@@ -125,19 +149,25 @@ router.post('/register', async (req, res) => {
     
     let transactionSignature = '', transactionHash = '';
     try {
+      console.log('[HealthCred] Sending transaction...');
       transactionSignature = await connection.sendRawTransaction(transaction.serialize());
+      console.log('[HealthCred] Transaction sent:', transactionSignature);
+      
+      console.log('[HealthCred] Confirming transaction...');
       await connection.confirmTransaction({
         signature: transactionSignature,
         blockhash: blockhash.blockhash,
         lastValidBlockHeight: blockhash.lastValidBlockHeight
       });
       transactionHash = transactionSignature;
+      console.log('[HealthCred] Transaction confirmed');
     } catch (err) {
-      console.error('Error sending transaction:', err);
+      console.error('[HealthCred] Error sending transaction:', err.message);
       return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
     }
     
     // Create credential record in database
+    console.log('[HealthCred] Creating credential record in database...');
     const credentialId = `hc_${uuidv4()}`;
     const credential = credentialDb.createCredential({
       id: credentialId,
@@ -155,6 +185,10 @@ router.post('/register', async (req, res) => {
       transactionSignature,
       transactionHash
     });
+    
+    console.log('[HealthCred] Registration successful!');
+    console.log('[HealthCred] Credential ID:', credentialId);
+    console.log('[HealthCred] Transaction URL: https://solscan.io/tx/' + transactionHash + '?cluster=devnet');
     
     return res.status(200).json({
       success: true,
@@ -177,7 +211,7 @@ router.post('/register', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('[HealthCred] Registration error:', error.message);
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
