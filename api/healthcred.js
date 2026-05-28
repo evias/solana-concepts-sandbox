@@ -533,9 +533,31 @@ router.post('/badges', async (req, res) => {
       );
       mintAddress = mint.toBase58();
       console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
+      
+      // Create associated token account for issuer and mint 1 token
+      console.log('[HealthCred] Creating associated token account for badge issuer...');
+      const issuerTokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer,
+        mint,
+        issuerPublicKey
+      );
+      console.log('[HealthCred] Issuer token account:', issuerTokenAccount.address.toBase58());
+      
+      // Mint 1 badge token to issuer
+      console.log('[HealthCred] Minting 1 badge NFT token to issuer...');
+      const badgeMintSig = await mintTo(
+        connection,
+        payer,
+        mint,
+        issuerTokenAccount.address,
+        payer,
+        1  // Mint 1 token
+      );
+      console.log('[HealthCred] Badge NFT minted, signature:', badgeMintSig);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for badge:', err.message);
-      return res.status(500).json({ error: 'Failed to create SPL token mint' });
+      return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
     }
     
     // Create unsigned transaction with memo containing badge data
@@ -817,9 +839,31 @@ router.post('/certifications', async (req, res) => {
       );
       mintAddress = mint.toBase58();
       console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
+      
+      // Create associated token account for issuer and mint 1 token
+      console.log('[HealthCred] Creating associated token account for certification issuer...');
+      const issuerTokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer,
+        mint,
+        issuerPublicKey
+      );
+      console.log('[HealthCred] Issuer token account:', issuerTokenAccount.address.toBase58());
+      
+      // Mint 1 certification token to issuer
+      console.log('[HealthCred] Minting 1 certification NFT token to issuer...');
+      const certMintSig = await mintTo(
+        connection,
+        payer,
+        mint,
+        issuerTokenAccount.address,
+        payer,
+        1  // Mint 1 token
+      );
+      console.log('[HealthCred] Certification NFT minted, signature:', certMintSig);
     } catch (err) {
       console.error('[HealthCred] Error creating SPL token mint for certification:', err.message);
-      return res.status(500).json({ error: 'Failed to create SPL token mint' });
+      return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
     }
     
     // Create unsigned transaction with memo containing certification metadata
