@@ -159,23 +159,26 @@ router.post('/register', async (req, res) => {
       })
     );
     
-    // Set transaction payer to USER wallet (not backend payer)
-    console.log('[HealthCred] Setting transaction fee payer to user wallet');
-    transaction.feePayer = userPublicKey;
-    
     // Get recent blockhash
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     console.log('[HealthCred] Recent blockhash:', blockhash.blockhash);
     
-    // Serialize transaction (unsigned)
-    const serializedTx = transaction.serialize({ 
-      requiredAllSignatures: false  // Allow signing later
-    });
-    const base64Tx = serializedTx.toString('base64');
+    // DON'T set feePayer yet - it will cause signature validation errors
+    // The client/Phantom will set feePayer when signing
     
-    console.log('[HealthCred] Unsigned transaction prepared');
-    console.log('[HealthCred] Transaction size:', serializedTx.length, 'bytes');
+    // Serialize transaction (unsigned, without feePayer)
+    let serializedTx;
+    try {
+      serializedTx = transaction.serialize({ 
+        requireAllSignatures: false,  // Don't require signatures
+        verifySignatures: false       // Don't verify
+      });
+    } catch (err) {
+      console.error('[HealthCred] Error serializing transaction:', err.message);
+      return res.status(500).json({ error: 'Failed to prepare transaction for signing', details: err.message });
+    }
+    const base64Tx = serializedTx.toString('base64');
     
     // Store temporary registration data (expires in 15 minutes)
     const registrationId = uuidv4();
@@ -531,18 +534,27 @@ router.post('/badges', async (req, res) => {
       })
     );
     
-    // Set issuer as fee payer
-    transaction.feePayer = issuerPublicKey;
-    
     // Get recent blockhash
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
-    // Serialize unsigned transaction
-    const serializedTx = transaction.serialize({ 
-      requiredAllSignatures: false
-    });
+    // DON'T set feePayer - will cause signature validation errors
+    // Phantom will set it when signing
+    
+    // Serialize unsigned transaction without feePayer
+    let serializedTx;
+    try {
+      serializedTx = transaction.serialize({ 
+        requireAllSignatures: false,
+        verifySignatures: false
+      });
+    } catch (err) {
+      console.error('[HealthCred] Error serializing badge transaction:', err.message);
+      return res.status(500).json({ error: 'Failed to prepare badge transaction for signing', details: err.message });
+    }
     const base64Tx = serializedTx.toString('base64');
+    
+    console.log('[HealthCred] Unsigned badge transaction prepared');
     
     console.log('[HealthCred] Unsigned badge transaction prepared');
     
@@ -807,17 +819,24 @@ router.post('/certifications', async (req, res) => {
       })
     );
     
-    // Set issuer as fee payer
-    transaction.feePayer = issuerPublicKey;
-    
     // Get recent blockhash
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
+    // DON'T set feePayer - will cause signature validation errors
+    // Phantom will set it when signing
+    
     // Serialize unsigned transaction
-    const serializedTx = transaction.serialize({ 
-      requiredAllSignatures: false
-    });
+    let serializedTx;
+    try {
+      serializedTx = transaction.serialize({ 
+        requireAllSignatures: false,
+        verifySignatures: false
+      });
+    } catch (err) {
+      console.error('[HealthCred] Error serializing certification transaction:', err.message);
+      return res.status(500).json({ error: 'Failed to prepare certification transaction for signing', details: err.message });
+    }
     const base64Tx = serializedTx.toString('base64');
     
     console.log('[HealthCred] Unsigned certification transaction prepared');
