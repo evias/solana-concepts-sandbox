@@ -232,14 +232,20 @@ router.get('/credentials', (req, res) => {
     const credentials = credentialDb.getAllCredentials(limit, offset);
     const total = credentialDb.getCredentialCount();
     
-    // Remove sensitive DID document from list view
+    // Remove sensitive DID document from list view but include all on-chain fields
     const sanitized = credentials.map(c => ({
       id: c.id,
       wallet_address: c.wallet_address,
       full_name: c.full_name,
+      date_of_birth: c.date_of_birth,
       profession: c.profession,
       email: c.email,
       did_id: c.did_id,
+      sas_credential_id: c.sas_credential_id,
+      mint_address: c.mint_address,
+      transaction_signature: c.transaction_signature,
+      transaction_hash: c.transaction_hash,
+      badges_count: 0, // Will be populated from badges table if needed
       created_at: c.created_at
     }));
     
@@ -271,14 +277,20 @@ router.get('/credentials/:id', (req, res) => {
     }
     
     // Remove DID document JSON from response (use /did/:didId for that)
-     const badgeCount = (badgeDb.getBadgesByCredentialId(credential.id) || []).length;
+    const badgeCount = (badgeDb.getBadgesByCredentialId(credential.id) || []).length;
     const sanitized = {
       id: credential.id,
       wallet_address: credential.wallet_address,
       full_name: credential.full_name,
+      date_of_birth: credential.date_of_birth,
       profession: credential.profession,
       email: credential.email,
       did_id: credential.did_id,
+      did_document_hash: credential.did_document_hash,
+      sas_credential_id: credential.sas_credential_id,
+      mint_address: credential.mint_address,
+      transaction_signature: credential.transaction_signature,
+      transaction_hash: credential.transaction_hash,
       created_at: credential.created_at,
       badges_count: badgeCount
     };
