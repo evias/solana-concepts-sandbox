@@ -526,10 +526,21 @@ router.post('/badges', async (req, res) => {
     // Create SPL Token Mint for badge (backend-controlled, mints to credential owner)
     console.log('[HealthCred] Creating SPL token mint for badge...');
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
-    const credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
+    console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+    
+    let credentialOwnerPublicKey;
+    try {
+      credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
+      console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
+    } catch (pkErr) {
+      console.error('[HealthCred] Invalid credential owner wallet address:', credentialOwnerWallet, pkErr.message);
+      return res.status(500).json({ error: 'Invalid credential owner wallet', details: pkErr.message });
+    }
+    
     let mintAddress;
     try {
       // Create mint with backend payer as mint authority (backend controls minting)
+      console.log('[HealthCred] Calling createMint with payer as mint authority...');
       const mint = await createMint(
         connection,
         payer,
@@ -562,7 +573,9 @@ router.post('/badges', async (req, res) => {
       );
       console.log('[HealthCred] Badge NFT minted to recipient, signature:', badgeMintSig);
     } catch (err) {
-      console.error('[HealthCred] Error creating SPL token mint for badge:', err.message);
+      console.error('[HealthCred] Error creating SPL token mint for badge:', err);
+      console.error('[HealthCred] Error message:', err.message);
+      console.error('[HealthCred] Error stack:', err.stack);
       return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
     }
     
@@ -842,10 +855,21 @@ router.post('/certifications', async (req, res) => {
     // Create SPL Token Mint for certification (backend-controlled, mints to credential owner)
     console.log('[HealthCred] Creating SPL token mint for certification...');
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
-    const credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
+    console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+    
+    let credentialOwnerPublicKey;
+    try {
+      credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
+      console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
+    } catch (pkErr) {
+      console.error('[HealthCred] Invalid credential owner wallet address:', credentialOwnerWallet, pkErr.message);
+      return res.status(500).json({ error: 'Invalid credential owner wallet', details: pkErr.message });
+    }
+    
     let mintAddress;
     try {
       // Create mint with backend payer as mint authority (backend controls minting)
+      console.log('[HealthCred] Calling createMint with payer as mint authority...');
       const mint = await createMint(
         connection,
         payer,
@@ -878,7 +902,9 @@ router.post('/certifications', async (req, res) => {
       );
       console.log('[HealthCred] Certification NFT minted to recipient, signature:', certMintSig);
     } catch (err) {
-      console.error('[HealthCred] Error creating SPL token mint for certification:', err.message);
+      console.error('[HealthCred] Error creating SPL token mint for certification:', err);
+      console.error('[HealthCred] Error message:', err.message);
+      console.error('[HealthCred] Error stack:', err.stack);
       return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
     }
     
