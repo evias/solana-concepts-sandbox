@@ -543,10 +543,10 @@ router.post('/badges', async (req, res) => {
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
-    // DON'T set feePayer - will cause signature validation errors
-    // Phantom will set it when signing
+    // Set backend payer as feePayer for serialization (frontend issuer will sign, backend will broadcast)
+    transaction.feePayer = payer.publicKey;
     
-    // Serialize unsigned transaction without feePayer
+    // Serialize unsigned transaction - issuer will sign via Phantom
     let serializedTx;
     try {
       serializedTx = transaction.serialize({ 
@@ -828,10 +828,10 @@ router.post('/certifications', async (req, res) => {
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
     
-    // DON'T set feePayer - will cause signature validation errors
-    // Phantom will set it when signing
+    // Set backend payer as feePayer for serialization (frontend issuer will sign, backend will broadcast)
+    transaction.feePayer = payer.publicKey;
     
-    // Serialize unsigned transaction
+    // Serialize unsigned transaction - issuer will sign via Phantom
     let serializedTx;
     try {
       serializedTx = transaction.serialize({ 
