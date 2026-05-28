@@ -278,7 +278,7 @@ describe('HealthCred API Endpoints', () => {
       expect(res.body.transaction).toBeDefined();
       expect(res.body.metadata).toBeDefined();
       expect(res.body.metadata.walletAddress).toBe(walletAddress);
-      expect(res.body.metadata.mint).toBeDefined();
+      // NFT mint is created after transaction is signed, not during registration
     });
 
     test('should allow wallet to register multiple credentials with different DIDs', async () => {

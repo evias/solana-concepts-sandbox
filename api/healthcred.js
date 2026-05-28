@@ -97,65 +97,17 @@ router.post('/register', async (req, res) => {
     console.log('[HealthCred] DID ID:', didDoc.id);
     console.log('[HealthCred] Authentication methods:', didDoc.authentication.length);
     
-    // Calculate SHA2-256 hash of DID document
-    console.log('[HealthCred] Calculating DID document hash...');
-    const didDocumentHash = crypto
-      .createHash('sha256')
-      .update(didDocumentJson)
-      .digest('hex');
-    console.log('[HealthCred] DID document hash:', didDocumentHash);
-    
-    // Create NFT Mint (0 decimals) for this credential, owned by user wallet
-    console.log('[HealthCred] Creating NFT mint (owned by user wallet)...');
+     // Calculate SHA2-256 hash of DID document
+     console.log('[HealthCred] Calculating DID document hash...');
+     const didDocumentHash = crypto
+       .createHash('sha256')
+       .update(didDocumentJson)
+       .digest('hex');
+     console.log('[HealthCred] DID document hash:', didDocumentHash);
+     
+     // Note: NFT Mint and token account creation will happen after user signs the transaction
+     // This avoids TokenAccountNotFoundError during background processing
      const userPublicKey = new web3.PublicKey(walletAddress);
-    let mintAddress;
-    try {
-      const mint = await createMint(
-        connection,
-        payer,              // Backend payer (pays for transaction)
-        userPublicKey,      // Mint authority (user wallet owns the mint)
-        null,               // Freeze authority
-        0                   // 0 decimals = NFT
-      );
-      mintAddress = mint.toBase58();
-      console.log('[HealthCred] NFT mint created (user-owned):', mintAddress);
-    } catch (err) {
-      console.error('[HealthCred] Error creating NFT mint:', err.message);
-      return res.status(500).json({ error: 'Failed to create NFT mint' });
-    }
-    
-    // Create associated token account for user and mint 1 token
-    console.log('[HealthCred] Creating associated token account for user...');
-    try {
-      console.log('[HealthCred] User PublicKey:', userPublicKey.toBase58());
-      console.log('[HealthCred] Mint PublicKey:', mintAddress);
-      console.log('[HealthCred] Payer PublicKey:', payer.publicKey.toBase58());
-      
-      const userTokenAccount = await getOrCreateAssociatedTokenAccount(
-        connection,
-        payer,
-        new web3.PublicKey(mintAddress),
-        userPublicKey
-      );
-      console.log('[HealthCred] User token account:', userTokenAccount.address.toBase58());
-      
-      // Mint 1 token to user
-      console.log('[HealthCred] Minting 1 NFT token to user...');
-      const mintSig = await mintTo(
-        connection,
-        payer,
-        new web3.PublicKey(mintAddress),
-        userTokenAccount.address,
-        payer,
-        1  // Mint 1 token
-      );
-      console.log('[HealthCred] NFT minted, signature:', mintSig);
-    } catch (err) {
-      console.error('[HealthCred] Error creating token account or minting:', err.message);
-      console.error('[HealthCred] Error stack:', err.stack);
-      console.error('[HealthCred] Full error:', err);
-      return res.status(500).json({ error: 'Failed to mint NFT token', details: err.message });
-    }
     
     // Create unsigned transaction with user as fee payer (2-step: user signs in Phantom)
     console.log('[HealthCred] Creating unsigned transaction for user to sign...');
@@ -209,23 +161,22 @@ router.post('/register', async (req, res) => {
     }
     const base64Tx = serializedTx.toString('base64');
     
-    // Store temporary registration data (expires in 15 minutes)
-    const registrationId = uuidv4();
-    const registrationData = {
-      walletAddress,
-      fullName,
-      dateOfBirth,
-      email,
-      profession,
-      didDocumentJson,
-      didDocumentHash,
-      didId: didDoc.id,
-      authenticationMethods: didDoc.authentication,
-      mintAddress,
-      blockhash: blockhash.blockhash,
-      lastValidBlockHeight: blockhash.lastValidBlockHeight,
-      timestamp: Date.now()
-    };
+     // Store temporary registration data (expires in 15 minutes)
+     const registrationId = uuidv4();
+     const registrationData = {
+       walletAddress,
+       fullName,
+       dateOfBirth,
+       email,
+       profession,
+       didDocumentJson,
+       didDocumentHash,
+       didId: didDoc.id,
+       authenticationMethods: didDoc.authentication,
+       blockhash: blockhash.blockhash,
+       lastValidBlockHeight: blockhash.lastValidBlockHeight,
+       timestamp: Date.now()
+     };
     
     // In production, store in Redis or similar. For now, store in memory with TTL
     if (!global.healthCredRegistrations) {
@@ -242,18 +193,17 @@ router.post('/register', async (req, res) => {
     
     console.log('[HealthCred] Registration prepared, waiting for user signature');
     
-    return res.status(200).json({
-      success: true,
-      registrationId,
-      transaction: base64Tx,
-      metadata: {
-        walletAddress,
-        fullName,
-        profession,
-        mint: mintAddress,
-        message: 'Sign this transaction with your wallet to complete registration'
-      }
-    });
+     return res.status(200).json({
+       success: true,
+       registrationId,
+       transaction: base64Tx,
+       metadata: {
+         walletAddress,
+         fullName,
+         profession,
+         message: 'Sign this transaction with your wallet to complete registration'
+       }
+     });
   } catch (error) {
     console.error('[HealthCred] Registration preparation error:', error.message);
     res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -311,32 +261,74 @@ router.post('/submit-signed-transaction', async (req, res) => {
       });
       transactionHash = transactionSignature;
       console.log('[HealthCred] Transaction confirmed');
-    } catch (err) {
-      console.error('[HealthCred] Error sending transaction:', err.message);
-      return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
-    }
+     } catch (err) {
+       console.error('[HealthCred] Error sending transaction:', err.message);
+       return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
+     }
+     
+     // Create NFT Mint and mint token to user wallet
+     console.log('[HealthCred] Transaction confirmed, creating NFT mint and minting token...');
+     const userPublicKey = new web3.PublicKey(regData.walletAddress);
+     let mintAddress;
+     try {
+       console.log('[HealthCred] Creating NFT mint (0 decimals, owned by user)...');
+       const mint = await createMint(
+         connection,
+         payer,              // Backend payer (pays for transaction)
+         userPublicKey,      // Mint authority (user wallet owns the mint)
+         null,               // Freeze authority
+         0                   // 0 decimals = NFT
+       );
+       mintAddress = mint.toBase58();
+       console.log('[HealthCred] NFT mint created:', mintAddress);
+       
+       console.log('[HealthCred] Creating associated token account for user...');
+       const userTokenAccount = await getOrCreateAssociatedTokenAccount(
+         connection,
+         payer,
+         new web3.PublicKey(mintAddress),
+         userPublicKey
+       );
+       console.log('[HealthCred] User token account:', userTokenAccount.address.toBase58());
+       
+       console.log('[HealthCred] Minting 1 NFT token to user...');
+       const mintSig = await mintTo(
+         connection,
+         payer,
+         new web3.PublicKey(mintAddress),
+         userTokenAccount.address,
+         payer,
+         1  // Mint 1 token
+       );
+       console.log('[HealthCred] NFT minted, signature:', mintSig);
+     } catch (err) {
+       console.error('[HealthCred] Error creating NFT mint or token account:', err.message);
+       console.error('[HealthCred] Error stack:', err.stack);
+       console.error('[HealthCred] Full error:', err);
+       return res.status(500).json({ error: 'Failed to create credential NFT', details: err.message });
+     }
     
-    // Create credential record in database
-    console.log('[HealthCred] Creating credential record in database...');
-    const credentialId = `hc_${uuidv4()}`;
-    let credential;
-    try {
-      credential = credentialDb.createCredential({
-        id: credentialId,
-        walletAddress: regData.walletAddress,
-        fullName: regData.fullName,
-        dateOfBirth: regData.dateOfBirth,
-        email: regData.email,
-        profession: regData.profession,
-        didDocumentJson: regData.didDocumentJson,
-        didDocumentHash: regData.didDocumentHash,
-        didId: regData.didId,
-        authenticationMethods: JSON.stringify(regData.authenticationMethods),
-        sasCredentialId: `sas_${Date.now()}`,
-        mintAddress: regData.mintAddress,
-        transactionSignature,
-        transactionHash
-      });
+     // Create credential record in database
+     console.log('[HealthCred] Creating credential record in database...');
+     const credentialId = `hc_${uuidv4()}`;
+     let credential;
+     try {
+       credential = credentialDb.createCredential({
+         id: credentialId,
+         walletAddress: regData.walletAddress,
+         fullName: regData.fullName,
+         dateOfBirth: regData.dateOfBirth,
+         email: regData.email,
+         profession: regData.profession,
+         didDocumentJson: regData.didDocumentJson,
+         didDocumentHash: regData.didDocumentHash,
+         didId: regData.didId,
+         authenticationMethods: JSON.stringify(regData.authenticationMethods),
+         sasCredentialId: `sas_${Date.now()}`,
+         mintAddress,      // Use the mint created after transaction confirmation
+         transactionSignature,
+         transactionHash
+       });
     } catch (dbErr) {
       console.error('[HealthCred] Database error creating credential:', dbErr.message);
       // Clean up registration data even if creation fails
@@ -361,11 +353,11 @@ router.post('/submit-signed-transaction', async (req, res) => {
         did_id: credential.did_id,
         created_at: credential.created_at
       },
-      onChain: {
-        mint: regData.mintAddress,
-        transactionSignature,
-        memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
-      },
+       onChain: {
+         mint: mintAddress,
+         transactionSignature,
+         memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
+       },
       metadata: {
         solscanUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`,
         didDocumentHash: regData.didDocumentHash
