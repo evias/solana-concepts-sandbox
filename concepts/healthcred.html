@@ -651,49 +651,18 @@
                         const result = await res.json();
                         const { registrationId, transaction: base64Tx } = result;
                         
-                        console.log('[HealthCred] Unsigned transaction created');
+                        console.log('[HealthCred] Transaction prepared by backend');
                         console.log('[HealthCred] Registration ID:', registrationId);
 
-                        // Sign transaction with Phantom
-                        this.registerProgress = '🔐 Waiting for wallet signature...';
-                        
-                        if (!window.solana) {
-                            throw new Error('Phantom wallet not available');
-                        }
-
-                        // Deserialize unsigned transaction
-                        const { Connection, Transaction } = window.solanaWeb3 || {};
-                        if (!Connection || !Transaction) {
-                            throw new Error('Solana Web3 library not available');
-                        }
-
-                        const txBuffer = Buffer.from(base64Tx, 'base64');
-                        const transaction = Transaction.from(txBuffer);
-                        
-                        // Set fee payer to user's wallet
-                        transaction.feePayer = new window.solanaWeb3.PublicKey(this.userAddress);
-                        console.log('[HealthCred] Set transaction fee payer to user wallet');
-                        
-                        console.log('[HealthCred] Deserialized unsigned transaction');
-
-                        // Sign with Phantom
-                        this.registerProgress = '✍️ Please approve signature in Phantom...';
-                        const signedTx = await window.solana.signTransaction(transaction);
-                        
-                        console.log('[HealthCred] Transaction signed by wallet');
-                        
-                        // Serialize signed transaction
-                        const signedTxBuffer = signedTx.serialize();
-                        const signedBase64 = signedTxBuffer.toString('base64');
-
-                        // Submit signed transaction
+                        // Transaction is already signed by backend payer (for memo)
+                        // Just submit it directly to complete registration
                         this.registerProgress = '📡 Broadcasting transaction...';
                         const submitRes = await fetch('/api/v1/healthcred/submit-signed-transaction', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 registrationId,
-                                signedTransaction: signedBase64
+                                signedTransaction: base64Tx
                             })
                         });
 
