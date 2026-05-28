@@ -344,10 +344,18 @@ describe('HealthCred Integration Tests', () => {
         .send({
           registrationId: registerRes.body.registrationId,
           signedTransaction: signedTxMock
-        })
-        .expect(200);
+        });
+
+      if (submitRes.status !== 200) {
+        console.error('BeforeAll error - Submit response:', submitRes.status, submitRes.body);
+        throw new Error('Failed to create test credential');
+      }
 
       testCredential = submitRes.body.credential;
+      if (!testCredential) {
+        console.error('BeforeAll error - No credential in response:', submitRes.body);
+        throw new Error('No credential returned');
+      }
       createdIds.push(testCredential.id);
     });
 
@@ -368,7 +376,11 @@ describe('HealthCred Integration Tests', () => {
       expect(res.body.error).toContain('Invalid file type');
     });
 
-    test.skip('should upload certification (2-step flow)', async () => {
+    test('should upload certification (2-step flow)', async () => {
+      if (!testCredential || !testCredential.id) {
+        throw new Error(`testCredential is not defined: ${JSON.stringify(testCredential)}`);
+      }
+
       const fileBuffer = Buffer.from('mock pdf content');
       const issuerWallet = genValidAddress();
 
@@ -382,8 +394,11 @@ describe('HealthCred Integration Tests', () => {
           fileBuffer: Array.from(fileBuffer),
           fileSize: fileBuffer.length,
           fileType: 'application/pdf'
-        })
-        .expect(200);
+        });
+
+      if (certRes.status !== 200) {
+        throw new Error(`POST /certifications failed with ${certRes.status}: ${JSON.stringify(certRes.body)}`);
+      }
 
       expect(certRes.body.success).toBe(true);
       expect(certRes.body.certificationRegistrationId).toBeDefined();

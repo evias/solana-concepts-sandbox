@@ -201,11 +201,12 @@ router.post('/register', async (req, res) => {
     }
     global.healthCredRegistrations[registrationId] = registrationData;
     
-    // Set TTL (15 minutes)
-    setTimeout(() => {
+    // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
+    const cleanupTimer = setTimeout(() => {
       delete global.healthCredRegistrations[registrationId];
       console.log('[HealthCred] Cleaned up expired registration:', registrationId);
     }, 15 * 60 * 1000);
+    cleanupTimer.unref();
     
     console.log('[HealthCred] Registration prepared, waiting for user signature');
     
@@ -563,11 +564,12 @@ router.post('/badges', async (req, res) => {
     }
     global.healthCredBadges[badgeRegistrationId] = badgeData_stored;
     
-    // Set TTL (15 minutes)
-    setTimeout(() => {
+    // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
+    const badgeCleanupTimer = setTimeout(() => {
       delete global.healthCredBadges[badgeRegistrationId];
       console.log('[HealthCred] Cleaned up expired badge registration:', badgeRegistrationId);
     }, 15 * 60 * 1000);
+    badgeCleanupTimer.unref();
     
     return res.status(200).json({
       success: true,
@@ -751,9 +753,11 @@ router.post('/certifications', async (req, res) => {
     
     // Calculate SHA2-256 hash of file
     console.log('[HealthCred] Calculating file hash...');
+    // Convert file buffer array back to Buffer if needed
+    const fileBufferAsBuffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer);
     const fileHash = crypto
       .createHash('sha256')
-      .update(fileBuffer)
+      .update(fileBufferAsBuffer)
       .digest('hex');
     console.log('[HealthCred] File hash:', fileHash);
     
@@ -839,11 +843,12 @@ router.post('/certifications', async (req, res) => {
     }
     global.healthCredCertifications[certRegistrationId] = certData_stored;
     
-    // Set TTL (15 minutes)
-    setTimeout(() => {
+    // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
+    const certCleanupTimer = setTimeout(() => {
       delete global.healthCredCertifications[certRegistrationId];
       console.log('[HealthCred] Cleaned up expired certification registration:', certRegistrationId);
     }, 15 * 60 * 1000);
+    certCleanupTimer.unref();
     
     return res.status(200).json({
       success: true,
