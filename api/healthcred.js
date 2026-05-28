@@ -303,13 +303,16 @@ router.post('/submit-signed-transaction', async (req, res) => {
          1
        );
        console.log('[HealthCred] Token minted, signature:', mintSig);
-     } catch (mintErr) {
-       console.error('[HealthCred] Error creating NFT mint or minting:', mintErr.message);
-       console.error('[HealthCred] Error stack:', mintErr.stack);
-       console.error('[HealthCred] Full error:', mintErr);
-       // Don't fail the whole registration if mint creation fails
-       mintAddress = null;
-     }
+      } catch (mintErr) {
+        console.error('[HealthCred] Error creating NFT mint or minting:', mintErr.message);
+        console.error('[HealthCred] Error stack:', mintErr.stack);
+        console.error('[HealthCred] Full error:', mintErr);
+        // If mint was created but something else failed, still keep the mint address
+        // Only set to null if createMint itself failed
+        if (!mintAddress) {
+          return res.status(500).json({ error: 'Failed to create credential NFT', details: mintErr.message });
+        }
+      }
      
      // Create credential record in database
      console.log('[HealthCred] Creating credential record in database...');
