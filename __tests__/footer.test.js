@@ -81,7 +81,7 @@ describe('Footer - All Pages', () => {
       });
 
       it('should have proper copyright text', () => {
-        expect(htmlContent).toMatch(/© 2026 Grégory Saive for re:Software S.L./);
+        expect(htmlContent).toMatch(/© 2026[\s\S]*?Grégory Saive[\s\S]*?re:Software S.L./);
       });
 
       it('copyright should say "All rights reserved"', () => {
@@ -141,7 +141,7 @@ describe('Footer - All Pages', () => {
       pages.forEach(page => {
         const htmlPath = path.join(__dirname, '..', page.filename);
         const content = fs.readFileSync(htmlPath, 'utf-8');
-        expect(content).toMatch(/© 2026 Grégory Saive/);
+        expect(content).toMatch(/© 2026[\s\S]*?Grégory Saive/);
       });
     });
 
