@@ -702,11 +702,11 @@ const certificationDb = {
     id,
     credentialId,
     issuerWallet,
+    certificationName,
     filename,
     fileHash,
     fileSize,
     fileType,
-    mintAddress,
     transactionSignature,
     transactionHash
   }) {
@@ -714,14 +714,14 @@ const certificationDb = {
     
     const stmt = db.prepare(`
       INSERT INTO certifications (
-        id, credential_id, issuer_wallet, filename, file_hash,
-        file_size, file_type, mint_address, transaction_signature, transaction_hash, created_at
+        id, credential_id, issuer_wallet, certification_name, filename, file_hash,
+        file_size, file_type, transaction_signature, transaction_hash, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
-      id, credentialId, issuerWallet, filename, fileHash,
-      fileSize || null, fileType || null, mintAddress || null,
+      id, credentialId, issuerWallet, certificationName || null, filename, fileHash,
+      fileSize || null, fileType || null,
       transactionSignature || null, transactionHash || null, now
     );
     
