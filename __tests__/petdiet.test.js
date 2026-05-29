@@ -117,7 +117,7 @@ describe('PetDiet API Endpoints', () => {
           for (const action of feedingActions) {
             try {
               const db = require('better-sqlite3');
-              const dbInstance = db('./pettracker.db');
+              const dbInstance = db('./sandbox.db');
               dbInstance.prepare('DELETE FROM feeding_actions WHERE id = ?').run(action.id);
             } catch (err) {
               // Silently ignore delete errors
@@ -131,7 +131,7 @@ describe('PetDiet API Endpoints', () => {
           for (const plan of plans) {
             try {
               const db = require('better-sqlite3');
-              const dbInstance = db('./pettracker.db');
+              const dbInstance = db('./sandbox.db');
               dbInstance.prepare('DELETE FROM nutrition_plans WHERE id = ?').run(plan.id);
             } catch (err) {
               // Silently ignore delete errors
@@ -141,7 +141,7 @@ describe('PetDiet API Endpoints', () => {
         
         // Delete the pet itself
         const db = require('better-sqlite3');
-        const dbInstance = db('./pettracker.db');
+        const dbInstance = db('./sandbox.db');
         dbInstance.prepare('DELETE FROM pets WHERE id = ?').run(petId);
       } catch (err) {
         // Silently ignore cleanup errors

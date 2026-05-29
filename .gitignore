@@ -1,6 +1,6 @@
 node_modules/
 uploads/
 TASKS.md
-pettracker.db
-pettracker.test.db
+sandbox.db
+sandbox.test.db
 .payer-keypair.json

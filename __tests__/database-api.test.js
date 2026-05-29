@@ -3,7 +3,7 @@ const fs = require('fs');
 const Database = require('better-sqlite3');
 
 describe('api/database.js - Error Handling and Behavior', () => {
-  const originalDbPath = path.join(__dirname, '..', 'pettracker.db');
+  const originalDbPath = path.join(__dirname, '..', 'sandbox.db');
   const testDbPath = path.join(__dirname, '..', 'test-db-error.db');
   
   afterEach(() => {

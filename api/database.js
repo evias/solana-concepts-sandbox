@@ -3,12 +3,12 @@ const path = require('path');
 const fs = require('fs');
 
 // Use test database in test environment, production database otherwise
-const dbFileName = process.env.NODE_ENV === 'test' ? 'pettracker.test.db' : 'pettracker.db';
+const dbFileName = process.env.NODE_ENV === 'test' ? 'sandbox.test.db' : 'sandbox.db';
 const dbPath = path.join(__dirname, '..', dbFileName);
 
 // For test database, create it if it doesn't exist (copy from production)
 if (process.env.NODE_ENV === 'test') {
-  const productionDbPath = path.join(__dirname, '..', 'pettracker.db');
+  const productionDbPath = path.join(__dirname, '..', 'sandbox.db');
   if (!fs.existsSync(dbPath) && fs.existsSync(productionDbPath)) {
     fs.copyFileSync(productionDbPath, dbPath);
   }
