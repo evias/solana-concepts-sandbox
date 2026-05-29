@@ -2,17 +2,26 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-// Create/connect to database
-const dbPath = path.join(__dirname, '..', 'pettracker.db');
+// Use test database in test environment, production database otherwise
+const dbFileName = process.env.NODE_ENV === 'test' ? 'pettracker.test.db' : 'pettracker.db';
+const dbPath = path.join(__dirname, '..', dbFileName);
 
-// Check if database exists; if not, throw error
-if (!fs.existsSync(dbPath)) {
-  throw new Error(
-    `Database not found at ${dbPath}\n` +
-    `Please run: npm run db:init\n` +
-    `Then run: npm run db:seed\n` +
-    `Then run: npm run db:migrate`
-  );
+// For test database, create it if it doesn't exist (copy from production)
+if (process.env.NODE_ENV === 'test') {
+  const productionDbPath = path.join(__dirname, '..', 'pettracker.db');
+  if (!fs.existsSync(dbPath) && fs.existsSync(productionDbPath)) {
+    fs.copyFileSync(productionDbPath, dbPath);
+  }
+} else {
+  // Check if production database exists
+  if (!fs.existsSync(dbPath)) {
+    throw new Error(
+      `Database not found at ${dbPath}\n` +
+      `Please run: npm run db:init\n` +
+      `Then run: npm run db:seed\n` +
+      `Then run: npm run db:migrate`
+    );
+  }
 }
 
 const db = new Database(dbPath);
