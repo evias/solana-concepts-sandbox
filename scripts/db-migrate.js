@@ -330,58 +330,80 @@ try {
         },
     
         // Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
-        // Allow multiple credentials per wallet; uniqueness is on did_document_hash
-        {
-          name: 'Remove UNIQUE constraint on wallet_address in credentials table',
-          up: (db) => {
-            try {
-              // Check if the UNIQUE constraint still exists
-              const indexInfo = db.prepare("PRAGMA index_info(sqlite_autoindex_credentials_1)").all();
-              
-              // If we can't find the autoindex, the constraint might already be removed
-              if (indexInfo.length === 0) {
-                return false; // Already removed or doesn't exist
-              }
-              
-              // Rebuild credentials table without UNIQUE on wallet_address
-              db.exec(`
-                CREATE TABLE credentials_new (
-                  id TEXT PRIMARY KEY,
-                  wallet_address TEXT NOT NULL,
-                  full_name TEXT NOT NULL,
-                  date_of_birth TEXT NOT NULL,
-                  email TEXT NOT NULL,
-                  profession TEXT NOT NULL,
-                  did_document_json TEXT NOT NULL,
-                  did_document_hash TEXT NOT NULL UNIQUE,
-                  did_id TEXT NOT NULL,
-                  authentication_methods TEXT,
-                  sas_credential_id TEXT,
-                  mint_address TEXT,
-                  transaction_signature TEXT,
-                  transaction_hash TEXT,
-                  created_at TEXT NOT NULL,
-                  updated_at TEXT NOT NULL
-                );
-                
-                INSERT INTO credentials_new SELECT * FROM credentials;
-                DROP TABLE credentials;
-                ALTER TABLE credentials_new RENAME TO credentials;
-                
-                CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
-                CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
-                CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
-              `);
-              
-              return true;
-            } catch (error) {
-              if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
-                return false;
-              }
-              throw error;
-            }
-          }
-        }
+         // Allow multiple credentials per wallet; uniqueness is on did_document_hash
+         {
+           name: 'Remove UNIQUE constraint on wallet_address in credentials table',
+           up: (db) => {
+             try {
+               // Check if the UNIQUE constraint still exists
+               const indexInfo = db.prepare("PRAGMA index_info(sqlite_autoindex_credentials_1)").all();
+               
+               // If we can't find the autoindex, the constraint might already be removed
+               if (indexInfo.length === 0) {
+                 return false; // Already removed or doesn't exist
+               }
+               
+               // Rebuild credentials table without UNIQUE on wallet_address
+               db.exec(`
+                 CREATE TABLE credentials_new (
+                   id TEXT PRIMARY KEY,
+                   wallet_address TEXT NOT NULL,
+                   full_name TEXT NOT NULL,
+                   date_of_birth TEXT NOT NULL,
+                   email TEXT NOT NULL,
+                   profession TEXT NOT NULL,
+                   did_document_json TEXT NOT NULL,
+                   did_document_hash TEXT NOT NULL UNIQUE,
+                   did_id TEXT NOT NULL,
+                   authentication_methods TEXT,
+                   sas_credential_id TEXT,
+                   mint_address TEXT,
+                   transaction_signature TEXT,
+                   transaction_hash TEXT,
+                   created_at TEXT NOT NULL,
+                   updated_at TEXT NOT NULL
+                 );
+                 
+                 INSERT INTO credentials_new SELECT * FROM credentials;
+                 DROP TABLE credentials;
+                 ALTER TABLE credentials_new RENAME TO credentials;
+                 
+                 CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
+                 CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
+                 CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
+               `);
+               
+               return true;
+             } catch (error) {
+               if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
+                 return false;
+               }
+               throw error;
+             }
+           }
+         },
+         
+         // Migration 9: Add certification_name column to certifications table
+         {
+           name: 'Add certification_name column to certifications table',
+           up: (db) => {
+             try {
+               const certTableInfo = db.prepare("PRAGMA table_info(certifications)").all();
+               const hasCertName = certTableInfo.some(col => col.name === 'certification_name');
+               
+               if (!hasCertName) {
+                 db.exec(`ALTER TABLE certifications ADD COLUMN certification_name TEXT;`);
+                 return true;
+               }
+               return false;
+             } catch (error) {
+               if (error.message.includes('duplicate column')) {
+                 return false;
+               }
+               throw error;
+             }
+           }
+         }
     ];
   
   console.log(`   Total migrations defined: ${migrations.length}`);

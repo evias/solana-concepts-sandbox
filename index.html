@@ -51,22 +51,30 @@
           </div>
         </section>
         
-        <!-- Concepts Search -->
+        <!-- Concepts Search and Tag Filter -->
         <section class="mb-8">
-          <div class="flex gap-4 items-center">
+          <div class="flex gap-4 items-center mb-4">
             <input 
               x-model="searchQuery" 
               type="text" 
               placeholder="Search concepts by name or description..." 
               class="flex-1 px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+            <select 
+              x-model="selectedTag"
+              class="px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+              <option value="">Filter by Tag...</option>
+              <template x-for="tag in availableTags" :key="tag">
+                <option :value="tag" x-text="tag"></option>
+              </template>
+            </select>
             <button 
-              @click="clearSearch" 
-              x-show="searchQuery"
+              @click="clearFilter" 
+              x-show="searchQuery || selectedTag"
               class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
               Clear Filter
             </button>
           </div>
-          <p x-show="filteredConcepts.length === 0 && searchQuery" class="mt-2 text-red-600 text-sm">No concepts match your search.</p>
+          <p x-show="filteredConcepts.length === 0 && (searchQuery || selectedTag)" class="mt-2 text-red-600 text-sm">No concepts match your filters.</p>
         </section>
         
         <!-- Concepts Grid -->
@@ -84,7 +92,13 @@
                 <!-- Title and Description -->
                 <div class="flex-grow">
                   <h3 class="text-2xl font-bold mb-2 text-gray-800 group-hover:text-indigo-600 transition-colors" x-text="concept.name"></h3>
-                  <p class="text-gray-600 text-sm leading-relaxed" x-text="concept.description"></p>
+                  <p class="text-gray-600 text-sm leading-relaxed mb-4" x-text="concept.description"></p>
+                </div>
+                <!-- Tags -->
+                <div class="flex flex-wrap gap-2">
+                  <template x-for="tag in concept.tags" :key="tag">
+                    <span class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded" x-text="tag"></span>
+                  </template>
                 </div>
               </div>
             </a>
@@ -120,55 +134,78 @@
     function landingPage() {
       return {
         searchQuery: '',
+        selectedTag: '',
         concepts: [
           {
             id: 'pettracker',
             name: 'PetTracker',
             description: 'Register and manage pets as SPL tokens on Solana devnet. Explore hybrid on-chain/off-chain storage patterns with SQLite metadata and blockchain verification.',
             link: '/pettracker',
-            enabled: true
+            enabled: true,
+            tags: ['SPL Token (NFT)', 'SAS Credential', 'SAS Authorization']
           },
           {
             id: 'petvax',
             name: 'PetVax',
             description: 'Proof of immunization system combining SPL tokens with vaccination records. Create verifiable, on-chain proof of veterinary care and vaccine administration.',
             link: '/petvax',
-            enabled: true
+            enabled: true,
+            tags: ['SPL Token (NFT)', 'Digital Signature', 'SAS Authorization', 'Transaction Memo']
           },
           {
             id: 'petdiet',
             name: 'PetDiet',
             description: 'Decentralized nutrition plans with daily feeding logs on-chain. Create customized meal schedules and cryptographically verify feeding actions.',
             link: '/petdiet',
-            enabled: true
+            enabled: true,
+            tags: ['SPL Token (NFT)', 'Digital Signature', 'SAS Authorization', 'Transaction Memo']
           },
           {
             id: 'healthcred',
             name: 'HealthCred',
             description: 'Public registry for healthcare worker credentials with badges, certifications, and DID documents on-chain.',
             link: '/healthcred',
-            enabled: true
+            enabled: true,
+            tags: ['SPL Token (NFT)', 'SAS Credential', 'NFT Badges', 'Storage']
           },
           {
             id: 'carecircle',
             name: 'CareCircle',
             description: 'Caregiver delegation and mandate circles. Coming soon.',
             link: '/carecircle',
-            enabled: false
+            enabled: false,
+            tags: ['SAS Credential', 'SAS Authorization', 'Storage', 'Permissions']
           }
         ],
-        get filteredConcepts() {
-          if (!this.searchQuery) {
-            return this.concepts;
-          }
-          const query = this.searchQuery.toLowerCase();
-          return this.concepts.filter(concept => 
-            concept.name.toLowerCase().includes(query) || 
-            concept.description.toLowerCase().includes(query)
-          );
+        get availableTags() {
+          const tags = new Set();
+          this.concepts.forEach(concept => {
+            concept.tags.forEach(tag => tags.add(tag));
+          });
+          return Array.from(tags).sort();
         },
-        clearSearch() {
+        get filteredConcepts() {
+          let results = this.concepts;
+          
+          if (this.searchQuery) {
+            const query = this.searchQuery.toLowerCase();
+            results = results.filter(concept => 
+              concept.name.toLowerCase().includes(query) || 
+              concept.description.toLowerCase().includes(query)
+            );
+          }
+          
+          if (this.selectedTag) {
+            results = results.filter(concept => 
+              concept.tags.includes(this.selectedTag)
+            );
+          }
+          
+          return results;
+        },
+        clearFilter() {
           this.searchQuery = '';
+          this.selectedTag = '';
         }
       };
     }
