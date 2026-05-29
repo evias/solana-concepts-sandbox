@@ -3,8 +3,8 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Middleware to parse JSON
-app.use(express.json());
+// Middleware to parse JSON with increased size limit for file uploads
+app.use(express.json({ limit: '5mb' }));
 
 // Serve dashboard landing
 app.get('/', (req, res) => {
