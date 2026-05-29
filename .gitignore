@@ -1,4 +1,5 @@
 node_modules/
 TASKS.md
 pettracker.db
+pettracker.test.db
 .payer-keypair.json
