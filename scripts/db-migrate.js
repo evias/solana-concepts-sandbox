@@ -12,7 +12,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const dbPath = path.join(__dirname, '..', 'pettracker.db');
+const dbPath = path.join(__dirname, '..', 'sandbox.db');
 const dbheadPath = path.join(__dirname, '..', 'DBHEAD');
 
 // Check if database exists

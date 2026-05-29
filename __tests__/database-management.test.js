@@ -4,7 +4,7 @@ const Database = require('better-sqlite3');
 const { execSync } = require('child_process');
 
 describe('Database Management System', () => {
-  const testDbPath = path.join(__dirname, '..', 'test-pettracker.db');
+  const testDbPath = path.join(__dirname, '..', 'test-sandbox.db');
   const testDbheadPath = path.join(__dirname, '..', 'test-DBHEAD');
 
   // Clean up test files after each test
@@ -620,7 +620,7 @@ describe('Database Management System', () => {
   describe('api/database.js - Missing Database Error', () => {
     test('should throw error if database file does not exist', () => {
       // Save original database path
-      const originalDbPath = path.join(__dirname, '..', 'pettracker.db');
+      const originalDbPath = path.join(__dirname, '..', 'sandbox.db');
       
       // This test verifies the logic that would be in database.js
       const missingDbPath = path.join(__dirname, '..', 'non-existent-db.db');

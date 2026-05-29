@@ -105,7 +105,7 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
-    // Test database cleanup handled automatically - tests use separate pettracker.test.db
+    // Test database cleanup handled automatically - tests use separate sandbox.test.db
   });
 
   describe('DID Document Download', () => {

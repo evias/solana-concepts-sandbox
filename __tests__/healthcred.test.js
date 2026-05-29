@@ -119,7 +119,7 @@ describe('HealthCred API Endpoints', () => {
   });
 
   afterAll(() => {
-    // Test database cleanup handled automatically - tests use separate pettracker.test.db
+    // Test database cleanup handled automatically - tests use separate sandbox.test.db
   });
 
   describe('POST /register', () => {
