@@ -11,6 +11,45 @@
     <!-- Solana Web3.js library for transaction handling -->
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.0/lib/index.iife.js"></script>
     <script src="/assets/alpinejs.min.js" defer></script>
+    <style>
+        /* Custom file input styling */
+        .file-input-wrapper {
+            position: relative;
+            display: block;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .file-input-button {
+            display: inline-block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            color: #1f2937;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .file-input-wrapper:hover .file-input-button {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        .file-input-wrapper:focus-within .file-input-button {
+            border-color: #3b82f6;
+            ring-color: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .file-input-name {
+            color: #6b7280;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto px-4 py-8" x-data="healthCred()">
@@ -119,8 +158,17 @@
 
             <!-- Registration Form -->
             <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Register Healthcare Credential</h2>
-                <form @submit.prevent="submitRegistration()" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Register Healthcare Credential</h2>
+                    <button 
+                        @click="showRegistrationForm = !showRegistrationForm"
+                        class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                        :title="showRegistrationForm ? 'Collapse' : 'Expand'">
+                        <span x-show="showRegistrationForm">▼</span>
+                        <span x-show="!showRegistrationForm">▶</span>
+                    </button>
+                </div>
+                <form @submit.prevent="submitRegistration()" class="space-y-4" x-show="showRegistrationForm" x-collapse>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
@@ -195,30 +243,49 @@
 
             <!-- Upload Certification Form -->
             <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Upload a Certification</h2>
-                <form @submit.prevent="submitCertification()" class="space-y-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Upload a Certification</h2>
+                    <button 
+                        @click="showCertificationForm = !showCertificationForm"
+                        class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                        :title="showCertificationForm ? 'Collapse' : 'Expand'">
+                        <span x-show="showCertificationForm">▼</span>
+                        <span x-show="!showCertificationForm">▶</span>
+                    </button>
+                </div>
+                <form @submit.prevent="submitCertification()" class="space-y-4" x-show="showCertificationForm" x-collapse>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Select Your Credential *</label>
                             <select 
                                 x-model="certForm.credentialId"
                                 required
-                                :disabled="!userAddress || credentials.length === 0"
+                                :disabled="!userAddress || ownedCredentials.length === 0"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select credential...</option>
-                                <template x-for="cred in credentials" :key="cred.id">
+                                <template x-for="cred in ownedCredentials" :key="cred.id">
                                     <option :value="cred.id" x-text="`${cred.full_name} (${cred.profession})`"></option>
                                 </template>
                             </select>
+                            <p x-show="userAddress && ownedCredentials.length === 0" class="text-xs text-gray-500 mt-1">You don't have any registered credentials yet</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">File *</label>
-                            <input 
-                                @change="onCertFileSelected"
-                                type="file" 
-                                accept="application/pdf,image/png,image/jpeg"
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                            <div class="file-input-wrapper">
+                                <input 
+                                    @change="onCertFileSelected"
+                                    type="file" 
+                                    accept="application/pdf,image/png,image/jpeg"
+                                    required>
+                                <div class="file-input-button">
+                                    <template x-if="!certForm.file">
+                                        <span class="file-input-name">📁 Choose a file...</span>
+                                    </template>
+                                    <template x-if="certForm.file">
+                                        <span class="file-input-name" x-text="`✓ ${certForm.file.name}`"></span>
+                                    </template>
+                                </div>
+                            </div>
                             <p class="text-xs text-gray-500 mt-1">Accepted: PDF, PNG, JPG</p>
                         </div>
                     </div>
@@ -248,6 +315,25 @@
                     </button>
                 </div>
 
+                <!-- Search Bar -->
+                <div class="mb-6 space-y-2">
+                    <div class="flex gap-2 items-center">
+                        <input 
+                            x-model="credentialSearchQuery" 
+                            type="text" 
+                            placeholder="Search by name, profession, email, DID ID, or wallet address..." 
+                            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                        <button 
+                            @click="clearCredentialSearch" 
+                            x-show="credentialSearchQuery"
+                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                            Clear Filter
+                        </button>
+                    </div>
+                    <p x-show="credentialSearchQuery && filteredCredentials.length === 0" class="text-red-600 text-sm">No credentials match your search.</p>
+                    <p x-show="credentialSearchQuery && filteredCredentials.length > 0" class="text-gray-600 text-sm" x-text="`Found ${filteredCredentials.length} credential(s) matching your search.`"></p>
+                </div>
+
                 <div x-show="loading" class="text-center py-8">
                     <p class="text-gray-500">Loading credentials...</p>
                 </div>
@@ -256,13 +342,25 @@
                     <p>No credentials registered yet</p>
                 </div>
 
-                <div x-show="!loading && credentials.length > 0" class="space-y-4">
-                    <template x-for="cred in credentials" :key="cred.id">
+                <div x-show="!loading && credentials.length > 0 && filteredCredentials.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No credentials match your search filter</p>
+                </div>
+
+                <div x-show="!loading && filteredCredentials.length > 0" class="space-y-4">
+                    <template x-for="cred in paginatedCredentials" :key="cred.id">
                         <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <h3 class="font-semibold text-lg mb-2" x-text="cred.full_name"></h3>
                                     <div class="text-sm text-gray-600 space-y-1">
+                                        <div>
+                                            <strong>Owner Address:</strong>
+                                            <div class="font-mono text-xs">
+                                                <a :href="`https://solscan.io/account/${cred.wallet_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                    <span x-text="cred.wallet_address.substring(0, 8) + '...' + cred.wallet_address.substring(cred.wallet_address.length - 8)"></span> ↗
+                                                </a>
+                                            </div>
+                                        </div>
                                         <div><strong>Profession:</strong> <span x-text="cred.profession"></span></div>
                                         <div><strong>Email:</strong> <span x-text="cred.email"></span></div>
                                         <div><strong>DID ID:</strong> <span x-text="cred.did_id" class="font-mono text-xs"></span></div>
@@ -333,19 +431,18 @@
                 </div>
 
                 <!-- Pagination -->
-                <div x-show="!loading && credentials.length > 0 && pagination.total > pagination.limit" class="flex justify-center gap-2 mt-4">
+                <div x-show="!loading && filteredCredentials.length > 0 && (displayedCredentialsCount < filteredCredentials.length || displayedCredentialsCount > 10)" class="flex justify-center gap-4 mt-6">
                     <button 
-                        @click="loadCredentials(Math.max(0, pagination.offset - pagination.limit))"
-                        :disabled="pagination.offset === 0"
-                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">
-                        ← Previous
+                        @click="loadMoreCredentials" 
+                        x-show="displayedCredentialsCount < filteredCredentials.length"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Load More
                     </button>
-                    <span class="px-3 py-1" x-text="`Page ${Math.floor(pagination.offset / pagination.limit) + 1}`"></span>
                     <button 
-                        @click="loadCredentials(pagination.offset + pagination.limit)"
-                        :disabled="!pagination.hasMore"
-                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50">
-                        Next →
+                        @click="collapseCredentials" 
+                        x-show="displayedCredentialsCount > 10"
+                        class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors">
+                        Collapse
                     </button>
                 </div>
             </section>
@@ -521,6 +618,8 @@
                 },
                 credentials: [],
                 credentialBadges: {}, // Store badges keyed by credential ID
+                credentialSearchQuery: '', // Search filter for credentials
+                displayedCredentialsCount: 10, // Number of credentials to display initially
                 pagination: { total: 0, limit: 10, offset: 0, hasMore: false },
                 loading: false,
                 registering: false,
@@ -534,6 +633,31 @@
                 registerError: '',
                 certError: '',
                 badgeError: '',
+                showRegistrationForm: false, // Collapse state for registration form
+                showCertificationForm: false, // Collapse state for certification form
+
+                get ownedCredentials() {
+                    if (!this.userAddress) return [];
+                    return this.credentials.filter(cred => cred.wallet_address === this.userAddress);
+                },
+
+                get filteredCredentials() {
+                    if (!this.credentialSearchQuery.trim()) {
+                        return this.credentials;
+                    }
+                    const query = this.credentialSearchQuery.toLowerCase();
+                    return this.credentials.filter(cred => 
+                        cred.full_name.toLowerCase().includes(query) ||
+                        cred.profession.toLowerCase().includes(query) ||
+                        cred.email.toLowerCase().includes(query) ||
+                        cred.did_id.toLowerCase().includes(query) ||
+                        cred.wallet_address.toLowerCase().includes(query)
+                    );
+                },
+
+                get paginatedCredentials() {
+                    return this.filteredCredentials.slice(0, this.displayedCredentialsCount);
+                },
 
                 async init() {
                     this.autoConnectWallet();
@@ -592,6 +716,7 @@
 
                 async loadCredentials(offset = 0) {
                     this.loading = true;
+                    this.displayedCredentialsCount = 10; // Reset displayed count when loading
                     try {
                         const res = await fetch(`/api/v1/healthcred/credentials?limit=10&offset=${offset}`);
                         const data = await res.json();
@@ -977,6 +1102,18 @@
                     } catch (err) {
                         alert('Error loading credential details');
                     }
+                },
+
+                clearCredentialSearch() {
+                    this.credentialSearchQuery = '';
+                },
+
+                loadMoreCredentials() {
+                    this.displayedCredentialsCount += 10;
+                },
+
+                collapseCredentials() {
+                    this.displayedCredentialsCount = 10;
                 }
             };
         }

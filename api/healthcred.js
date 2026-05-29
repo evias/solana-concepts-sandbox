@@ -539,67 +539,9 @@ router.post('/badges', async (req, res) => {
     const credentialOwnerWallet = credential.wallet_address;
     console.log('[HealthCred] Credential owner (badge recipient):', credentialOwnerWallet);
     
-    // Create SPL Token Mint for badge (backend-controlled, mints to credential owner)
-    console.log('[HealthCred] Creating SPL token mint for badge...');
+    // Create issuer public key for transaction fee payer
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
     console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
-    
-    let credentialOwnerPublicKey;
-    try {
-      credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
-      console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
-    } catch (pkErr) {
-      console.error('[HealthCred] Invalid credential owner wallet address:', credentialOwnerWallet, pkErr.message);
-      return res.status(500).json({ error: 'Invalid credential owner wallet', details: pkErr.message });
-    }
-    
-    let mintAddress;
-    try {
-      // Create mint with backend payer as mint authority (backend controls minting)
-      console.log('[HealthCred] Calling createMint with payer as mint authority...');
-      const mint = await createMint(
-        connection,
-        payer,
-        payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
-        null,
-        0  // 0 decimals = NFT (badges are single tokens)
-       );
-       mintAddress = mint.toBase58();
-       console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
-       
-       // Wait for RPC to index the mint
-       
-       
-       // Create associated token account for credential owner (badge recipient)
-       console.log('[HealthCred] Creating associated token account for credential owner...');
-      const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-        connection,
-        payer,
-        mint,
-        credentialOwnerPublicKey
-       );
-       console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
-       
-       // Wait for RPC to index the ATA
-       
-       
-       // Mint 1 badge token to credential owner (the person receiving the badge)
-       console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
-      const badgeMintSig = await mintTo(
-        connection,
-        payer,
-        mint,
-        recipientTokenAccount.address,
-        payer,  // payer is the mint authority, so they authorize the mint
-        1  // Mint 1 token
-      );
-      console.log('[HealthCred] Badge NFT minted to recipient, signature:', badgeMintSig);
-    } catch (err) {
-      console.error('[HealthCred] Error creating SPL token mint for badge:', err);
-      console.error('[HealthCred] Error message:', err.message);
-      console.error('[HealthCred] Error stack:', err.stack);
-      return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
-    }
     
     // Create unsigned transaction with memo containing badge data
     console.log('[HealthCred] Creating unsigned transaction for badge...');
@@ -651,13 +593,14 @@ router.post('/badges', async (req, res) => {
     console.log('[HealthCred] Unsigned badge transaction prepared, size:', base64Tx.length, 'bytes');
     
     // Store temporary badge data (expires in 15 minutes)
+    // NOTE: SPL token creation will happen AFTER signing in submit-signed-badge-transaction
     const badgeRegistrationId = uuidv4();
     const badgeData_stored = {
       credentialId,
       issuerWallet,
+      credentialOwnerWallet,
       emoji,
       description,
-      mintAddress,
       blockhash: blockhash.blockhash,
       lastValidBlockHeight: blockhash.lastValidBlockHeight,
       timestamp: Date.now()
@@ -684,7 +627,6 @@ router.post('/badges', async (req, res) => {
         issuerWallet,
         emoji,
         description,
-        mint: mintAddress,
         message: 'Sign this transaction with your wallet to issue the badge'
       }
     });
@@ -720,69 +662,119 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
       return res.status(404).json({ error: 'Badge registration not found or expired. Please create a new badge.' });
     }
     
-    const badgeData = global.healthCredBadges[badgeRegistrationId];
-    console.log('[HealthCred] Found badge registration for credential:', badgeData.credentialId);
-    
-    // Deserialize and send transaction
-    let transactionSignature = '';
-    let transactionHash = '';
-    try {
-      const txBuffer = Buffer.from(signedTransaction, 'base64');
-      const transaction = web3.Transaction.from(txBuffer);
-      
-      console.log('[HealthCred] Deserialized signed badge transaction');
-      console.log('[HealthCred] Sending badge transaction...');
-      
-      transactionSignature = await connection.sendRawTransaction(transaction.serialize());
-      console.log('[HealthCred] Badge transaction sent:', transactionSignature);
-      
-      console.log('[HealthCred] Confirming badge transaction...');
-      await connection.confirmTransaction({
-        signature: transactionSignature,
-        blockhash: badgeData.blockhash,
-        lastValidBlockHeight: badgeData.lastValidBlockHeight
-      });
-      transactionHash = transactionSignature;
-      console.log('[HealthCred] Badge transaction confirmed');
-    } catch (err) {
-      console.error('[HealthCred] Error sending badge transaction:', err.message);
-      return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
-    }
-    
-    // Create badge record in database
-    console.log('[HealthCred] Creating badge record in database...');
-    const badgeId = `badge_${uuidv4()}`;
-    const badge = badgeDb.createBadge({
-      id: badgeId,
-      credentialId: badgeData.credentialId,
-      issuerWallet: badgeData.issuerWallet,
-      emoji: badgeData.emoji,
-      description: badgeData.description,
-      mintAddress: badgeData.mintAddress,
-      transactionSignature,
-      transactionHash
-    });
-    
-    // Clean up badge data
-    delete global.healthCredBadges[badgeRegistrationId];
-    
-    console.log('[HealthCred] Badge creation completed!');
-    console.log('[HealthCred] Solscan URL: https://solscan.io/tx/' + transactionSignature + '?cluster=devnet');
-    
-    return res.status(200).json({
-      success: true,
-      badge: {
-        id: badge.id,
-        credential_id: badge.credential_id,
-        emoji: badge.emoji,
-        description: badge.description
-      },
-      onChain: {
-        mint: badgeData.mintAddress,
-        transactionSignature,
-        solscanUrl: `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
-      }
-    });
+     const badgeData = global.healthCredBadges[badgeRegistrationId];
+     console.log('[HealthCred] Found badge registration for credential:', badgeData.credentialId);
+     
+     // Deserialize and send transaction
+     let transactionSignature = '';
+     let transactionHash = '';
+     try {
+       const txBuffer = Buffer.from(signedTransaction, 'base64');
+       const transaction = web3.Transaction.from(txBuffer);
+       
+       console.log('[HealthCred] Deserialized signed badge transaction');
+       console.log('[HealthCred] Sending badge transaction...');
+       
+       transactionSignature = await connection.sendRawTransaction(transaction.serialize());
+       console.log('[HealthCred] Badge transaction sent:', transactionSignature);
+       
+       console.log('[HealthCred] Confirming badge transaction...');
+       await connection.confirmTransaction({
+         signature: transactionSignature,
+         blockhash: badgeData.blockhash,
+         lastValidBlockHeight: badgeData.lastValidBlockHeight
+       });
+       transactionHash = transactionSignature;
+       console.log('[HealthCred] Badge transaction confirmed');
+     } catch (err) {
+       console.error('[HealthCred] Error sending badge transaction:', err.message);
+       return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
+     }
+     
+     // NOW create SPL Token Mint for badge (after transaction is confirmed)
+     console.log('[HealthCred] Creating SPL token mint for badge...');
+     let mintAddress;
+     try {
+       const issuerPublicKey = new web3.PublicKey(badgeData.issuerWallet);
+       const credentialOwnerPublicKey = new web3.PublicKey(badgeData.credentialOwnerWallet);
+       
+       console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+       console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
+       
+       // Create mint with backend payer as mint authority
+       console.log('[HealthCred] Calling createMint with payer as mint authority...');
+       const mint = await createMint(
+         connection,
+         payer,
+         payer.publicKey,  // Backend payer is the mint authority
+         payer.publicKey,  // Freeze authority (backend payer)
+         0  // 0 decimals = NFT
+        );
+        mintAddress = mint.toBase58();
+        console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
+        
+        // Create associated token account for credential owner
+        console.log('[HealthCred] Creating associated token account for credential owner...');
+        const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+          connection,
+          payer,
+          mint,
+          credentialOwnerPublicKey
+         );
+         console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
+         
+         // Mint 1 badge token to credential owner
+         console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
+         const badgeMintSig = await mintTo(
+           connection,
+           payer,
+           mint,
+           recipientTokenAccount.address,
+           payer,
+           1  // Mint 1 token
+         );
+         console.log('[HealthCred] Badge NFT minted to recipient, signature:', badgeMintSig);
+       } catch (err) {
+         console.error('[HealthCred] Error creating SPL token mint for badge:', err);
+         console.error('[HealthCred] Error message:', err.message);
+         console.error('[HealthCred] Error stack:', err.stack);
+         return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
+       }
+     
+     // Create badge record in database
+     console.log('[HealthCred] Creating badge record in database...');
+     const badgeId = `badge_${uuidv4()}`;
+     const badge = badgeDb.createBadge({
+       id: badgeId,
+       credentialId: badgeData.credentialId,
+       issuerWallet: badgeData.issuerWallet,
+       emoji: badgeData.emoji,
+       description: badgeData.description,
+       mintAddress: mintAddress,
+       transactionSignature,
+       transactionHash
+     });
+     
+     // Clean up badge data
+     delete global.healthCredBadges[badgeRegistrationId];
+     
+     console.log('[HealthCred] Badge creation completed!');
+     console.log('[HealthCred] Solscan URL: https://solscan.io/tx/' + transactionSignature + '?cluster=devnet');
+     
+     return res.status(200).json({
+       success: true,
+       badge: {
+         id: badge.id,
+         credential_id: badge.credential_id,
+         emoji: badge.emoji,
+         description: badge.description
+       },
+       onChain: {
+         mint: mintAddress,
+         transactionSignature,
+         solscanUrl: `https://solscan.io/tx/${transactionSignature}?cluster=devnet`
+       }
+     });
   } catch (error) {
     console.error('[HealthCred] Signed badge transaction submission error:', error.message);
     res.status(500).json({ error: 'Internal server error', details: error.message });
@@ -874,67 +866,9 @@ router.post('/certifications', async (req, res) => {
     const credentialOwnerWallet = certCredential.wallet_address;
     console.log('[HealthCred] Credential owner (certification recipient):', credentialOwnerWallet);
     
-    // Create SPL Token Mint for certification (backend-controlled, mints to credential owner)
-    console.log('[HealthCred] Creating SPL token mint for certification...');
+    // Create issuer public key for transaction fee payer
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
     console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
-    
-    let credentialOwnerPublicKey;
-    try {
-      credentialOwnerPublicKey = new web3.PublicKey(credentialOwnerWallet);
-      console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
-    } catch (pkErr) {
-      console.error('[HealthCred] Invalid credential owner wallet address:', credentialOwnerWallet, pkErr.message);
-      return res.status(500).json({ error: 'Invalid credential owner wallet', details: pkErr.message });
-    }
-    
-    let mintAddress;
-    try {
-      // Create mint with backend payer as mint authority (backend controls minting)
-      console.log('[HealthCred] Calling createMint with payer as mint authority...');
-      const mint = await createMint(
-        connection,
-        payer,
-        payer.publicKey,  // Backend payer is the mint authority (can mint tokens)
-        null,
-        0  // 0 decimals = NFT (certifications are single tokens)
-       );
-       mintAddress = mint.toBase58();
-       console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
-       
-       // Wait for RPC to index the mint
-       
-       
-       // Create associated token account for credential owner (certification recipient)
-       console.log('[HealthCred] Creating associated token account for credential owner...');
-      const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-        connection,
-        payer,
-        mint,
-        credentialOwnerPublicKey
-       );
-       console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
-       
-       // Wait for RPC to index the ATA
-       
-       
-       // Mint 1 certification token to credential owner (the person receiving the certification)
-       console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
-      const certMintSig = await mintTo(
-        connection,
-        payer,
-        mint,
-        recipientTokenAccount.address,
-        payer,  // payer is the mint authority, so they authorize the mint
-        1  // Mint 1 token
-      );
-      console.log('[HealthCred] Certification NFT minted to recipient, signature:', certMintSig);
-    } catch (err) {
-      console.error('[HealthCred] Error creating SPL token mint for certification:', err);
-      console.error('[HealthCred] Error message:', err.message);
-      console.error('[HealthCred] Error stack:', err.stack);
-      return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
-    }
     
     // Create unsigned transaction with memo containing certification metadata
     console.log('[HealthCred] Creating unsigned transaction for certification...');
@@ -986,16 +920,17 @@ router.post('/certifications', async (req, res) => {
     console.log('[HealthCred] Unsigned certification transaction prepared, size:', base64Tx.length, 'bytes');
     
     // Store temporary certification data (expires in 15 minutes)
+    // NOTE: SPL token creation will happen AFTER signing in submit-signed-certification-transaction
     const certRegistrationId = uuidv4();
     const certData_stored = {
       credentialId,
       issuerWallet,
+      credentialOwnerWallet,
       filename,
       fileBuffer, // Store raw file for later
       fileSize,
       fileType,
       fileHash,
-      mintAddress,
       blockhash: blockhash.blockhash,
       lastValidBlockHeight: blockhash.lastValidBlockHeight,
       timestamp: Date.now()
@@ -1022,7 +957,6 @@ router.post('/certifications', async (req, res) => {
         issuerWallet,
         filename,
         fileHash,
-        mint: mintAddress,
         message: 'Sign this transaction with your wallet to upload the certification'
       }
     });
@@ -1058,70 +992,120 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
       return res.status(404).json({ error: 'Certification registration not found or expired. Please create a new certification.' });
     }
     
-    const certData = global.healthCredCertifications[certificationRegistrationId];
-    console.log('[HealthCred] Found certification registration for credential:', certData.credentialId);
-    
-    // Deserialize and send transaction
-    let transactionSignature = '';
-    let transactionHash = '';
-    try {
-      const txBuffer = Buffer.from(signedTransaction, 'base64');
-      const transaction = web3.Transaction.from(txBuffer);
-      
-      console.log('[HealthCred] Deserialized signed certification transaction');
-      console.log('[HealthCred] Sending certification transaction...');
-      
-      transactionSignature = await connection.sendRawTransaction(transaction.serialize());
-      console.log('[HealthCred] Certification transaction sent:', transactionSignature);
-      
-      console.log('[HealthCred] Confirming certification transaction...');
-      await connection.confirmTransaction({
-        signature: transactionSignature,
-        blockhash: certData.blockhash,
-        lastValidBlockHeight: certData.lastValidBlockHeight
-      });
-      transactionHash = transactionSignature;
-      console.log('[HealthCred] Certification transaction confirmed');
-    } catch (err) {
-      console.error('[HealthCred] Error sending certification transaction:', err.message);
-      return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
-    }
-    
-    // Create certification record in database
-    console.log('[HealthCred] Creating certification record in database...');
-    const certId = `cert_${uuidv4()}`;
-    const certification = certificationDb.createCertification({
-      id: certId,
-      credentialId: certData.credentialId,
-      issuerWallet: certData.issuerWallet,
-      filename: certData.filename,
-      fileHash: certData.fileHash,
-      fileSize: certData.fileSize,
-      fileType: certData.fileType,
-      mintAddress: certData.mintAddress,
-      transactionSignature,
-      transactionHash
-    });
-    
-    // Clean up certification data
-    delete global.healthCredCertifications[certificationRegistrationId];
-    
-    console.log('[HealthCred] Certification upload completed!');
-    
-    return res.status(200).json({
-      success: true,
-      certification: {
-        id: certification.id,
-        credential_id: certification.credential_id,
-        filename: certification.filename,
-        file_hash: certification.file_hash
-      },
-      onChain: {
-        mint: certData.mintAddress,
-        transactionSignature,
-        memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
-      }
-    });
+     const certData = global.healthCredCertifications[certificationRegistrationId];
+     console.log('[HealthCred] Found certification registration for credential:', certData.credentialId);
+     
+     // Deserialize and send transaction
+     let transactionSignature = '';
+     let transactionHash = '';
+     try {
+       const txBuffer = Buffer.from(signedTransaction, 'base64');
+       const transaction = web3.Transaction.from(txBuffer);
+       
+       console.log('[HealthCred] Deserialized signed certification transaction');
+       console.log('[HealthCred] Sending certification transaction...');
+       
+       transactionSignature = await connection.sendRawTransaction(transaction.serialize());
+       console.log('[HealthCred] Certification transaction sent:', transactionSignature);
+       
+       console.log('[HealthCred] Confirming certification transaction...');
+       await connection.confirmTransaction({
+         signature: transactionSignature,
+         blockhash: certData.blockhash,
+         lastValidBlockHeight: certData.lastValidBlockHeight
+       });
+       transactionHash = transactionSignature;
+       console.log('[HealthCred] Certification transaction confirmed');
+     } catch (err) {
+       console.error('[HealthCred] Error sending certification transaction:', err.message);
+       return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
+     }
+     
+     // NOW create SPL Token Mint for certification (after transaction is confirmed)
+     console.log('[HealthCred] Creating SPL token mint for certification...');
+     let mintAddress;
+     try {
+       const issuerPublicKey = new web3.PublicKey(certData.issuerWallet);
+       const credentialOwnerPublicKey = new web3.PublicKey(certData.credentialOwnerWallet);
+       
+       console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+       console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
+       
+       // Create mint with backend payer as mint authority
+       console.log('[HealthCred] Calling createMint with payer as mint authority...');
+       const mint = await createMint(
+         connection,
+         payer,
+         payer.publicKey,  // Backend payer is the mint authority
+         payer.publicKey,  // Freeze authority (backend payer)
+         0  // 0 decimals = NFT
+        );
+        mintAddress = mint.toBase58();
+        console.log('[HealthCred] Certification SPL token mint created (NFT):', mintAddress);
+        
+        // Create associated token account for credential owner
+        console.log('[HealthCred] Creating associated token account for credential owner...');
+        const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+          connection,
+          payer,
+          mint,
+          credentialOwnerPublicKey
+         );
+         console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
+         
+         // Mint 1 certification token to credential owner
+         console.log('[HealthCred] Minting 1 certification NFT token to credential owner...');
+         const certMintSig = await mintTo(
+           connection,
+           payer,
+           mint,
+           recipientTokenAccount.address,
+           payer,
+           1  // Mint 1 token
+         );
+         console.log('[HealthCred] Certification NFT minted to recipient, signature:', certMintSig);
+       } catch (err) {
+         console.error('[HealthCred] Error creating SPL token mint for certification:', err);
+         console.error('[HealthCred] Error message:', err.message);
+         console.error('[HealthCred] Error stack:', err.stack);
+         return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
+       }
+     
+     // Create certification record in database
+     console.log('[HealthCred] Creating certification record in database...');
+     const certId = `cert_${uuidv4()}`;
+     const certification = certificationDb.createCertification({
+       id: certId,
+       credentialId: certData.credentialId,
+       issuerWallet: certData.issuerWallet,
+       filename: certData.filename,
+       fileHash: certData.fileHash,
+       fileSize: certData.fileSize,
+       fileType: certData.fileType,
+       mintAddress: mintAddress,
+       transactionSignature,
+       transactionHash
+     });
+     
+     // Clean up certification data
+     delete global.healthCredCertifications[certificationRegistrationId];
+     
+     console.log('[HealthCred] Certification upload completed!');
+     
+     return res.status(200).json({
+       success: true,
+       certification: {
+         id: certification.id,
+         credential_id: certification.credential_id,
+         filename: certification.filename,
+         file_hash: certification.file_hash
+       },
+       onChain: {
+         mint: mintAddress,
+         transactionSignature,
+         memoUrl: `https://solscan.io/tx/${transactionHash}?cluster=devnet`
+       }
+     });
   } catch (error) {
     console.error('[HealthCred] Signed certification transaction submission error:', error.message);
     res.status(500).json({ error: 'Internal server error', details: error.message });
