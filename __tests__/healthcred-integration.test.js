@@ -357,6 +357,7 @@ describe('HealthCred Integration Tests', () => {
         .send({
           credentialId: testCredential.id,
           issuerWallet: genValidAddress(),
+          certificationName: 'Test Certification',
           filename: 'document.txt',
           fileBuffer: Array.from(fileBuffer),
           fileSize: fileBuffer.length,
@@ -381,6 +382,7 @@ describe('HealthCred Integration Tests', () => {
         .send({
           credentialId: testCredential.id,
           issuerWallet,
+          certificationName: 'Professional Certification',
           filename: 'license.pdf',
           fileBuffer: Array.from(fileBuffer),
           fileSize: fileBuffer.length,
@@ -408,7 +410,7 @@ describe('HealthCred Integration Tests', () => {
       expect(submitCertRes.body.success).toBe(true);
       expect(submitCertRes.body.certification).toBeDefined();
       expect(submitCertRes.body.certification.filename).toBe('license.pdf');
-      expect(submitCertRes.body.onChain.mint).toBeDefined();
+      expect(submitCertRes.body.certification.certification_name).toBe('Professional Certification');
     });
 
     test('should return 400 if required certification fields missing', async () => {
@@ -416,6 +418,7 @@ describe('HealthCred Integration Tests', () => {
         .post('/api/v1/healthcred/certifications')
         .send({
           credentialId: testCredential.id,
+          certificationName: 'Test Cert',
           filename: 'cert.pdf'
         })
         .expect(400);

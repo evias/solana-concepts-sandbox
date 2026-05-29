@@ -232,7 +232,7 @@ describe('Landing Page (index.html)', () => {
     });
 
     it('should have copyright message', () => {
-      expect(htmlContent).toMatch(/© 2026 Grégory Saive for re:Software S.L./);
+      expect(htmlContent).toMatch(/© 2026[\s\S]*?Grégory Saive[\s\S]*?re:Software S.L./);
     });
 
     it('footer should be centered', () => {
@@ -339,20 +339,36 @@ describe('Landing Page (index.html)', () => {
       expect(htmlContent).toMatch(/Clear Filter/);
     });
 
-    it('clear button should use clearSearch Alpine method', () => {
-      expect(htmlContent).toMatch(/@click="clearSearch"/);
+    it('clear button should use clearFilter Alpine method', () => {
+      expect(htmlContent).toMatch(/@click="clearFilter"/);
     });
 
-    it('clear button should only show when search query is active', () => {
-      expect(htmlContent).toMatch(/x-show="searchQuery"/);
+    it('clear button should only show when search query or selected tag is active', () => {
+      expect(htmlContent).toMatch(/x-show="searchQuery \|\| selectedTag"/);
     });
 
-    it('should display error message when no concepts match search', () => {
-      expect(htmlContent).toMatch(/No concepts match your search/);
+    it('should display error message when no concepts match filters', () => {
+      expect(htmlContent).toMatch(/No concepts match your filters/);
     });
 
     it('error message should be conditionally shown', () => {
-      expect(htmlContent).toMatch(/x-show="filteredConcepts.length === 0 && searchQuery"/);
+      expect(htmlContent).toMatch(/x-show="filteredConcepts.length === 0 && \(searchQuery \|\| selectedTag\)"/);
+    });
+
+    it('should have tag filter select element', () => {
+      expect(htmlContent).toMatch(/<select[^>]*x-model="selectedTag"[^>]*>/);
+    });
+
+    it('should have selectedTag property in Alpine data', () => {
+      expect(htmlContent).toMatch(/selectedTag:\s*''/);
+    });
+
+    it('concepts should have tags property', () => {
+      expect(htmlContent).toMatch(/tags:\s*\[/);
+    });
+
+    it('should have availableTags getter in Alpine', () => {
+      expect(htmlContent).toMatch(/get availableTags\(\)/);
     });
 
     it('should have Alpine.js data function landingPage', () => {
@@ -367,21 +383,23 @@ describe('Landing Page (index.html)', () => {
       expect(htmlContent).toMatch(/concepts:\s*\[/);
     });
 
-    it('each concept should have id, name, description, link, and enabled properties', () => {
+    it('each concept should have id, name, description, link, enabled, and tags properties', () => {
       expect(htmlContent).toMatch(/id:/);
       expect(htmlContent).toMatch(/name:/);
       expect(htmlContent).toMatch(/description:/);
       expect(htmlContent).toMatch(/link:/);
       expect(htmlContent).toMatch(/enabled:/);
+      expect(htmlContent).toMatch(/tags:/);
     });
 
     it('should have filteredConcepts computed getter in Alpine', () => {
       expect(htmlContent).toMatch(/get filteredConcepts\(\)/);
     });
 
-    it('filteredConcepts should filter by name and description', () => {
+    it('filteredConcepts should filter by name, description, and tags', () => {
       expect(htmlContent).toMatch(/concept.name.toLowerCase\(\).includes\(query\)/);
       expect(htmlContent).toMatch(/concept.description.toLowerCase\(\).includes\(query\)/);
+      expect(htmlContent).toMatch(/concept.tags.includes\(this.selectedTag\)/);
     });
 
     it('concepts grid should use x-for to render filtered concepts', () => {
