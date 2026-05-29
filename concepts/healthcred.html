@@ -924,6 +924,11 @@
                         return;
                     }
 
+                    if (!this.certForm.certificationName) {
+                        this.certError = 'Please enter a certification name';
+                        return;
+                    }
+
                     this.uploadingCert = true;
                     try {
                         const fileBuffer = new Uint8Array(await this.certForm.file.arrayBuffer());
@@ -935,6 +940,7 @@
                             body: JSON.stringify({
                                 credentialId: this.certForm.credentialId,
                                 issuerWallet: this.userAddress,
+                                certificationName: this.certForm.certificationName,
                                 filename: this.certForm.file.name,
                                 fileBuffer: Array.from(fileBuffer),
                                 fileSize: this.certForm.file.size,
@@ -992,7 +998,7 @@
                         }
 
                         alert('Certification uploaded successfully!');
-                        this.certForm = { credentialId: '', file: null };
+                        this.certForm = { credentialId: '', certificationName: '', file: null };
                     } catch (err) {
                         this.certError = err.message;
                     } finally {
