@@ -166,7 +166,7 @@
                     </div>
                     <div x-show="selectedPet" class="bg-blue-50 border border-blue-200 rounded-md p-4">
                         <p class="font-semibold text-blue-900"><span x-text="selectedPet ? getSpeciesEmoji(selectedPet.species) : '🐾'"></span> <span x-text="selectedPet ? `${selectedPet.name} - ${selectedPet.species}` : ''"></span> <span x-text="selectedPet ? `(${selectedPet.breed || 'Unknown'})` : ''"></span></p>
-                        <p class="text-sm text-blue-700 mt-1">Owner: <a :href="'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-mono" x-text="selectedPet ? selectedPet.owner.substring(0, 6) + '...' + selectedPet.owner.substring(selectedPet.owner.length - 4) : ''"></a></p>
+                        <p class="text-sm text-blue-700 mt-1" x-show="selectedPet">Owner: <a :href="selectedPet ? 'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet' : '#'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-mono" x-text="selectedPet ? selectedPet.owner.substring(0, 6) + '...' + selectedPet.owner.substring(selectedPet.owner.length - 4) : ''"></a></p>
                         <p x-show="selectedPet && selectedPet.authorizedVets && selectedPet.authorizedVets.length > 0" class="text-sm text-blue-700 mt-2">
                             <span class="font-medium">Authorized Nutritioners:</span>
                             <span x-text="selectedPet ? selectedPet.authorizedVets.join(', ') : ''"></span>
