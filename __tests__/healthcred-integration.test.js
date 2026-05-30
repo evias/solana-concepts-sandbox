@@ -107,28 +107,8 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
-    // Clean up only test-related uploads (those with test prefixes like 'jest_', 'test-', etc.)
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
-    if (fs.existsSync(uploadsDir)) {
-      const files = fs.readdirSync(uploadsDir);
-      files.forEach(file => {
-        // Only remove directories that look like test wallets (starting with jest_, test-, or known test patterns)
-        if (file.startsWith('jest_') || file.startsWith('test-') || file.startsWith('mock_')) {
-          const filePath = path.join(uploadsDir, file);
-          const stat = fs.statSync(filePath);
-          if (stat.isDirectory()) {
-            // Remove test directory and its contents
-            fs.rmSync(filePath, { recursive: true, force: true });
-            console.log(`[HealthCred Tests] Cleaned up test uploads: ${file}`);
-          } else {
-            // Remove test file
-            fs.unlinkSync(filePath);
-            console.log(`[HealthCred Tests] Cleaned up test file: ${file}`);
-          }
-        }
-      });
-    }
     // Test database cleanup handled automatically - tests use separate sandbox.test.db
+    // NOTE: NO CLEANUP OF PRODUCTION UPLOADS DIRECTORY - Tests must not pollute production!
   });
 
   describe('DID Document Download', () => {
