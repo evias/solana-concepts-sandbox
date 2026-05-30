@@ -164,13 +164,30 @@
                             </template>
                         </select>
                     </div>
-                    <div x-show="selectedPet" class="bg-blue-50 border border-blue-200 rounded-md p-4">
-                        <p class="font-semibold text-blue-900"><span x-text="selectedPet ? getSpeciesEmoji(selectedPet.species) : '🐾'"></span> <span x-text="selectedPet ? `${selectedPet.name} - ${selectedPet.species}` : ''"></span> <span x-text="selectedPet ? `(${selectedPet.breed || 'Unknown'})` : ''"></span></p>
-                        <p class="text-sm text-blue-700 mt-1" x-show="selectedPet">Owner: <a :href="selectedPet ? 'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet' : '#'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-800 font-mono" x-text="selectedPet ? selectedPet.owner.substring(0, 6) + '...' + selectedPet.owner.substring(selectedPet.owner.length - 4) : ''"></a></p>
-                        <p x-show="selectedPet && getAuthorizedVets().length > 0" class="text-sm text-blue-700 mt-2">
-                            <span class="font-medium">Authorized Nutritioners:</span>
-                            <span x-text="getAuthorizedVets().join(', ')"></span>
-                        </p>
+                    <div x-show="selectedPet" class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-lg p-6 shadow-md">
+                        <!-- Pet Name and Species Header -->
+                        <div class="mb-4 pb-4 border-b-2 border-indigo-200">
+                            <p class="text-3xl font-bold text-indigo-900"><span x-text="selectedPet ? getSpeciesEmoji(selectedPet.species) : '🐾'"></span> <span x-text="selectedPet ? selectedPet.name : ''"></span></p>
+                            <p class="text-lg text-indigo-700 mt-1"><span x-text="selectedPet ? selectedPet.species : ''"></span> <span x-show="selectedPet" x-text="selectedPet ? `(${selectedPet.breed || 'Unknown breed'})` : ''"></span></p>
+                        </div>
+                        
+                        <!-- Owner Info Card -->
+                        <div class="bg-white rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+                            <p class="text-sm text-gray-600 font-semibold mb-2">OWNER</p>
+                            <p class="text-gray-900 font-mono"><a x-show="selectedPet" :href="selectedPet ? 'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet' : '#'" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-bold" x-text="selectedPet ? selectedPet.owner : ''"></a></p>
+                        </div>
+                        
+                        <!-- Authorized Nutritioners -->
+                        <div x-show="selectedPet && getAuthorizedVets().length > 0" class="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                            <p class="text-sm text-gray-600 font-semibold mb-3">AUTHORIZED NUTRITIONERS</p>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="vet in getAuthorizedVets()" :key="vet">
+                                    <a :href="'https://solscan.io/address/' + vet + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-mono hover:bg-green-200 transition">
+                                        <span x-text="vet.substring(0, 6) + '...' + vet.substring(vet.length - 4)"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -934,7 +951,9 @@
 
                         if (response.ok) {
                             const result = await response.json();
-                            this.feedingSuccessMessage = `✓ Feeding logged successfully!<br><br>View on Solscan:<br><a href="https://solscan.io/tx/${result.metadata.transactionHash}?cluster=devnet" target="_blank" class="text-blue-600 hover:text-blue-800">${result.metadata.transactionHash}</a>`;
+                            const txHash = result.metadata.transactionHash;
+                            const shortHash = txHash.substring(0, 6) + '...' + txHash.substring(txHash.length - 4);
+                            this.feedingSuccessMessage = `✓ Feeding logged successfully!<br><br>View on Solscan:<br><a href="https://solscan.io/tx/${txHash}?cluster=devnet" target="_blank" class="text-blue-600 hover:text-blue-800 font-mono">${shortHash}</a>`;
                             
                             // Reset form
                             this.feedingForm.ingredients = '';
