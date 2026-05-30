@@ -452,7 +452,9 @@
                             <div class="flex gap-2 mt-4">
                                 <button 
                                     @click="openBadgeModal(cred.id)"
-                                    class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition">
+                                    :disabled="userAddress === cred.wallet_address"
+                                    :title="userAddress === cred.wallet_address ? 'You cannot send a badge to yourself' : 'Send a badge to this credential holder'"
+                                    class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
                                     🎖️ Send Badge
                                 </button>
                                 <button 
@@ -1050,6 +1052,14 @@
                     
                     if (!this.userAddress) {
                         this.badgeError = 'Please connect your wallet first';
+                        this.sendingBadge = false;
+                        return;
+                    }
+
+                    // Get the credential to check if it belongs to the user
+                    const credential = this.credentials.find(c => c.id === this.badgeForm.credentialId);
+                    if (credential && credential.wallet_address === this.userAddress) {
+                        this.badgeError = 'You cannot send a badge to yourself';
                         this.sendingBadge = false;
                         return;
                     }

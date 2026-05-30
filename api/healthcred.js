@@ -539,6 +539,12 @@ router.post('/badges', async (req, res) => {
     const credentialOwnerWallet = credential.wallet_address;
     console.log('[HealthCred] Credential owner (badge recipient):', credentialOwnerWallet);
     
+    // Prevent self-sending badges
+    if (issuerWallet === credentialOwnerWallet) {
+      console.log('[HealthCred] Badge self-send prevented: issuer and owner are the same');
+      return res.status(400).json({ error: 'You cannot send a badge to yourself' });
+    }
+    
     // Create issuer public key for transaction fee payer
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
     console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());

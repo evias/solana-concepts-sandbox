@@ -84,6 +84,8 @@ jest.mock('../api/payer', () => ({
 
 const request = require('supertest');
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { credentialDb, badgeDb, certificationDb } = require('../api/database');
 
 const healthcredRouter = require('../api/healthcred');
@@ -105,6 +107,22 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
+    // Clean up uploads folder
+    const uploadsDir = path.join(__dirname, '..', 'uploads');
+    if (fs.existsSync(uploadsDir)) {
+      const files = fs.readdirSync(uploadsDir);
+      files.forEach(file => {
+        const filePath = path.join(uploadsDir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+          // Remove directory and its contents
+          fs.rmSync(filePath, { recursive: true, force: true });
+        } else {
+          // Remove file
+          fs.unlinkSync(filePath);
+        }
+      });
+    }
     // Test database cleanup handled automatically - tests use separate sandbox.test.db
   });
 
