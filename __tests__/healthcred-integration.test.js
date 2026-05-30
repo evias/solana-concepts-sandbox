@@ -107,19 +107,24 @@ describe('HealthCred Integration Tests', () => {
   };
 
   afterAll(() => {
-    // Clean up uploads folder
+    // Clean up only test-related uploads (those with test prefixes like 'jest_', 'test-', etc.)
     const uploadsDir = path.join(__dirname, '..', 'uploads');
     if (fs.existsSync(uploadsDir)) {
       const files = fs.readdirSync(uploadsDir);
       files.forEach(file => {
-        const filePath = path.join(uploadsDir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-          // Remove directory and its contents
-          fs.rmSync(filePath, { recursive: true, force: true });
-        } else {
-          // Remove file
-          fs.unlinkSync(filePath);
+        // Only remove directories that look like test wallets (starting with jest_, test-, or known test patterns)
+        if (file.startsWith('jest_') || file.startsWith('test-') || file.startsWith('mock_')) {
+          const filePath = path.join(uploadsDir, file);
+          const stat = fs.statSync(filePath);
+          if (stat.isDirectory()) {
+            // Remove test directory and its contents
+            fs.rmSync(filePath, { recursive: true, force: true });
+            console.log(`[HealthCred Tests] Cleaned up test uploads: ${file}`);
+          } else {
+            // Remove test file
+            fs.unlinkSync(filePath);
+            console.log(`[HealthCred Tests] Cleaned up test file: ${file}`);
+          }
         }
       });
     }
