@@ -1034,27 +1034,32 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
        return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
      }
      
-     // Store file to filesystem under uploads/{walletAddress}/{filename}
-     console.log('[HealthCred] Storing certification file to filesystem...');
-     const uploadsDir = path.join(__dirname, '..', 'uploads');
-     const walletDir = path.join(uploadsDir, certData.credentialId.split('_')[1] || certData.issuerWallet);
-     
-     try {
-       // Create wallet directory if it doesn't exist
-       if (!fs.existsSync(walletDir)) {
-         fs.mkdirSync(walletDir, { recursive: true });
-         console.log('[HealthCred] Created uploads directory:', walletDir);
-       }
-       
-       // Store file
-       const fileBufferAsBuffer = Buffer.isBuffer(certData.fileBuffer) ? certData.fileBuffer : Buffer.from(certData.fileBuffer);
-       const filePath = path.join(walletDir, certData.filename);
-       fs.writeFileSync(filePath, fileBufferAsBuffer);
-       console.log('[HealthCred] Certification file stored at:', filePath);
-     } catch (err) {
-       console.error('[HealthCred] Error storing certification file:', err.message);
-       // Don't fail the transaction if file storage fails, but log it
-     }
+      // Store file to filesystem under uploads/{walletAddress}/{filename}
+      // SKIP FILE WRITES DURING TESTS to prevent polluting production uploads/
+      if (process.env.NODE_ENV !== 'test') {
+        console.log('[HealthCred] Storing certification file to filesystem...');
+        const uploadsDir = path.join(__dirname, '..', 'uploads');
+        const walletDir = path.join(uploadsDir, certData.credentialId.split('_')[1] || certData.issuerWallet);
+        
+        try {
+          // Create wallet directory if it doesn't exist
+          if (!fs.existsSync(walletDir)) {
+            fs.mkdirSync(walletDir, { recursive: true });
+            console.log('[HealthCred] Created uploads directory:', walletDir);
+          }
+          
+          // Store file
+          const fileBufferAsBuffer = Buffer.isBuffer(certData.fileBuffer) ? certData.fileBuffer : Buffer.from(certData.fileBuffer);
+          const filePath = path.join(walletDir, certData.filename);
+          fs.writeFileSync(filePath, fileBufferAsBuffer);
+          console.log('[HealthCred] Certification file stored at:', filePath);
+        } catch (err) {
+          console.error('[HealthCred] Error storing certification file:', err.message);
+          // Don't fail the transaction if file storage fails, but log it
+        }
+      } else {
+        console.log('[HealthCred] Skipping file storage during tests (NODE_ENV=test)');
+      }
       
       // Create certification record in database (NO SPL token creation)
       console.log('[HealthCred] Creating certification record in database...');
