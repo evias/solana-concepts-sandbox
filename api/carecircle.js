@@ -104,7 +104,6 @@ function calculateFileHash(buffer) {
 /**
  * GET /api/v1/carecircle/credentials
  * List credentials accessible by the wallet with metadata (name, mint)
- * For owned credentials, automatically ensures SAS Credential exists
  * Returns credentials where wallet is owner or authorized signer
  * Fetches from database, not filesystem
  */
@@ -130,21 +129,8 @@ router.get('/credentials', async (req, res) => {
 
       // Filter credentials where wallet is owner or authorized signer
       for (const cred of allCredentials) {
-        // Check if wallet is the owner
+        // Always return credentials owned by the wallet
         if (cred.wallet_address === wallet) {
-          // For owned credentials, ensure a SAS Credential exists for delegation
-          if (!cred.sas_credential_id) {
-            try {
-              const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
-              // Update the credential with the SAS credential ID
-              cred.sas_credential_id = sasResult.credentialId;
-              console.log(`[CareCircle] Ensured SAS Credential for owned credential ${cred.id}`);
-            } catch (error) {
-              console.error(`[CareCircle] Error ensuring SAS Credential:`, error.message);
-              // Continue even if SAS creation fails - user can still view/upload files
-            }
-          }
-
           credentials.push({
             id: extractCredentialUuid(cred.id),
             name: cred.full_name,
@@ -153,7 +139,7 @@ router.get('/credentials', async (req, res) => {
           continue;
         }
 
-        // Check if wallet is an authorized signer
+        // Check if wallet is an authorized signer on credentials with SAS
         if (cred.sas_credential_id) {
           try {
             // Derive the actual SAS credential address for the credential owner
