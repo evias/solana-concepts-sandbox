@@ -104,7 +104,8 @@ function calculateFileHash(buffer) {
 /**
  * GET /api/v1/carecircle/credentials
  * List credentials accessible by the wallet with metadata (name, mint)
- * Only returns credentials where wallet is owner or authorized signer
+ * For owned credentials, automatically ensures SAS Credential exists
+ * Returns credentials where wallet is owner or authorized signer
  * Fetches from database, not filesystem
  */
 router.get('/credentials', async (req, res) => {
@@ -120,6 +121,8 @@ router.get('/credentials', async (req, res) => {
     }
 
     const credentials = [];
+    const payer = require('./payer').getPayerKeypair();
+    const sasIntegration = require('./sas-integration');
 
     try {
       // Fetch all credentials from database
@@ -129,6 +132,19 @@ router.get('/credentials', async (req, res) => {
       for (const cred of allCredentials) {
         // Check if wallet is the owner
         if (cred.wallet_address === wallet) {
+          // For owned credentials, ensure a SAS Credential exists for delegation
+          if (!cred.sas_credential_id) {
+            try {
+              const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
+              // Update the credential with the SAS credential ID
+              cred.sas_credential_id = sasResult.credentialId;
+              console.log(`[CareCircle] Ensured SAS Credential for owned credential ${cred.id}`);
+            } catch (error) {
+              console.error(`[CareCircle] Error ensuring SAS Credential:`, error.message);
+              // Continue even if SAS creation fails - user can still view/upload files
+            }
+          }
+
           credentials.push({
             id: extractCredentialUuid(cred.id),
             name: cred.full_name,
@@ -141,8 +157,6 @@ router.get('/credentials', async (req, res) => {
         if (cred.sas_credential_id) {
           try {
             // Derive the actual SAS credential address for the credential owner
-            const payer = require('./payer').getPayerKeypair();
-            const sasIntegration = require('./sas-integration');
             const sasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
             
             const authorizedSigners = await getAuthorizedSigners(sasResult.credentialAddress);
