@@ -43,7 +43,7 @@ router.get('/credentials', (req, res) => {
         // Try to find matching credential in database
         try {
           const allCredentials = credentialDb.getAllCredentials(1000, 0);
-          const matching = allCredentials.data.find(cred => 
+          const matching = allCredentials.find(cred => 
             cred.sas_credential_id === credentialId || cred.id === credentialId
           );
 

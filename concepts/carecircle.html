@@ -311,7 +311,7 @@
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select credential to upload to...</option>
                                 <template x-for="cred in browsing.credentials" :key="cred.id">
-                                    <option :value="cred.id" x-text="cred.name ? (cred.name + ' (' + cred.id + (cred.mint ? ', ' + cred.mint.substring(0, 6) + '...' + cred.mint.substring(cred.mint.length - 4) : '') + ')') : cred.id"></option>
+                                    <option :value="cred.id" x-text="getCredentialLabel(cred)"></option>
                                 </template>
                             </select>
                             <p class="text-xs text-gray-500 mt-1">Choose which credential's uploads folder to save to</p>
@@ -535,6 +535,19 @@
                     } finally {
                         this.browsing.loading = false;
                     }
+                },
+
+                getCredentialLabel(cred) {
+                    if (!cred) return '';
+                    let label = cred.name || cred.id;
+                    if (cred.name && cred.id) {
+                        label += ` (${cred.id}`;
+                        if (cred.mint) {
+                            label += `, ${cred.mint.substring(0, 6)}...${cred.mint.substring(cred.mint.length - 4)}`;
+                        }
+                        label += ')';
+                    }
+                    return label;
                 },
 
                 async openCredential(credentialId) {
