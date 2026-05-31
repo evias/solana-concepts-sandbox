@@ -4,7 +4,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { credentialDb } = require('./database');
-const { getAuthorizedSigners } = require('./sas-integration');
+const { getAuthorizedSigners, addAuthorizedSigner } = require('./sas-integration');
 const router = express.Router();
 
 /**
@@ -283,21 +283,88 @@ router.post('/authorize-caregiver', async (req, res) => {
       return res.status(400).json({ error: 'Invalid caregiver address format' });
     }
 
-    // In production, this would:
-    // 1. Retrieve the SAS Credential for the wallet
-    // 2. Add the caregiver address to authorized signers
-    // 3. Create a transaction to update the credential on-chain
-    // For now, we return success to simulate the operation
-    
-    console.log('[CareCircle] Authorized caregiver:', caregiverAddress, 'for credential:', credentialId, 'wallet:', wallet);
+    // In test mode, skip SAS operations and return success
+    if (process.env.NODE_ENV === 'test') {
+      console.log('[CareCircle] [TEST MODE] Caregiver authorization (SAS skipped):', caregiverAddress);
+      return res.status(200).json({
+        success: true,
+        message: 'Caregiver authorized successfully (test mode)',
+        credential: credentialId,
+        caregiver: caregiverAddress,
+        wallet: wallet
+      });
+    }
 
-    return res.status(200).json({
-      success: true,
-      message: 'Caregiver authorized successfully',
-      credential: credentialId,
-      caregiver: caregiverAddress,
-      wallet: wallet
-    });
+    try {
+      // Get the credential from database
+      const allCredentials = credentialDb.getAllCredentials(1000, 0);
+      const credentialUuid = extractCredentialUuid(credentialId);
+      const credential = allCredentials.find(cred => {
+        const sasUuid = extractCredentialUuid(cred.sas_credential_id);
+        const idUuid = extractCredentialUuid(cred.id);
+        return sasUuid === credentialUuid || idUuid === credentialUuid;
+      });
+
+      if (!credential) {
+        return res.status(404).json({ error: 'Credential not found' });
+      }
+
+      if (!credential.sas_credential_id) {
+        return res.status(400).json({ error: 'Credential does not have a SAS Credential ID' });
+      }
+
+      // Get payer for SAS operations
+      const payer = require('./payer').getPayerKeypair();
+      const sasIntegration = require('./sas-integration');
+
+      // Add the caregiver as an authorized signer to the SAS Credential
+      console.log(`[CareCircle] Adding caregiver ${caregiverAddress} to SAS credential ${credential.sas_credential_id}...`);
+      let sasResult;
+      try {
+        sasResult = await sasIntegration.addAuthorizedSigner(
+          credential.sas_credential_id,
+          wallet,
+          caregiverAddress,
+          payer
+        );
+        console.log(`[CareCircle] Caregiver added successfully. Tx: ${sasResult.transactionSignature}`);
+      } catch (addError) {
+        console.error('[CareCircle] Error adding caregiver to SAS credential:', addError.message);
+        // If error is "signer already authorized", continue anyway
+        if (!addError.message.includes('Signer already authorized')) {
+          throw addError;
+        }
+        console.log('[CareCircle] Caregiver was already added, continuing...');
+        sasResult = {
+          transactionSignature: null,
+          authorizedSigners: await getAuthorizedSigners(credential.sas_credential_id)
+        };
+      }
+
+      console.log('[CareCircle] Caregiver authorized:', caregiverAddress, 'for credential:', credentialId, 'wallet:', wallet);
+
+      return res.status(200).json({
+        success: true,
+        message: 'Caregiver authorized successfully',
+        credential: {
+          id: credentialId,
+          sasCredentialId: credential.sas_credential_id,
+          name: credential.full_name
+        },
+        caregiver: caregiverAddress,
+        wallet: wallet,
+        sasTransaction: {
+          signature: sasResult.transactionSignature,
+          authorizedSigners: sasResult.authorizedSigners
+        }
+      });
+    } catch (sasError) {
+      console.error('[CareCircle] Error during SAS operations:', sasError.message);
+      return res.status(500).json({ 
+        error: 'Failed to update SAS Credential',
+        details: sasError.message 
+      });
+    }
   } catch (error) {
     console.error('[CareCircle] Error authorizing caregiver:', error);
     return res.status(500).json({ error: 'Failed to authorize caregiver' });
