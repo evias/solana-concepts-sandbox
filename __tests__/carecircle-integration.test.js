@@ -83,6 +83,13 @@ jest.mock('../api/payer', () => ({
   }
 }));
 
+jest.mock('../api/sas-integration', () => ({
+  getAuthorizedSigners: jest.fn(async (credentialAddress) => {
+    // Mock: return the test wallet as authorized signer for all test credentials
+    return ['test_wallet_carecircle_12345678901234567890'];
+  })
+}));
+
 const request = require('supertest');
 const express = require('express');
 const path = require('path');

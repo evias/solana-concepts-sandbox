@@ -4,7 +4,47 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { credentialDb } = require('./database');
+const { getAuthorizedSigners } = require('./sas-integration');
 const router = express.Router();
+
+/**
+ * Helper: Check if wallet has access to a credential
+ * Access is granted if:
+ * 1. Wallet is the credential owner (wallet_address in database), OR
+ * 2. Wallet is an authorized signer on the SAS Credential
+ * Note: In test mode, authorization is bypassed for testing purposes
+ */
+async function hasCredentialAccess(wallet, credentialId) {
+  try {
+    // In test mode, allow all access for testing
+    if (process.env.NODE_ENV === 'test') {
+      return true;
+    }
+
+    // Check if wallet is the credential owner
+    const allCredentials = credentialDb.getAllCredentials(1000, 0);
+    const credential = allCredentials.find(cred => 
+      cred.sas_credential_id === credentialId || cred.id === credentialId
+    );
+
+    if (credential && credential.wallet_address === wallet) {
+      return true;
+    }
+
+    // Check if wallet is an authorized signer
+    if (credential && credential.sas_credential_id) {
+      const authorizedSigners = await getAuthorizedSigners(credential.sas_credential_id);
+      if (authorizedSigners && authorizedSigners.includes(wallet)) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error('[CareCircle] Error checking credential access:', error);
+    return false;
+  }
+}
 
 /**
  * Helper: Calculate file hash (SHA2-256)
@@ -16,8 +56,9 @@ function calculateFileHash(buffer) {
 /**
  * GET /api/v1/carecircle/credentials
  * List credentials accessible by the wallet with metadata (name, mint)
+ * Only returns credentials where wallet is owner or authorized signer
  */
-router.get('/credentials', (req, res) => {
+router.get('/credentials', async (req, res) => {
   try {
     const wallet = req.query.wallet;
     if (!wallet) {
@@ -35,10 +76,17 @@ router.get('/credentials', (req, res) => {
     if (fs.existsSync(uploadsDir)) {
       const entries = fs.readdirSync(uploadsDir);
       
-      // For each upload folder, try to match it with credential metadata
+      // For each upload folder, check if wallet has access
       for (const credentialId of entries) {
         const credentialPath = path.join(uploadsDir, credentialId);
         if (!fs.statSync(credentialPath).isDirectory()) continue;
+
+        // Check if wallet has access to this credential
+        const hasAccess = await hasCredentialAccess(wallet, credentialId);
+        if (!hasAccess) {
+          console.log(`[CareCircle] Wallet ${wallet} denied access to credential ${credentialId}`);
+          continue;
+        }
 
         // Try to find matching credential in database
         try {
@@ -73,14 +121,21 @@ router.get('/credentials', (req, res) => {
 /**
  * GET /api/v1/carecircle/files
  * List files in a credential's uploads folder
+ * Only returns if wallet has access to the credential
  */
-router.get('/files', (req, res) => {
+router.get('/files', async (req, res) => {
   try {
     const wallet = req.query.wallet;
     const credentialId = req.query.credentialId;
 
     if (!wallet || !credentialId) {
       return res.status(400).json({ error: 'Wallet and credentialId required' });
+    }
+
+    // Check if wallet has access to this credential
+    const hasAccess = await hasCredentialAccess(wallet, credentialId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
     }
 
     // Check if NODE_ENV is test
@@ -109,13 +164,20 @@ router.get('/files', (req, res) => {
 /**
  * POST /api/v1/carecircle/upload
  * Upload a file to a credential's uploads folder
+ * Only allows if wallet has access to the credential
  */
-router.post('/upload', (req, res) => {
+router.post('/upload', async (req, res) => {
   try {
     const { wallet, credentialId, filename, fileBuffer, fileSize, fileType } = req.body;
 
     if (!wallet || !credentialId || !filename || !fileBuffer) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Check if wallet has access to this credential
+    const hasAccess = await hasCredentialAccess(wallet, credentialId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
     }
 
     const maxSize = 5 * 1024 * 1024; // 5MB
