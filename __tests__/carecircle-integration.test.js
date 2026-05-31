@@ -311,6 +311,18 @@ describe('CareCircle API', () => {
       const res = await request(app)
         .post('/api/v1/carecircle/authorize-caregiver')
         .send({
+          credentialId: testCredentialId,
+          caregiverAddress: testCaregiverAddress
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBeDefined();
+    });
+
+    it('should reject authorization without credentialId', async () => {
+      const res = await request(app)
+        .post('/api/v1/carecircle/authorize-caregiver')
+        .send({
+          wallet: testWallet,
           caregiverAddress: testCaregiverAddress
         });
       expect(res.status).toBe(400);
@@ -321,7 +333,8 @@ describe('CareCircle API', () => {
       const res = await request(app)
         .post('/api/v1/carecircle/authorize-caregiver')
         .send({
-          wallet: testWallet
+          wallet: testWallet,
+          credentialId: testCredentialId
         });
       expect(res.status).toBe(400);
       expect(res.body.error).toBeDefined();
@@ -332,6 +345,7 @@ describe('CareCircle API', () => {
         .post('/api/v1/carecircle/authorize-caregiver')
         .send({
           wallet: testWallet,
+          credentialId: testCredentialId,
           caregiverAddress: 'invalid-address'
         });
       expect(res.status).toBe(400);
@@ -343,6 +357,7 @@ describe('CareCircle API', () => {
         .post('/api/v1/carecircle/authorize-caregiver')
         .send({
           wallet: testWallet,
+          credentialId: testCredentialId,
           caregiverAddress: testCaregiverAddress
         });
       expect(res.status).toBe(200);

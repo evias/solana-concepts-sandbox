@@ -51,12 +51,17 @@ async function hasCredentialAccess(wallet, credentialId) {
       return true;
     }
 
-    // Check if wallet is an authorized signer
+    // Check if wallet is an authorized signer (only if credential has sas_credential_id)
     if (credential && credential.sas_credential_id) {
-      const authorizedSigners = await getAuthorizedSigners(credential.sas_credential_id);
-      if (authorizedSigners && authorizedSigners.includes(wallet)) {
-        console.log(`[CareCircle] Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
-        return true;
+      try {
+        const authorizedSigners = await getAuthorizedSigners(credential.sas_credential_id);
+        if (authorizedSigners && authorizedSigners.includes(wallet)) {
+          console.log(`[CareCircle] Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
+          return true;
+        }
+      } catch (error) {
+        console.error(`[CareCircle] Error fetching authorized signers for ${credential.sas_credential_id}:`, error.message);
+        // Don't fail access check if SAS lookup fails
       }
     }
 
@@ -79,6 +84,7 @@ function calculateFileHash(buffer) {
  * GET /api/v1/carecircle/credentials
  * List credentials accessible by the wallet with metadata (name, mint)
  * Only returns credentials where wallet is owner or authorized signer
+ * Fetches from database, not filesystem
  */
 router.get('/credentials', async (req, res) => {
   try {
@@ -92,48 +98,44 @@ router.get('/credentials', async (req, res) => {
       return res.json({ credentials: [] });
     }
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads');
     const credentials = [];
 
-    if (fs.existsSync(uploadsDir)) {
-      const entries = fs.readdirSync(uploadsDir);
-      
-      // For each upload folder, check if wallet has access
-      for (const credentialId of entries) {
-        const credentialPath = path.join(uploadsDir, credentialId);
-        if (!fs.statSync(credentialPath).isDirectory()) continue;
+    try {
+      // Fetch all credentials from database
+      const allCredentials = credentialDb.getAllCredentials(1000, 0);
 
-        // Check if wallet has access to this credential
-        const hasAccess = await hasCredentialAccess(wallet, credentialId);
-        if (!hasAccess) {
+      // Filter credentials where wallet is owner or authorized signer
+      for (const cred of allCredentials) {
+        // Check if wallet is the owner
+        if (cred.wallet_address === wallet) {
+          credentials.push({
+            id: extractCredentialUuid(cred.id),
+            name: cred.full_name,
+            mint: cred.mint_address
+          });
           continue;
         }
 
-        // Try to find matching credential in database
-        try {
-          const allCredentials = credentialDb.getAllCredentials(1000, 0);
-          const credentialUuid = extractCredentialUuid(credentialId);
-          const matching = allCredentials.find(cred => {
-            // Check both sas_credential_id and id fields
-            const sasUuid = extractCredentialUuid(cred.sas_credential_id);
-            const idUuid = extractCredentialUuid(cred.id);
-            return sasUuid === credentialUuid || idUuid === credentialUuid;
-          });
-
-          credentials.push({
-            id: credentialId,
-            name: matching ? matching.full_name : null,
-            mint: matching ? matching.mint_address : null
-          });
-        } catch (err) {
-          // If database lookup fails, just add the ID
-          credentials.push({
-            id: credentialId,
-            name: null,
-            mint: null
-          });
+        // Check if wallet is an authorized signer
+        if (cred.sas_credential_id) {
+          try {
+            const authorizedSigners = await getAuthorizedSigners(cred.sas_credential_id);
+            if (authorizedSigners && authorizedSigners.includes(wallet)) {
+              credentials.push({
+                id: extractCredentialUuid(cred.id),
+                name: cred.full_name,
+                mint: cred.mint_address
+              });
+            }
+          } catch (error) {
+            console.error(`[CareCircle] Error checking authorized signers for ${cred.sas_credential_id}:`, error.message);
+            // Continue to next credential on error
+          }
         }
       }
+    } catch (err) {
+      console.error('[CareCircle] Error fetching credentials from database:', err);
+      return res.status(500).json({ error: 'Failed to fetch credentials' });
     }
 
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
@@ -259,14 +261,20 @@ router.post('/upload', async (req, res) => {
 /**
  * POST /api/v1/carecircle/authorize-caregiver
  * Add a caregiver to the authorized signers of a SAS Credential
- * (In production, this would interact with SAS to add the caregiver as an authorized signer)
+ * Requires wallet to own or have access to the credential
  */
-router.post('/authorize-caregiver', (req, res) => {
+router.post('/authorize-caregiver', async (req, res) => {
   try {
-    const { wallet, caregiverAddress } = req.body;
+    const { wallet, credentialId, caregiverAddress } = req.body;
 
-    if (!wallet || !caregiverAddress) {
-      return res.status(400).json({ error: 'Wallet and caregiver address required' });
+    if (!wallet || !credentialId || !caregiverAddress) {
+      return res.status(400).json({ error: 'Wallet, credential ID, and caregiver address required' });
+    }
+
+    // Check if wallet has access to this credential
+    const hasAccess = await hasCredentialAccess(wallet, credentialId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
     }
 
     // Validate caregiver address format
@@ -281,11 +289,12 @@ router.post('/authorize-caregiver', (req, res) => {
     // 3. Create a transaction to update the credential on-chain
     // For now, we return success to simulate the operation
     
-    console.log('[CareCircle] Authorized caregiver:', caregiverAddress, 'for wallet:', wallet);
+    console.log('[CareCircle] Authorized caregiver:', caregiverAddress, 'for credential:', credentialId, 'wallet:', wallet);
 
     return res.status(200).json({
       success: true,
       message: 'Caregiver authorized successfully',
+      credential: credentialId,
       caregiver: caregiverAddress,
       wallet: wallet
     });
