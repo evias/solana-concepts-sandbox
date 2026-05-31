@@ -556,16 +556,12 @@
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received credentials:', data.credentials);
                         
-                        // Update credentials using Object.assign to maintain reactivity
-                        console.log('[CareCircle Browser] Before update - browsing.loading:', this.browsing.loading);
-                        Object.assign(this.browsing, {
-                            loading: false,
-                            error: '',
-                            credentials: data.credentials || [],
-                            files: [],
-                            path: []
-                        });
-                        console.log('[CareCircle Browser] After update - browsing.loading:', this.browsing.loading);
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.credentials = data.credentials || [];
+                        this.browsing.files = [];
+                        this.browsing.path = [];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
                         console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading credentials:', error);
@@ -601,13 +597,11 @@
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received files:', data.files);
                         
-                        // Update files using Object.assign to maintain reactivity
-                        Object.assign(this.browsing, {
-                            loading: false,
-                            error: '',
-                            files: data.files || [],
-                            path: [credentialId]
-                        });
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.files = data.files || [];
+                        this.browsing.path = [credentialId];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
                         console.log('[CareCircle Browser] Updated browsing.files:', this.browsing.files.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading files:', error);
