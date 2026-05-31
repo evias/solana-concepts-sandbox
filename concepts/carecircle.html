@@ -560,6 +560,7 @@
                         console.log('[CareCircle Browser] Received credentials:', data.credentials);
                         
                         // Update credentials with a new object to ensure reactivity
+                        console.log('[CareCircle Browser] Before reassign - browsing.loading:', this.browsing.loading);
                         this.browsing = {
                             loading: false,
                             error: '',
@@ -567,6 +568,7 @@
                             files: [],
                             path: []
                         };
+                        console.log('[CareCircle Browser] After reassign - browsing.loading:', this.browsing.loading);
                         console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading credentials:', error);
