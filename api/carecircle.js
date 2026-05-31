@@ -8,6 +8,19 @@ const { getAuthorizedSigners } = require('./sas-integration');
 const router = express.Router();
 
 /**
+ * Helper: Extract UUID from credential ID (handles both prefixed and unprefixed formats)
+ * Examples:
+ *   'sas_a7c15464-a9a8-4c59-99e6-ccac7c02a452' -> 'a7c15464-a9a8-4c59-99e6-ccac7c02a452'
+ *   'hc_5bff0293-c708-4f2e-8343-13b843b71729' -> '5bff0293-c708-4f2e-8343-13b843b71729'
+ *   'a7c15464-a9a8-4c59-99e6-ccac7c02a452' -> 'a7c15464-a9a8-4c59-99e6-ccac7c02a452'
+ */
+function extractCredentialUuid(credentialId) {
+  if (!credentialId) return null;
+  const parts = credentialId.split('_');
+  return parts.length > 1 ? parts[1] : credentialId;
+}
+
+/**
  * Helper: Check if wallet has access to a credential
  * Access is granted if:
  * 1. Wallet is the credential owner (wallet_address in database), OR
@@ -21,13 +34,20 @@ async function hasCredentialAccess(wallet, credentialId) {
       return true;
     }
 
+    // Extract UUID from credential ID (uploads use just the UUID part)
+    const credentialUuid = extractCredentialUuid(credentialId);
+
     // Check if wallet is the credential owner
     const allCredentials = credentialDb.getAllCredentials(1000, 0);
-    const credential = allCredentials.find(cred => 
-      cred.sas_credential_id === credentialId || cred.id === credentialId
-    );
+    const credential = allCredentials.find(cred => {
+      // Check both sas_credential_id and id fields
+      const sasUuid = extractCredentialUuid(cred.sas_credential_id);
+      const idUuid = extractCredentialUuid(cred.id);
+      return sasUuid === credentialUuid || idUuid === credentialUuid;
+    });
 
     if (credential && credential.wallet_address === wallet) {
+      console.log(`[CareCircle] Wallet ${wallet} authorized as owner of credential ${credentialUuid}`);
       return true;
     }
 
@@ -35,10 +55,12 @@ async function hasCredentialAccess(wallet, credentialId) {
     if (credential && credential.sas_credential_id) {
       const authorizedSigners = await getAuthorizedSigners(credential.sas_credential_id);
       if (authorizedSigners && authorizedSigners.includes(wallet)) {
+        console.log(`[CareCircle] Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
         return true;
       }
     }
 
+    console.log(`[CareCircle] Wallet ${wallet} denied access to credential ${credentialUuid}`);
     return false;
   } catch (error) {
     console.error('[CareCircle] Error checking credential access:', error);
@@ -84,16 +106,19 @@ router.get('/credentials', async (req, res) => {
         // Check if wallet has access to this credential
         const hasAccess = await hasCredentialAccess(wallet, credentialId);
         if (!hasAccess) {
-          console.log(`[CareCircle] Wallet ${wallet} denied access to credential ${credentialId}`);
           continue;
         }
 
         // Try to find matching credential in database
         try {
           const allCredentials = credentialDb.getAllCredentials(1000, 0);
-          const matching = allCredentials.find(cred => 
-            cred.sas_credential_id === credentialId || cred.id === credentialId
-          );
+          const credentialUuid = extractCredentialUuid(credentialId);
+          const matching = allCredentials.find(cred => {
+            // Check both sas_credential_id and id fields
+            const sasUuid = extractCredentialUuid(cred.sas_credential_id);
+            const idUuid = extractCredentialUuid(cred.id);
+            return sasUuid === credentialUuid || idUuid === credentialUuid;
+          });
 
           credentials.push({
             id: credentialId,
