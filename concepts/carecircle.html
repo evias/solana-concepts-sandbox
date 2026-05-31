@@ -559,16 +559,16 @@
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received credentials:', data.credentials);
                         
-                        // Update credentials with a new object to ensure reactivity
-                        console.log('[CareCircle Browser] Before reassign - browsing.loading:', this.browsing.loading);
-                        this.browsing = {
+                        // Update credentials using Object.assign to maintain reactivity
+                        console.log('[CareCircle Browser] Before update - browsing.loading:', this.browsing.loading);
+                        Object.assign(this.browsing, {
                             loading: false,
                             error: '',
                             credentials: data.credentials || [],
                             files: [],
                             path: []
-                        };
-                        console.log('[CareCircle Browser] After reassign - browsing.loading:', this.browsing.loading);
+                        });
+                        console.log('[CareCircle Browser] After update - browsing.loading:', this.browsing.loading);
                         console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading credentials:', error);
@@ -604,14 +604,13 @@
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received files:', data.files);
                         
-                        // Update files with a new object to ensure reactivity
-                        this.browsing = {
+                        // Update files using Object.assign to maintain reactivity
+                        Object.assign(this.browsing, {
                             loading: false,
                             error: '',
-                            credentials: this.browsing.credentials,
                             files: data.files || [],
                             path: [credentialId]
-                        };
+                        });
                         console.log('[CareCircle Browser] Updated browsing.files:', this.browsing.files.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading files:', error);
