@@ -557,14 +557,19 @@
                         }
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received credentials:', data.credentials);
-                        this.browsing.credentials = data.credentials || [];
-                        this.browsing.path = [];
-                        this.browsing.files = [];
+                        
+                        // Update credentials with a new object to ensure reactivity
+                        this.browsing = {
+                            loading: false,
+                            error: '',
+                            credentials: data.credentials || [],
+                            files: [],
+                            path: []
+                        };
                         console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading credentials:', error);
                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
-                    } finally {
                         this.browsing.loading = false;
                     }
                 },
@@ -595,13 +600,19 @@
                         }
                         const data = await response.json();
                         console.log('[CareCircle Browser] Received files:', data.files);
-                        this.browsing.path = [credentialId];
-                        this.browsing.files = data.files || [];
+                        
+                        // Update files with a new object to ensure reactivity
+                        this.browsing = {
+                            loading: false,
+                            error: '',
+                            credentials: this.browsing.credentials,
+                            files: data.files || [],
+                            path: [credentialId]
+                        };
                         console.log('[CareCircle Browser] Updated browsing.files:', this.browsing.files.length, 'items');
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading files:', error);
                         this.browsing.error = 'Failed to load files: ' + error.message;
-                    } finally {
                         this.browsing.loading = false;
                     }
                 },
