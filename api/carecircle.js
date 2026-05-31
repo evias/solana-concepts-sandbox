@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const { credentialDb } = require('./database');
 const router = express.Router();
 
 /**
@@ -14,7 +15,7 @@ function calculateFileHash(buffer) {
 
 /**
  * GET /api/v1/carecircle/credentials
- * List credential IDs accessible by the wallet (both owned and those with SAS access)
+ * List credentials accessible by the wallet with metadata (name, mint)
  */
 router.get('/credentials', (req, res) => {
   try {
@@ -33,10 +34,36 @@ router.get('/credentials', (req, res) => {
 
     if (fs.existsSync(uploadsDir)) {
       const entries = fs.readdirSync(uploadsDir);
-      credentials.push(...entries);
+      
+      // For each upload folder, try to match it with credential metadata
+      for (const credentialId of entries) {
+        const credentialPath = path.join(uploadsDir, credentialId);
+        if (!fs.statSync(credentialPath).isDirectory()) continue;
+
+        // Try to find matching credential in database
+        try {
+          const allCredentials = credentialDb.getAllCredentials(1000, 0);
+          const matching = allCredentials.data.find(cred => 
+            cred.sas_credential_id === credentialId || cred.id === credentialId
+          );
+
+          credentials.push({
+            id: credentialId,
+            name: matching ? matching.full_name : null,
+            mint: matching ? matching.mint_address : null
+          });
+        } catch (err) {
+          // If database lookup fails, just add the ID
+          credentials.push({
+            id: credentialId,
+            name: null,
+            mint: null
+          });
+        }
+      }
     }
 
-    return res.json({ credentials: credentials.sort() });
+    return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
   } catch (error) {
     console.error('[CareCircle] Error listing credentials:', error);
     return res.status(500).json({ error: 'Failed to list credentials' });
