@@ -212,8 +212,25 @@ router.post('/upload', async (req, res) => {
       return res.status(400).json({ error: 'File size exceeds 5MB limit' });
     }
 
-    // Convert base64 to buffer
-    const buffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer.split(',')[1] || fileBuffer, 'base64');
+    // Convert base64/ArrayBuffer to buffer
+    let buffer;
+    if (Buffer.isBuffer(fileBuffer)) {
+      buffer = fileBuffer;
+    } else if (typeof fileBuffer === 'string') {
+      // Handle base64 string (with or without data URI prefix)
+      const base64String = fileBuffer.includes(',') ? fileBuffer.split(',')[1] : fileBuffer;
+      buffer = Buffer.from(base64String, 'base64');
+    } else if (fileBuffer instanceof ArrayBuffer) {
+      // Handle ArrayBuffer directly
+      buffer = Buffer.from(fileBuffer);
+    } else if (typeof fileBuffer === 'object' && fileBuffer.type === 'Buffer' && Array.isArray(fileBuffer.data)) {
+      // Handle serialized Buffer objects
+      buffer = Buffer.from(fileBuffer.data);
+    } else {
+      console.error('[CareCircle] Unknown fileBuffer type:', typeof fileBuffer, 'keys:', Object.keys(fileBuffer || {}));
+      return res.status(400).json({ error: 'Invalid file buffer format' });
+    }
+    
     const fileHash = calculateFileHash(buffer);
 
     // Store file to filesystem (skip during tests)
@@ -309,25 +326,26 @@ router.post('/authorize-caregiver', async (req, res) => {
         return res.status(404).json({ error: 'Credential not found' });
       }
 
-      if (!credential.sas_credential_id) {
-        return res.status(400).json({ error: 'Credential does not have a SAS Credential ID' });
-      }
-
       // Get payer for SAS operations
       const payer = require('./payer').getPayerKeypair();
       const sasIntegration = require('./sas-integration');
 
+      // Ensure SAS credential exists and get its actual on-chain address
+      console.log(`[CareCircle] Ensuring SAS credential for wallet ${wallet}...`);
+      const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
+      console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
+
       // Add the caregiver as an authorized signer to the SAS Credential
-      console.log(`[CareCircle] Adding caregiver ${caregiverAddress} to SAS credential ${credential.sas_credential_id}...`);
-      let sasResult;
+      console.log(`[CareCircle] Adding caregiver ${caregiverAddress} to SAS credential...`);
+      let addResult;
       try {
-        sasResult = await sasIntegration.addAuthorizedSigner(
-          credential.sas_credential_id,
+        addResult = await sasIntegration.addAuthorizedSigner(
+          sasResult.credentialAddress,
           wallet,
           caregiverAddress,
           payer
         );
-        console.log(`[CareCircle] Caregiver added successfully. Tx: ${sasResult.transactionSignature}`);
+        console.log(`[CareCircle] Caregiver added successfully. Tx: ${addResult.transactionSignature}`);
       } catch (addError) {
         console.error('[CareCircle] Error adding caregiver to SAS credential:', addError.message);
         // If error is "signer already authorized", continue anyway
@@ -335,9 +353,9 @@ router.post('/authorize-caregiver', async (req, res) => {
           throw addError;
         }
         console.log('[CareCircle] Caregiver was already added, continuing...');
-        sasResult = {
+        addResult = {
           transactionSignature: null,
-          authorizedSigners: await getAuthorizedSigners(credential.sas_credential_id)
+          authorizedSigners: await getAuthorizedSigners(sasResult.credentialAddress)
         };
       }
 
@@ -348,14 +366,14 @@ router.post('/authorize-caregiver', async (req, res) => {
         message: 'Caregiver authorized successfully',
         credential: {
           id: credentialId,
-          sasCredentialId: credential.sas_credential_id,
           name: credential.full_name
         },
         caregiver: caregiverAddress,
         wallet: wallet,
         sasTransaction: {
-          signature: sasResult.transactionSignature,
-          authorizedSigners: sasResult.authorizedSigners
+          credentialAddress: sasResult.credentialAddress,
+          signature: addResult.transactionSignature,
+          authorizedSigners: addResult.authorizedSigners
         }
       });
     } catch (sasError) {
