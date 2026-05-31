@@ -14,10 +14,13 @@ This guide details the implementation plan for the selected concepts in the heal
 ## Concept Sandbox
 
 - Serves a dashboard landing page that lists all available concepts at `/`.
+- Landing page includes concept filtering by tags with a dropdown filter and "Clear filter" button.
 - Serves individual HTML files for concept frontends at `/<concept>`.
 - Serves assets used in concept frontends at `/assets/<concept>`.
 - Serves a HTTP API at `/api/v1`. Each concept may define API routes.
 - Use TailwindCSS4 for layout and styling of the dashboard.
+- Database uses SQLite with filename `sandbox.db` (or `sandbox.test.db` for tests).
+- File uploads stored to disk at `/uploads/{credentialId}/{filename}` for persistence.
 
 ## Concepts Implementation Details
 
@@ -50,11 +53,14 @@ This guide details the implementation plan for the selected concepts in the heal
 - **Features:**
   - Vets issue attested vaccination proofs as tokens linked to pet accounts.
   - Pet owners and third parties can verify vaccination status through attestations.
+  - Display authorized veterinaries with Solscan links for transparency.
+  - Pet species emoji display for visual identification.
 - **Frontend:**
   - Accessible in browser via: `/petvax`.
   - Source code in `concepts/petvax.html`.
   - Use TailwindCSS4 for layout and styling.
   - Alpine.js to handle vet form submissions and attestation display.
+  - Pet info cards show owner, species emoji, and authorized vets.
 - **Solana Integration:**
   - Vaccination records stored as tokens with attestations from veterinary mandates.
   - Token linkage and verification against the PetTracker registry.
@@ -69,32 +75,47 @@ This guide details the implementation plan for the selected concepts in the heal
 - **Features:**
   - Vets issue nutrition plan mandates attached to pet token accounts.
   - Pet owners can retrieve and follow the nutrition plans.
+  - Display authorized nutritioners with Solscan links for transparency.
+  - Pet species emoji display for visual identification.
+  - Transaction hashes shortened in UI to prevent overflow (format: `xxx...xxxx`).
 - **Frontend:**
   - Accessible in browser via: `/petdiet`.
   - Source code in `concepts/petdiet.html`.
   - Use TailwindCSS4 for layout and styling.
   - Alpine.js module to display diet plans and vet attestation status.
+  - Pet info cards show owner, species emoji, and authorized nutritioners.
 - **Solana Integration:**
   - Use mandates to attach verified nutrition plans to pets on Solana.
   - Plans are tokenized to ensure immutability and trusted provenance.
 
-### 4. HealthCred (Healthcare Worker Badges)
+### 4. HealthCred (Healthcare Worker Badges & Certifications)
 
-- **Purpose:** Issue NFT badges representing healthcare worker credentials and certifications.
+- **Purpose:** Issue and manage healthcare worker credentials, badges, and certifications with attached files.
 - **Routes:** `/api/v1/healthcred/`
-  - GET `/api/v1/healthcred/verify`
-  - POST `/api/v1/healthcred/issue`
+  - GET `/api/v1/healthcred/verify` - Verify credential authenticity
+  - POST `/api/v1/healthcred/issue` - Issue new credential
+  - POST `/api/v1/healthcred/register-credential` - Register credential with issuer details
+  - POST `/api/v1/healthcred/complete-certification` - Complete file upload certification
+  - POST `/api/v1/healthcred/send-badge` - Send badge to another wallet (with self-send prevention)
+  - GET `/api/v1/healthcred/credentials` - List issued credentials for current user
 - **Features:**
-  - Authorities issue attested credential NFTs on Solana.
-  - Workers can display badges and confirm authenticity.
+  - Authorities issue attested credential badges on Solana.
+  - Upload certifications with file storage and SHA2-256 file hashing.
+  - Workers can display badges and verify authenticity.
+  - Badge self-sending is prevented at both frontend and backend.
+  - Certification files persisted to disk for long-term access.
 - **Frontend:**
   - Accessible in browser via: `/healthcred`.
   - Source code in `concepts/healthcred.html`.
   - Use TailwindCSS4 for layout and styling.
-  - Alpine.js for browsing issued badges and verifying attestations.
+  - Alpine.js for browsing issued badges, uploading certifications, and verifying attestations.
+  - Displays certifications in "Registered Credentials" listing with document icon and Solscan links.
+  - Certification Name field allows custom naming of uploaded certifications.
 - **Solana Integration:**
-  - Credential NFTs minted as tokens with verified attestation mandates.
-  - Transparent and trusted badge issuance recorded on-chain.
+  - Credential badges and certifications recorded as memo-based transactions (no SPL token mints).
+  - Memo format: `{fullName} certification {certificationName}: {filename} - {fileHash} (SHA2-256)`
+  - Transparent and auditable credential issuance recorded on-chain.
+  - Each certification includes issuer wallet, certification name, filename, file hash, and transaction signature.
 
 ### 5. CareCircle (Mandate Circles)
 
