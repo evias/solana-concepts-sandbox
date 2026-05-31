@@ -119,49 +119,20 @@ router.get('/credentials', async (req, res) => {
       return res.json({ credentials: [] });
     }
 
+    // Fetch all credentials from database
+    const allCredentials = credentialDb.getAllCredentials(1000, 0);
     const credentials = [];
-    const payer = require('./payer').getPayerKeypair();
-    const sasIntegration = require('./sas-integration');
 
-    try {
-      // Fetch all credentials from database
-      const allCredentials = credentialDb.getAllCredentials(1000, 0);
-
-      // Filter credentials where wallet is owner or authorized signer
-      for (const cred of allCredentials) {
-        // Always return credentials owned by the wallet
-        if (cred.wallet_address === wallet) {
-          credentials.push({
-            id: extractCredentialUuid(cred.id),
-            name: cred.full_name,
-            mint: cred.mint_address
-          });
-          continue;
-        }
-
-        // Check if wallet is an authorized signer on credentials with SAS
-        if (cred.sas_credential_id) {
-          try {
-            // Derive the actual SAS credential address for the credential owner
-            const sasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
-            
-            const authorizedSigners = await getAuthorizedSigners(sasResult.credentialAddress);
-            if (authorizedSigners && authorizedSigners.includes(wallet)) {
-              credentials.push({
-                id: extractCredentialUuid(cred.id),
-                name: cred.full_name,
-                mint: cred.mint_address
-              });
-            }
-          } catch (error) {
-            console.error(`[CareCircle] Error checking authorized signers:`, error.message);
-            // Continue to next credential on error
-          }
-        }
+    // Filter credentials where wallet is owner
+    // Only return owned credentials for now - checking authorized signers requires async SAS calls
+    for (const cred of allCredentials) {
+      if (cred.wallet_address === wallet) {
+        credentials.push({
+          id: extractCredentialUuid(cred.id),
+          name: cred.full_name,
+          mint: cred.mint_address
+        });
       }
-    } catch (err) {
-      console.error('[CareCircle] Error fetching credentials from database:', err);
-      return res.status(500).json({ error: 'Failed to fetch credentials' });
     }
 
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
