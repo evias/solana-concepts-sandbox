@@ -114,11 +114,6 @@ router.get('/credentials', async (req, res) => {
       return res.status(400).json({ error: 'Wallet address required' });
     }
 
-    // Check if NODE_ENV is test to avoid reading production uploads
-    if (process.env.NODE_ENV === 'test') {
-      return res.json({ credentials: [] });
-    }
-
     // Fetch all credentials from database
     const allCredentials = credentialDb.getAllCredentials(1000, 0);
     const credentials = [];
@@ -160,11 +155,6 @@ router.get('/files', async (req, res) => {
     const hasAccess = await hasCredentialAccess(wallet, credentialId);
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
-    }
-
-    // Check if NODE_ENV is test
-    if (process.env.NODE_ENV === 'test') {
-      return res.json({ files: [] });
     }
 
     const credentialPath = path.join(__dirname, '..', 'uploads', credentialId);
