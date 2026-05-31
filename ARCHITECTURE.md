@@ -117,21 +117,39 @@ This guide details the implementation plan for the selected concepts in the heal
   - Transparent and auditable credential issuance recorded on-chain.
   - Each certification includes issuer wallet, certification name, filename, file hash, and transaction signature.
 
-### 5. CareCircle (Mandate Circles)
+### 5. CareCircle (Secure File Sharing & Caregiver Delegation)
 
-- **Purpose:** Manage secure caregiving circles for patients via attested authority mandates.
+- **Purpose:** Enable secure file sharing and caregiver delegation through SAS Credentials and authorized signers.
 - **Routes:** `/api/v1/carecircle/`
+  - GET `/api/v1/carecircle/credentials` - List credential IDs accessible by wallet
+  - GET `/api/v1/carecircle/files` - List files in a credential's uploads folder
+  - POST `/api/v1/carecircle/upload` - Upload file to credential's folder
+  - POST `/api/v1/carecircle/authorize-caregiver` - Add caregiver to authorized signers
+  - GET `/api/v1/carecircle/documentation` - Return CareCircle markdown documentation
 - **Features:**
-  - Family members and caregivers granted access via mandates on patient's health token accounts.
-  - Attested authority signatures manage access and permissions.
+  - Filesystem-style browser to navigate credentials and files.
+  - Upload documents, images, spreadsheets, and videos (max 5MB).
+  - SHA2-256 file hashing for integrity verification.
+  - Caregiver authorization via Solana wallet addresses.
+  - Authorized caregivers added as SAS Credential signers for access control.
+  - Support for multiple file types: PDF, DOCX, XLSX, CSV, JSON, JPG, PNG, GIF, MP4, etc.
 - **Frontend:**
   - Accessible in browser via: `/carecircle`.
   - Source code in `concepts/carecircle.html`.
   - Use TailwindCSS4 for layout and styling.
-  - Alpine.js handles circle management and mandate verification.
+  - Alpine.js for wallet connection, filesystem browsing, file uploads, and caregiver authorization.
+  - Wallet connection identical to PetDiet for consistency.
+  - Collapsible forms for upload and caregiver authorization.
 - **Solana Integration:**
-  - Mandates created and registered on Solana to define caregiving circle permissions.
-  - Secure and auditable delegation of health data access.
+  - Caregivers added as authorized signers to the owner's SAS Credential.
+  - File uploads recorded with memo-based transactions (no token mints).
+  - File metadata includes: filename, file size, SHA2-256 hash, timestamp, uploader wallet.
+  - On-chain audit trail of all file uploads and caregiver authorizations.
+- **File Storage:**
+  - Files persisted to disk at `/uploads/{credentialId}/{filename}`.
+  - Each credential has its own folder for organized storage.
+  - Test mode (NODE_ENV=test) skips file writes to prevent polluting production uploads.
+  - File upload transactions create memos: `{wallet} file upload: {filename} - {fileHash} (SHA2-256)`
 
 ## Dependency Management
 
