@@ -21,6 +21,22 @@ function extractCredentialUuid(credentialId) {
 }
 
 /**
+ * Helper: Get actual SAS Credential address for authorization checks
+ * The database stores prefixed IDs (sas_...), but we need the derived address
+ */
+async function getSasCredentialAddress(wallet) {
+  try {
+    const payer = require('./payer').getPayerKeypair();
+    const sasIntegration = require('./sas-integration');
+    const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
+    return sasResult.credentialAddress;
+  } catch (error) {
+    console.error('[CareCircle] Error deriving SAS credential address:', error.message);
+    return null;
+  }
+}
+
+/**
  * Helper: Check if wallet has access to a credential
  * Access is granted if:
  * 1. Wallet is the credential owner (wallet_address in database), OR
@@ -51,16 +67,21 @@ async function hasCredentialAccess(wallet, credentialId) {
       return true;
     }
 
-    // Check if wallet is an authorized signer (only if credential has sas_credential_id)
+    // Check if wallet is an authorized signer (need to derive actual credential address)
     if (credential && credential.sas_credential_id) {
       try {
-        const authorizedSigners = await getAuthorizedSigners(credential.sas_credential_id);
+        // Get the actual SAS credential address by deriving it for the credential owner
+        const payer = require('./payer').getPayerKeypair();
+        const sasIntegration = require('./sas-integration');
+        const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
+        
+        const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
         if (authorizedSigners && authorizedSigners.includes(wallet)) {
           console.log(`[CareCircle] Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
           return true;
         }
       } catch (error) {
-        console.error(`[CareCircle] Error fetching authorized signers for ${credential.sas_credential_id}:`, error.message);
+        console.error(`[CareCircle] Error checking authorized signers:`, error.message);
         // Don't fail access check if SAS lookup fails
       }
     }
@@ -119,7 +140,12 @@ router.get('/credentials', async (req, res) => {
         // Check if wallet is an authorized signer
         if (cred.sas_credential_id) {
           try {
-            const authorizedSigners = await getAuthorizedSigners(cred.sas_credential_id);
+            // Derive the actual SAS credential address for the credential owner
+            const payer = require('./payer').getPayerKeypair();
+            const sasIntegration = require('./sas-integration');
+            const sasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
+            
+            const authorizedSigners = await getAuthorizedSigners(sasResult.credentialAddress);
             if (authorizedSigners && authorizedSigners.includes(wallet)) {
               credentials.push({
                 id: extractCredentialUuid(cred.id),
@@ -128,7 +154,7 @@ router.get('/credentials', async (req, res) => {
               });
             }
           } catch (error) {
-            console.error(`[CareCircle] Error checking authorized signers for ${cred.sas_credential_id}:`, error.message);
+            console.error(`[CareCircle] Error checking authorized signers:`, error.message);
             // Continue to next credential on error
           }
         }
