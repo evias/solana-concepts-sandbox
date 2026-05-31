@@ -9,11 +9,13 @@ Use at your own risk. See LICENSE for the complete terms and liability limitatio
 
 ## Features
 
-- **PetTracker Application** - Register pets as SPL tokens on Solana devnet
-- **Wallet Integration** - Phantom wallet connect with Alpine.js frontend
-- **Hybrid Architecture** - SQLite database + Solana blockchain
-- **Unit Tests** - Comprehensive Jest test suites for API and token operations
-- **Devnet Ready** - Works out-of-the-box with Solana devnet
+- **Credentials Registry** - Distributed Credentials with Solana Attestation Service (SAS) 
+- **Mandates / Delegations** - Uses SAS Credentials to authorize additional signers.
+- **Wallet Integration** - Phantom wallet connect with Alpine.js frontend.
+- **Token Mints / NFT** - SPL Token Mints and on-demand NFT issuance.
+- **Devnet Ready** - Works out-of-the-box with Solana DevNet.
+- **Hybrid Architecture** - Solana DevNet blockchain + SQLite database for caching.
+- **Unit Tests** - Comprehensive Jest test suites for API and token operations.
 
 ## Quick Start
 
@@ -27,7 +29,7 @@ Use at your own risk. See LICENSE for the complete terms and liability limitatio
 
 ```bash
 # Clone and install
-git clone <repo>
+git clone https://github.com/evias/solana-concepts-sandbox
 cd solana-concepts-sandbox
 npm install
 ```
@@ -44,7 +46,7 @@ npm start
 The server will output:
 ```
 Created new payer keypair: YOUR_ADDRESS_HERE
-IMPORTANT: Fund this address with SOL
+IMPORTANT: Fund this address with DevNet SOL
    On devnet, use: https://faucet.solana.com
 ```
 
@@ -69,18 +71,24 @@ Visit the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`) in your browser and 
 
 ```
 ├── api/
-│   ├── pettracker.js          # Express routes
+│   ├── pettracker.js          # Express routes (per concept API)
 │   ├── database.js            # SQLite CRUD operations
 │   ├── solana-tokens.js       # SPL token operations
 │   └── payer.js               # Backend wallet management
 ├── concepts/
+|   ├── docs/
+|       ├── pettracker.md      # Documentation about PetTracker
 │   ├── pettracker.html        # Frontend (Alpine.js + Tailwind)
 │   └── index.html             # Main page
+├── scripts/
+│   ├── db-init.js             # Database initialization script (npm run db:init)
+│   ├── db-seed.js             # Database seeding script, imports test data (npm run db:seed)
+│   ├── db-migrate.js          # Database migration script, see DBHEAD (npm run db:migrate)
 ├── __tests__/
 │   ├── pettracker.test.js     # API tests (18 tests)
 │   └── solana-tokens.test.js  # Token tests (27 tests)
 ├── ARCHITECTURE.md            # Architecture details
-├── PETTRACKER_README.md       # PetTracker app documentation
+├── DBHEAD                     # Latest database migration included in current repository HEAD.
 └── server.js                  # Express server entry point
 ```
 
@@ -89,8 +97,6 @@ Visit the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`) in your browser and 
 ```bash
 npm start              # Start development server on port 3000
 npm test               # Run all tests
-npm test -- pettracker.test.js        # Run API tests
-npm test -- solana-tokens.test.js     # Run token operation tests
 npm run build          # Build Tailwind CSS
 npm run watch          # Watch and rebuild Tailwind CSS
 ```
@@ -98,15 +104,16 @@ npm run watch          # Watch and rebuild Tailwind CSS
 ## Developer Notes
 
 ### Database
-- **SQLite** database stored in `pettracker.db`
+- **SQLite** database stored in `sandbox.db`, unit tests use `sandbox.test.db`.
 - Schema includes: `pets` table with owner, mint address, and token account references
-- CRUD operations in `api/database.js`
+- CRUD operations for pets database in `api/database.js`
 
-### Solana Integration
+### Solana Integrations
 - Connects to **devnet**: `https://api.devnet.solana.com`
 - Each pet gets a unique SPL token mint (0 decimals)
 - Owner receives 1 token in their associated token account
-- All transactions paid by backend payer wallet
+- PetTracker/PetVax/PetDiet transactions paid by backend payer wallet
+- HealthCred/CareCircle transactions paid by *connected* wallet (end-user)
 
 ### Backend Payer Wallet
 - Created automatically on first run: `.payer-keypair.json`
@@ -122,7 +129,6 @@ npm run watch          # Watch and rebuild Tailwind CSS
 
 ### Testing
 - **Jest** test framework with mocked Solana libraries
-- 45+ tests total covering API and token operations
 - `npm test` to run all, or target specific test files
 - Tests don't require blockchain connection
 
@@ -132,15 +138,14 @@ npm run watch          # Watch and rebuild Tailwind CSS
 |-------|----------|
 | "Insufficient payer balance" | Fund payer at https://faucet.solana.com |
 | Phantom won't connect | Ensure you're using HTTPS (via ngrok) |
-| Database locked | Delete `pettracker.db` and restart |
+| Phantom doesn't response | Reload the page and try again |
 
 ## Architecture Highlights
 
-- **Express.js** backend with RESTful API
+- **Express.js** backend with RESTful API (per concept)
 - **SQLite** for persistent metadata storage
 - **@solana/spl-token** for SPL token operations
 - **@solana/web3.js** for blockchain interactions
-- Secure wallet key storage with filesystem encryption
 - Comprehensive error handling with helpful messages
 
 ## Production Considerations
