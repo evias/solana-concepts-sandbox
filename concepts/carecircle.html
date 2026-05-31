@@ -239,49 +239,46 @@
                             <p class="text-gray-500">Loading...</p>
                         </div>
 
-                        <template x-if="!browsing.loading">
-                            <div class="file-tree">
-                                <p style="color: #999; font-size: 0.9em;">Debug: loading={{browsing.loading}}, path.length={{browsing.path.length}}, credentials={{browsing.credentials.length}}, files={{browsing.files.length}}</p>
-                                <template x-if="browsing.path.length > 0">
-                                    <div @click="browsing.path = []" class="file-item parent cursor-pointer">
-                                        <span class="file-icon">📂</span>
-                                        <span>..</span>
+                        <div x-show="!browsing.loading" class="file-tree">
+                            <template x-if="browsing.path.length > 0">
+                                <div @click="browsing.path = []" class="file-item parent cursor-pointer">
+                                    <span class="file-icon">📂</span>
+                                    <span>..</span>
+                                </div>
+                            </template>
+
+                            <template x-if="browsing.path.length === 0">
+                                <template x-if="browsing.credentials.length === 0">
+                                    <div class="text-center py-4 text-gray-500">
+                                        <p>No credentials accessible</p>
                                     </div>
                                 </template>
-
-                                <template x-if="browsing.path.length === 0">
-                                    <template x-if="browsing.credentials.length === 0">
-                                        <div class="text-center py-4 text-gray-500">
-                                            <p>No credentials accessible</p>
+                                <template x-if="browsing.credentials.length > 0">
+                                    <template x-for="credential in browsing.credentials" :key="credential.id">
+                                        <div @click="openCredential(credential.id)" class="file-item folder cursor-pointer">
+                                            <span class="file-icon">📂</span>
+                                            <span x-text="credential.name || credential.id"></span>
                                         </div>
                                     </template>
-                                    <template x-if="browsing.credentials.length > 0">
-                                        <template x-for="credential in browsing.credentials" :key="credential.id">
-                                            <div @click="openCredential(credential.id)" class="file-item folder cursor-pointer">
-                                                <span class="file-icon">📂</span>
-                                                <span x-text="credential.name || credential.id"></span>
-                                            </div>
-                                        </template>
-                                    </template>
                                 </template>
+                            </template>
 
-                                <template x-if="browsing.path.length > 0">
-                                    <template x-if="browsing.files.length === 0">
-                                        <div class="text-center py-4 text-gray-500">
-                                            <p>No files in this folder</p>
+                            <template x-if="browsing.path.length > 0">
+                                <template x-if="browsing.files.length === 0">
+                                    <div class="text-center py-4 text-gray-500">
+                                        <p>No files in this folder</p>
+                                    </div>
+                                </template>
+                                <template x-if="browsing.files.length > 0">
+                                    <template x-for="file in browsing.files" :key="file">
+                                        <div class="file-item file">
+                                            <span class="file-icon">📄</span>
+                                            <span x-text="file"></span>
                                         </div>
                                     </template>
-                                    <template x-if="browsing.files.length > 0">
-                                        <template x-for="file in browsing.files" :key="file">
-                                            <div class="file-item file">
-                                                <span class="file-icon">📄</span>
-                                                <span x-text="file"></span>
-                                            </div>
-                                        </template>
-                                    </template>
                                 </template>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
 
                         <div x-show="browsing.error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                             <span x-text="browsing.error"></span>
