@@ -76,12 +76,14 @@ async function ensureSasCredential(ownerAddress, payer) {
     const existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
     if (existingCredential?.exists !== false) {
-      console.log(`[SAS] Credential exists with ${existingCredential?.authorizedSigners?.length || 0} signers`);
+      // Handle both test and production data structures
+      const signers = existingCredential?.data?.authorizedSigners || existingCredential?.authorizedSigners || [];
+      console.log(`[SAS] Credential exists with ${signers.length} signers`);
       return {
         credentialAddress,
         exists: true,
         transactionSignature: null,
-        authorizedSigners: existingCredential?.authorizedSigners || []
+        authorizedSigners: signers
       };
     }
 
@@ -134,8 +136,8 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
       throw new Error('Credential does not exist');
     }
 
-    // Check if signer already in list
-    const currentSigners = credential.authorizedSigners || [];
+    // Check if signer already in list (handle both test and production data structures)
+    const currentSigners = credential.data?.authorizedSigners || credential.authorizedSigners || [];
     if (currentSigners.includes(newSignerAddress)) {
       throw new Error('Signer already authorized for this credential');
     }
@@ -178,11 +180,11 @@ async function getAuthorizedSigners(credentialAddress) {
     
     // Retry logic in case of timing issues with on-chain indexing
     let credential = null;
-    let retries = 0;
+    let lastError = null;
     const maxRetries = 3;
     const retryDelayMs = 500;
     
-    while (retries < maxRetries && !credential) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
         console.log(`[SAS] Credential fetch result:`, credential);
@@ -191,30 +193,29 @@ async function getAuthorizedSigners(credentialAddress) {
           break;
         }
         
-        if (retries < maxRetries - 1) {
-          console.log(`[SAS] Credential not ready, retrying (attempt ${retries + 1}/${maxRetries - 1})...`);
+        if (attempt < maxRetries - 1) {
+          console.log(`[SAS] Credential not ready, retrying (attempt ${attempt + 1}/${maxRetries - 1})...`);
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-          retries++;
-        } else {
-          break;
         }
       } catch (fetchError) {
-        console.error(`[SAS] Error fetching credential (attempt ${retries + 1}):`, fetchError.message);
-        if (retries < maxRetries - 1) {
+        lastError = fetchError;
+        console.error(`[SAS] Error fetching credential (attempt ${attempt + 1}):`, fetchError.message);
+        if (attempt < maxRetries - 1) {
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
-          retries++;
-        } else {
-          throw fetchError;
         }
       }
     }
     
     if (!credential?.exists) {
-      console.log(`[SAS] Credential does not exist or fetch failed after ${retries} retries`);
+      console.log(`[SAS] Credential does not exist or fetch failed after ${maxRetries} retries`);
+      if (lastError) {
+        console.error(`[SAS] Last error:`, lastError.message);
+      }
       return [];
     }
     
-    const signers = credential.authorizedSigners || [];
+    // Extract signers from the credential data structure (handle both test and production formats)
+    const signers = credential.data?.authorizedSigners || credential.authorizedSigners || [];
     console.log(`[SAS] Found ${signers.length} authorized signers:`, signers);
     return signers;
   } catch (error) {
