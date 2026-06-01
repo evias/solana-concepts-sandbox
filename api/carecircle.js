@@ -390,6 +390,8 @@ router.get('/authorized-signers', async (req, res) => {
       return res.status(400).json({ error: 'Wallet and credentialId required' });
     }
 
+    console.log(`[CareCircle] Fetching authorized signers for credential: ${credentialId}, wallet: ${wallet}`);
+
     // Check if wallet has access to this credential
     const hasAccess = await hasCredentialAccess(wallet, credentialId);
     if (!hasAccess) {
@@ -407,11 +409,15 @@ router.get('/authorized-signers', async (req, res) => {
       });
 
       if (!credential) {
+        console.log(`[CareCircle] Credential not found in database: ${credentialId}`);
         return res.status(404).json({ error: 'Credential not found' });
       }
 
+      console.log(`[CareCircle] Found credential in database, owner: ${credential.wallet_address}, SAS ID: ${credential.sas_credential_id}`);
+
       // In test mode, return empty signers
       if (process.env.NODE_ENV === 'test') {
+        console.log('[CareCircle] [TEST MODE] Returning empty signers');
         return res.json({ signers: [] });
       }
 
@@ -419,19 +425,26 @@ router.get('/authorized-signers', async (req, res) => {
       const payer = require('./payer').getPayerKeypair();
       const sasIntegration = require('./sas-integration');
 
-      // Ensure SAS credential exists and get its actual on-chain address
+      // IMPORTANT: Derive SAS credential from the credential OWNER (not the requesting wallet)
+      // This ensures we get the correct on-chain credential that contains the signers
+      console.log(`[CareCircle] Deriving SAS credential for owner: ${credential.wallet_address}`);
       const sasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
+      console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
 
       // Get the authorized signers for this SAS Credential
+      console.log(`[CareCircle] Calling getAuthorizedSigners for address: ${sasResult.credentialAddress}`);
       const signers = await getAuthorizedSigners(sasResult.credentialAddress) || [];
+      console.log(`[CareCircle] getAuthorizedSigners returned: ${signers.length} signers`, signers);
 
       return res.json({ 
         signers: signers,
         credentialId: credentialId,
-        credentialName: credential.full_name
+        credentialName: credential.full_name,
+        credentialOwner: credential.wallet_address
       });
     } catch (sasError) {
       console.error('[CareCircle] Error fetching authorized signers:', sasError.message);
+      console.error('[CareCircle] Stack trace:', sasError.stack);
       // Return empty list if SAS lookup fails
       return res.json({ signers: [], error: 'Could not fetch signers from on-chain' });
     }

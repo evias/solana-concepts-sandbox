@@ -174,13 +174,51 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
  */
 async function getAuthorizedSigners(credentialAddress) {
   try {
-    const credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+    console.log(`[SAS] Fetching authorized signers for credential: ${credentialAddress}`);
+    
+    // Retry logic in case of timing issues with on-chain indexing
+    let credential = null;
+    let retries = 0;
+    const maxRetries = 3;
+    const retryDelayMs = 500;
+    
+    while (retries < maxRetries && !credential) {
+      try {
+        credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+        console.log(`[SAS] Credential fetch result:`, credential);
+        
+        if (credential?.exists) {
+          break;
+        }
+        
+        if (retries < maxRetries - 1) {
+          console.log(`[SAS] Credential not ready, retrying (attempt ${retries + 1}/${maxRetries - 1})...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+          retries++;
+        } else {
+          break;
+        }
+      } catch (fetchError) {
+        console.error(`[SAS] Error fetching credential (attempt ${retries + 1}):`, fetchError.message);
+        if (retries < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+          retries++;
+        } else {
+          throw fetchError;
+        }
+      }
+    }
+    
     if (!credential?.exists) {
+      console.log(`[SAS] Credential does not exist or fetch failed after ${retries} retries`);
       return [];
     }
-    return credential.authorizedSigners || [];
+    
+    const signers = credential.authorizedSigners || [];
+    console.log(`[SAS] Found ${signers.length} authorized signers:`, signers);
+    return signers;
   } catch (error) {
-    console.error('Error fetching authorized signers:', error);
+    console.error('[SAS] Error fetching authorized signers:', error.message);
     return [];
   }
 }
