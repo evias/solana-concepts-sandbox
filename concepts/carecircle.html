@@ -686,9 +686,13 @@
                         
                         if (!response.ok) {
                             console.warn('[CareCircle] Could not fetch signers:', response.status);
-                            this.signersMap[credential.id] = {
-                                loaded: true,
-                                signers: []
+                            // Trigger reactivity by reassigning the object
+                            this.signersMap = {
+                                ...this.signersMap,
+                                [credential.id]: {
+                                    loaded: true,
+                                    signers: []
+                                }
                             };
                             return;
                         }
@@ -696,19 +700,25 @@
                         const data = await response.json();
                         console.log('[CareCircle] Fetched signers for', credential.id, ':', data.signers);
                         
-                        // Use direct property assignment for reactivity
-                        if (!this.signersMap[credential.id]) {
-                            this.signersMap[credential.id] = {};
-                        }
-                        this.signersMap[credential.id].signers = data.signers || [];
-                        this.signersMap[credential.id].loaded = true;
+                        // Trigger Alpine.js reactivity by reassigning the entire signersMap
+                        this.signersMap = {
+                            ...this.signersMap,
+                            [credential.id]: {
+                                signers: data.signers || [],
+                                loaded: true
+                            }
+                        };
+                        console.log('[CareCircle] Updated signersMap:', this.signersMap);
                     } catch (error) {
                         console.error('[CareCircle] Error loading signers:', error);
-                        if (!this.signersMap[credential.id]) {
-                            this.signersMap[credential.id] = {};
-                        }
-                        this.signersMap[credential.id].signers = [];
-                        this.signersMap[credential.id].loaded = true;
+                        // Trigger reactivity by reassigning the object
+                        this.signersMap = {
+                            ...this.signersMap,
+                            [credential.id]: {
+                                signers: [],
+                                loaded: true
+                            }
+                        };
                     }
                 },
 
