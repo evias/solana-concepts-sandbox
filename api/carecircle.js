@@ -377,6 +377,71 @@ router.post('/authorize-caregiver', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/carecircle/authorized-signers
+ * Get authorized signers for a specific credential
+ * Returns list of wallet addresses that can sign with this credential
+ */
+router.get('/authorized-signers', async (req, res) => {
+  try {
+    const wallet = req.query.wallet;
+    const credentialId = req.query.credentialId;
+
+    if (!wallet || !credentialId) {
+      return res.status(400).json({ error: 'Wallet and credentialId required' });
+    }
+
+    // Check if wallet has access to this credential
+    const hasAccess = await hasCredentialAccess(wallet, credentialId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
+    }
+
+    try {
+      // Get the credential from database
+      const allCredentials = credentialDb.getAllCredentials(1000, 0);
+      const credentialUuid = extractCredentialUuid(credentialId);
+      const credential = allCredentials.find(cred => {
+        const sasUuid = extractCredentialUuid(cred.sas_credential_id);
+        const idUuid = extractCredentialUuid(cred.id);
+        return sasUuid === credentialUuid || idUuid === credentialUuid;
+      });
+
+      if (!credential) {
+        return res.status(404).json({ error: 'Credential not found' });
+      }
+
+      // In test mode, return empty signers
+      if (process.env.NODE_ENV === 'test') {
+        return res.json({ signers: [] });
+      }
+
+      // Get payer for SAS operations
+      const payer = require('./payer').getPayerKeypair();
+      const sasIntegration = require('./sas-integration');
+
+      // Ensure SAS credential exists and get its actual on-chain address
+      const sasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
+
+      // Get the authorized signers for this SAS Credential
+      const signers = await getAuthorizedSigners(sasResult.credentialAddress) || [];
+
+      return res.json({ 
+        signers: signers,
+        credentialId: credentialId,
+        credentialName: credential.full_name
+      });
+    } catch (sasError) {
+      console.error('[CareCircle] Error fetching authorized signers:', sasError.message);
+      // Return empty list if SAS lookup fails
+      return res.json({ signers: [], error: 'Could not fetch signers from on-chain' });
+    }
+  } catch (error) {
+    console.error('[CareCircle] Error getting authorized signers:', error);
+    return res.status(500).json({ error: 'Failed to get authorized signers' });
+  }
+});
+
+/**
  * GET /api/v1/carecircle/documentation
  * Return CareCircle documentation as markdown
  */

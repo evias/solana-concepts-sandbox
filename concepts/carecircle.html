@@ -183,6 +183,60 @@
                 <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage shared files</p>
             </section>
 
+            <!-- Authorized Signers Display -->
+            <template x-if="userAddress">
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">👥 Authorized Signers</h2>
+                    <p class="text-gray-600 mb-4">Caregivers authorized to access your credentials:</p>
+                    
+                    <div x-show="loadingSigners" class="text-center py-8">
+                        <p class="text-gray-500">Loading authorized signers...</p>
+                    </div>
+
+                    <template x-if="!loadingSigners">
+                        <template x-if="browsing.credentials.length === 0">
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <p class="text-gray-500 text-center">No credentials available</p>
+                            </div>
+                        </template>
+
+                        <template x-if="browsing.credentials.length > 0">
+                            <div class="space-y-4">
+                                <template x-for="credential in browsing.credentials" :key="credential.id">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h3 class="font-semibold text-gray-900" x-text="credential.name || credential.id"></h3>
+                                                <p class="text-xs text-gray-500" x-text="'ID: ' + credential.id.substring(0, 8) + '...'"></p>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="!signersMap[credential.id]?.loaded" class="text-sm text-gray-500">
+                                            Loading...
+                                        </div>
+
+                                        <template x-if="signersMap[credential.id]?.loaded">
+                                            <template x-if="!signersMap[credential.id]?.signers || signersMap[credential.id]?.signers.length === 0">
+                                                <p class="text-sm text-gray-500">No authorized signers</p>
+                                            </template>
+                                            <template x-if="signersMap[credential.id]?.signers && signersMap[credential.id]?.signers.length > 0">
+                                                <div class="space-y-2">
+                                                    <template x-for="signer in signersMap[credential.id]?.signers" :key="signer">
+                                                        <div class="bg-white border border-gray-300 rounded p-2 text-sm">
+                                                            <code class="text-blue-600 break-all" x-text="signer"></code>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </template>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </template>
+                </section>
+            </template>
+
             <!-- Wallet Modal -->
             <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
                 <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
@@ -467,6 +521,7 @@
                 authorizingCaregiver: false,
                 caregiverError: '',
                 caregiverSuccess: '',
+                loadingSigners: false,
 
                 uploadForm: {
                     credentialId: '',
@@ -486,6 +541,8 @@
                     files: [],
                     path: [] // will hold [credentialId, ...subdirs]
                 },
+
+                signersMap: {}, // Maps credential.id -> { loaded, signers: [] }
 
                 async init() {
                     // On page load, if user already has a wallet connected (from localStorage or other source)
@@ -511,6 +568,7 @@
                     } catch (error) {
                         console.error('Error connecting Phantom:', error);
                         alert('Failed to connect Phantom wallet');
+                        this.loadingSigners = false;
                     }
                 },
 
@@ -539,11 +597,14 @@
                     this.browsing.files = [];
                     this.uploadForm.credentialId = '';
                     this.caregiverForm.address = '';
+                    this.signersMap = {};
+                    this.loadingSigners = false;
                 },
 
                 async loadCredentialsList() {
                     this.browsing.loading = true;
                     this.browsing.error = '';
+                    this.loadingSigners = true;
                     console.log('[CareCircle Browser] Loading credentials for wallet:', this.userAddress);
                     try {
                         const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
@@ -563,10 +624,17 @@
                         this.browsing.error = '';
                         this.browsing.loading = false;
                         console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
+                        
+                        // Load authorized signers for each credential
+                        for (const credential of this.browsing.credentials) {
+                            await this.loadAuthorizedSigners(credential);
+                        }
+                        this.loadingSigners = false;
                     } catch (error) {
                         console.error('[CareCircle Browser] Error loading credentials:', error);
                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
                         this.browsing.loading = false;
+                        this.loadingSigners = false;
                     }
                 },
 
@@ -607,6 +675,40 @@
                         console.error('[CareCircle Browser] Error loading files:', error);
                         this.browsing.error = 'Failed to load files: ' + error.message;
                         this.browsing.loading = false;
+                    }
+                },
+
+                async loadAuthorizedSigners(credential) {
+                    try {
+                        console.log('[CareCircle] Fetching authorized signers for credential:', credential.id);
+                        const url = `/api/v1/carecircle/authorized-signers?wallet=${this.userAddress}&credentialId=${credential.id}`;
+                        const response = await fetch(url);
+                        
+                        if (!response.ok) {
+                            console.warn('[CareCircle] Could not fetch signers:', response.status);
+                            this.signersMap[credential.id] = {
+                                loaded: true,
+                                signers: []
+                            };
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        console.log('[CareCircle] Fetched signers for', credential.id, ':', data.signers);
+                        
+                        // Use direct property assignment for reactivity
+                        if (!this.signersMap[credential.id]) {
+                            this.signersMap[credential.id] = {};
+                        }
+                        this.signersMap[credential.id].signers = data.signers || [];
+                        this.signersMap[credential.id].loaded = true;
+                    } catch (error) {
+                        console.error('[CareCircle] Error loading signers:', error);
+                        if (!this.signersMap[credential.id]) {
+                            this.signersMap[credential.id] = {};
+                        }
+                        this.signersMap[credential.id].signers = [];
+                        this.signersMap[credential.id].loaded = true;
                     }
                 },
 
@@ -739,6 +841,12 @@
                         this.caregiverSuccess = 'Caregiver authorized successfully!';
                         this.caregiverForm.credentialId = '';
                         this.caregiverForm.address = '';
+                        
+                        // Reload authorized signers to display updated list
+                        const updatedCredential = this.browsing.credentials.find(c => c.id === this.caregiverForm.credentialId);
+                        if (updatedCredential) {
+                            await this.loadAuthorizedSigners(updatedCredential);
+                        }
                     } catch (error) {
                         console.error('Error authorizing caregiver:', error);
                         this.caregiverError = error.message || 'Failed to authorize caregiver';
