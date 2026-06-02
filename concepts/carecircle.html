@@ -211,7 +211,7 @@
                                             </div>
                                         </div>
 
-                                        <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
+                                         <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
                                             Loading signers...
                                         </div>
 
@@ -220,11 +220,9 @@
                                         </template>
                                         <template x-if="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0">
                                             <div class="space-y-2">
-                                                <template x-for="signer in getSignerInfo(credential.id).signers" :key="signer">
-                                                    <div class="bg-white border border-gray-300 rounded p-2 text-sm">
-                                                        <code class="text-blue-600 break-all" x-text="signer"></code>
-                                                    </div>
-                                                </template>
+                                                <div x-for="signer in getSignerInfo(credential.id).signers" :key="signer" class="bg-white border border-gray-300 rounded p-2 text-sm">
+                                                    <code class="text-blue-600 break-all" x-text="signer"></code>
+                                                </div>
                                             </div>
                                         </template>
                                     </div>
