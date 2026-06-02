@@ -200,7 +200,7 @@
                             </div>
                         </template>
 
-                        <template x-if="browsing.credentials.length > 0">
+                        <div x-show="browsing.credentials.length > 0">
                             <div class="space-y-4">
                                 <template x-for="credential in browsing.credentials" :key="credential.id">
                                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -211,24 +211,25 @@
                                             </div>
                                         </div>
 
-                                         <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
+                                        <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
                                             Loading signers...
                                         </div>
 
-                                        <template x-if="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0">
-                                            <p class="text-sm text-gray-500">No authorized signers</p>
-                                        </template>
-                                        <template x-if="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0">
+                                        <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0" class="text-sm text-gray-500">
+                                            No authorized signers
+                                        </div>
+                                        
+                                        <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0">
                                             <div class="space-y-2">
                                                 <div x-for="signer in getSignerInfo(credential.id).signers" :key="signer" class="bg-white border border-gray-300 rounded p-2 text-sm">
                                                     <code class="text-blue-600 break-all" x-text="signer"></code>
                                                 </div>
                                             </div>
-                                        </template>
+                                        </div>
                                     </div>
                                 </template>
                             </div>
-                        </template>
+                        </div>
                     </template>
                 </section>
             </template>
