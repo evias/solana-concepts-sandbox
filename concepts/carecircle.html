@@ -211,23 +211,21 @@
                                             </div>
                                         </div>
 
-                                        <div x-show="!signersMap[credential.id]?.loaded" class="text-sm text-gray-500">
-                                            Loading...
+                                        <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
+                                            Loading signers...
                                         </div>
 
-                                        <template x-if="signersMap[credential.id]?.loaded">
-                                            <template x-if="!signersMap[credential.id]?.signers || signersMap[credential.id]?.signers.length === 0">
-                                                <p class="text-sm text-gray-500">No authorized signers</p>
-                                            </template>
-                                            <template x-if="signersMap[credential.id]?.signers && signersMap[credential.id]?.signers.length > 0">
-                                                <div class="space-y-2">
-                                                    <template x-for="signer in signersMap[credential.id]?.signers" :key="signer">
-                                                        <div class="bg-white border border-gray-300 rounded p-2 text-sm">
-                                                            <code class="text-blue-600 break-all" x-text="signer"></code>
-                                                        </div>
-                                                    </template>
-                                                </div>
-                                            </template>
+                                        <template x-if="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0">
+                                            <p class="text-sm text-gray-500">No authorized signers</p>
+                                        </template>
+                                        <template x-if="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0">
+                                            <div class="space-y-2">
+                                                <template x-for="signer in getSignerInfo(credential.id).signers" :key="signer">
+                                                    <div class="bg-white border border-gray-300 rounded p-2 text-sm">
+                                                        <code class="text-blue-600 break-all" x-text="signer"></code>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </template>
                                     </div>
                                 </template>
@@ -651,6 +649,14 @@
                     return label;
                 },
 
+                getSignerInfo(credentialId) {
+                    return {
+                        loaded: this.signersMap[credentialId]?.loaded === true,
+                        signers: this.signersMap[credentialId]?.signers || [],
+                        count: this.signersMap[credentialId]?.signerCount || 0
+                    };
+                },
+
                 async openCredential(credentialId) {
                     this.browsing.loading = true;
                     this.browsing.error = '';
@@ -686,12 +692,12 @@
                         
                         if (!response.ok) {
                             console.warn('[CareCircle] Could not fetch signers:', response.status);
-                            // Trigger reactivity by reassigning the object
                             this.signersMap = {
                                 ...this.signersMap,
                                 [credential.id]: {
                                     loaded: true,
-                                    signers: []
+                                    signers: [],
+                                    signerCount: 0
                                 }
                             };
                             return;
@@ -699,23 +705,29 @@
                         
                         const data = await response.json();
                         console.log('[CareCircle] Fetched signers for', credential.id, ':', data.signers);
+                        console.log('[CareCircle] TEST - is array:', Array.isArray(data.signers));
+                        console.log('[CareCircle] TEST - length:', data.signers ? data.signers.length : 'undefined');
                         
-                        // Trigger Alpine.js reactivity by reassigning the entire signersMap
+                        // Store as plain array, not wrapped
+                        const signerArray = Array.isArray(data.signers) ? [...data.signers] : [];
+                        console.log('[CareCircle] TEST - stored array:', signerArray);
+                        
                         this.signersMap = {
                             ...this.signersMap,
                             [credential.id]: {
-                                signers: data.signers || [],
+                                signers: signerArray,
+                                signerCount: signerArray.length,
                                 loaded: true
                             }
                         };
-                        console.log('[CareCircle] Updated signersMap:', this.signersMap);
+                        console.log('[CareCircle] TEST - after store, count:', this.signersMap[credential.id]?.signerCount);
                     } catch (error) {
                         console.error('[CareCircle] Error loading signers:', error);
-                        // Trigger reactivity by reassigning the object
                         this.signersMap = {
                             ...this.signersMap,
                             [credential.id]: {
                                 signers: [],
+                                signerCount: 0,
                                 loaded: true
                             }
                         };
