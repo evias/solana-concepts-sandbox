@@ -296,68 +296,59 @@
                 <h2 class="text-2xl font-bold mb-4">📁 Credential Uploads Browser</h2>
                 <p class="text-gray-600 mb-4">Browse files uploaded to your credentials and accessible shared files.</p>
                 
-                <template x-if="!userAddress">
-                    <div class="text-center py-8 bg-gray-50 rounded-lg">
-                        <p class="text-gray-500 mb-2">Connect your wallet to browse credentials and files</p>
+                <div x-show="!userAddress" class="text-center py-8 bg-gray-50 rounded-lg">
+                    <p class="text-gray-500 mb-2">Connect your wallet to browse credentials and files</p>
+                </div>
+
+                <div x-show="userAddress" class="space-y-4">
+                    <div class="mb-4">
+                        <button @click="refreshCredentialsBrowser()" class="text-blue-600 hover:text-blue-700 text-sm">
+                            🔄 Refresh
+                        </button>
                     </div>
-                </template>
 
-                    <template x-if="userAddress">
-                        <div class="mb-4">
-                            <button @click="refreshFiles()" class="text-blue-600 hover:text-blue-700 text-sm">
-                                🔄 Refresh
-                            </button>
+                    <div x-show="browsing.loading" class="text-center py-8">
+                        <p class="text-gray-500">Loading...</p>
+                    </div>
+
+                    <div x-show="!browsing.loading" class="file-tree">
+                        <!-- Parent directory link -->
+                        <div x-show="browsing.path.length > 0" @click="browsing.path = []" class="file-item parent cursor-pointer">
+                            <span class="file-icon">📂</span>
+                            <span>..</span>
                         </div>
 
-                        <div x-show="browsing.loading" class="text-center py-8">
-                            <p class="text-gray-500">Loading...</p>
-                        </div>
-
-                        <div x-show="!browsing.loading" class="file-tree">
-                            <template x-if="browsing.path.length > 0">
-                                <div @click="browsing.path = []" class="file-item parent cursor-pointer">
+                        <!-- Root level: show credentials -->
+                        <div x-show="browsing.path.length === 0">
+                            <div x-show="browsing.credentials.length === 0" class="text-center py-4 text-gray-500">
+                                <p>No credentials accessible</p>
+                            </div>
+                            <template x-for="credential in browsing.credentials" :key="credential.id">
+                                <div @click="openCredential(credential.id)" class="file-item folder cursor-pointer">
                                     <span class="file-icon">📂</span>
-                                    <span>..</span>
+                                    <span x-text="credential.name || credential.id"></span>
                                 </div>
                             </template>
-
-                            <template x-if="browsing.path.length === 0">
-                                <template x-if="browsing.credentials.length === 0">
-                                    <div class="text-center py-4 text-gray-500">
-                                        <p>No credentials accessible</p>
-                                    </div>
-                                </template>
-                                <template x-if="browsing.credentials.length > 0">
-                                    <template x-for="credential in browsing.credentials" :key="credential.id">
-                                        <div @click="openCredential(credential.id)" class="file-item folder cursor-pointer">
-                                            <span class="file-icon">📂</span>
-                                            <span x-text="credential.name || credential.id"></span>
-                                        </div>
-                                    </template>
-                                </template>
-                            </template>
-
-                            <template x-if="browsing.path.length > 0">
-                                <template x-if="browsing.files.length === 0">
-                                    <div class="text-center py-4 text-gray-500">
-                                        <p>No files in this folder</p>
-                                    </div>
-                                </template>
-                                <template x-if="browsing.files.length > 0">
-                                    <template x-for="file in browsing.files" :key="file">
-                                        <div class="file-item file">
-                                            <span class="file-icon">📄</span>
-                                            <span x-text="file"></span>
-                                        </div>
-                                    </template>
-                                </template>
-                            </template>
                         </div>
 
-                        <div x-show="browsing.error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                            <span x-text="browsing.error"></span>
+                        <!-- Inside a credential: show files -->
+                        <div x-show="browsing.path.length > 0">
+                            <div x-show="browsing.files.length === 0" class="text-center py-4 text-gray-500">
+                                <p>No files in this folder</p>
+                            </div>
+                            <template x-for="file in browsing.files" :key="file">
+                                <div class="file-item file">
+                                    <span class="file-icon">📄</span>
+                                    <span x-text="file"></span>
+                                </div>
+                            </template>
                         </div>
-                    </template>
+                    </div>
+
+                    <div x-show="browsing.error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        <span x-text="browsing.error"></span>
+                    </div>
+                </div>
             </section>
 
             <!-- File Upload Form -->
@@ -756,13 +747,46 @@
                     }
                 },
 
-                async refreshFiles() {
+                async refreshCredentialsBrowser() {
                     console.log('[CareCircle Browser] Refresh clicked, path:', this.browsing.path);
                     if (this.browsing.path.length === 0) {
-                        await this.loadCredentialsList();
+                        // Reload only credentials, not signers
+                        await this.loadCredentialsOnly();
                     } else {
                         const credentialId = this.browsing.path[0];
                         await this.openCredential(credentialId);
+                    }
+                },
+
+                async loadCredentialsOnly() {
+                    // Load only credentials without loading authorized signers
+                    try {
+                        this.browsing.loading = true;
+                        this.browsing.error = '';
+                        console.log('[CareCircle Browser] Loading credentials for wallet:', this.userAddress);
+                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                        console.log('[CareCircle Browser] Fetching:', url);
+                        const response = await fetch(url);
+                        console.log('[CareCircle Browser] Response status:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`Failed to load credentials: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('[CareCircle Browser] Received credentials:', data.credentials);
+                        
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.credentials = data.credentials || [];
+                        this.browsing.files = [];
+                        this.browsing.path = [];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
+                        console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
+                    } catch (error) {
+                        console.error('[CareCircle Browser] Error loading credentials:', error);
+                        this.browsing.error = 'Failed to load credentials list: ' + error.message;
+                        this.browsing.loading = false;
                     }
                 },
 
