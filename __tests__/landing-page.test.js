@@ -181,24 +181,20 @@ describe('Landing Page (index.html)', () => {
       expect(htmlContent).toMatch(/PetDiet/);
     });
 
-    it('should have PetDiet marked as coming soon', () => {
-      expect(htmlContent).toMatch(/PetDiet[\s\S]*Coming soon/);
+    it('should have PetDiet concept box', () => {
+      expect(htmlContent).toMatch(/PetDiet/);
     });
 
     it('should have HealthCred concept box', () => {
       expect(htmlContent).toMatch(/HealthCred/);
     });
 
-    it('should have HealthCred marked as coming soon', () => {
-      expect(htmlContent).toMatch(/HealthCred[\s\S]*Coming soon/);
+    it('should have HealthCred concept box', () => {
+      expect(htmlContent).toMatch(/HealthCred/);
     });
 
     it('should have CareCircle concept box', () => {
       expect(htmlContent).toMatch(/CareCircle/);
-    });
-
-    it('should have CareCircle marked as coming soon', () => {
-      expect(htmlContent).toMatch(/CareCircle[\s\S]*Coming soon/);
     });
 
     it('each concept box should have a clickable link', () => {

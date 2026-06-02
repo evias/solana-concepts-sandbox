@@ -4,9 +4,19 @@ const {
   createSolanaRpc
 } = require('@solana/kit');
 const web3 = require('@solana/web3.js');
+const crypto = require('crypto');
 
 // Initialize RPC
 const rpc = createSolanaRpc('https://api.devnet.solana.com');
+
+/**
+ * Extract UUID from credential ID (removes prefix like 'sas_' or 'hc_')
+ */
+function extractCredentialUuid(credentialId) {
+  if (!credentialId) return null;
+  const parts = credentialId.split('_');
+  return parts.length > 1 ? parts[1] : credentialId;
+}
 
 /**
  * Convert role number to web3 account metadata
@@ -59,29 +69,72 @@ async function sendTransaction(ix, payer) {
  * @param {web3.Keypair} payer - Payer for transaction fees (also authority)
  * @returns {Promise<object>} { credentialAddress, exists, transactionSignature?, authorizedSigners }
  */
-async function ensureSasCredential(ownerAddress, payer) {
+async function ensureSasCredential(ownerAddress, payer, credentialId) {
   try {
+    // Check if we have a stored old SAS credential address for backward compatibility
+    let oldCredentialAddress = null;
+    if (credentialId) {
+      const { credentialDb } = require('./database');
+      const allCreds = credentialDb.getAllCredentials(1000, 0);
+      const cred = allCreds.find(c => extractCredentialUuid(c.sas_credential_id) === extractCredentialUuid(credentialId));
+      if (cred && cred.sas_credential_address) {
+        oldCredentialAddress = cred.sas_credential_address;
+        console.log(`[SAS] Found stored old credential address for backward compatibility: ${oldCredentialAddress}`);
+      }
+    }
+    
+    // Use credentialId in the derivation name to ensure each credential gets its own SAS credential
+    // Hash the credential ID to fit within the 32-byte seed limit
+    // If credentialId is not provided, fall back to 'pet-owner' for backward compatibility
+    let credentialName = 'pet-owner';
+    if (credentialId) {
+      // Hash the credential ID to get a unique 32-byte seed
+      const hash = crypto.createHash('sha256').update(credentialId).digest();
+      credentialName = hash.toString('hex').substring(0, 32); // Use first 32 chars of hex (16 bytes worth)
+    }
+    
     // Derive credential PDA using PAYER as authority (not owner)
     // This allows the backend to control the credential
     const credentialPda = await lib.deriveCredentialPda({
       authority: payer.publicKey.toBase58(),
-      name: 'pet-owner'
+      name: credentialName
     });
 
     const credentialAddress = credentialPda[0].toString();
     console.log(`[SAS] Derived credential PDA: ${credentialAddress}`);
 
-    // Check if credential exists
-    console.log(`[SAS] Fetching credential...`);
-    const existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+    // Check if credential exists at new address
+    console.log(`[SAS] Fetching credential from new address...`);
+    let existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+
+    // If not found at new address, check old address for backward compatibility
+    if (!existingCredential || existingCredential?.exists === false) {
+      if (oldCredentialAddress) {
+        console.log(`[SAS] Credential not found at new address, checking old address...`);
+        existingCredential = await lib.fetchMaybeCredential(rpc, oldCredentialAddress);
+        if (existingCredential?.exists !== false) {
+          console.log(`[SAS] Found credential at old address, returning old address for compatibility`);
+          const signers = existingCredential?.data?.authorizedSigners || existingCredential?.authorizedSigners || [];
+          // Note: returning old address to preserve existing signers
+          return {
+            credentialAddress: oldCredentialAddress,
+            exists: true,
+            transactionSignature: null,
+            authorizedSigners: signers
+          };
+        }
+      }
+    }
 
     if (existingCredential?.exists !== false) {
-      console.log(`[SAS] Credential exists with ${existingCredential?.authorizedSigners?.length || 0} signers`);
+      // Handle both test and production data structures
+      const signers = existingCredential?.data?.authorizedSigners || existingCredential?.authorizedSigners || [];
+      console.log(`[SAS] Credential exists with ${signers.length} signers`);
       return {
         credentialAddress,
         exists: true,
         transactionSignature: null,
-        authorizedSigners: existingCredential?.authorizedSigners || []
+        authorizedSigners: signers
       };
     }
 
@@ -92,13 +145,13 @@ async function ensureSasCredential(ownerAddress, payer) {
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
 
-    const createCredentialIx = lib.getCreateCredentialInstruction({
-      payer: payerSigner,
-      authority: payerSigner,
-      credential: credentialAddress,
-      name: 'pet-owner',
-      signers: []
-    });
+     const createCredentialIx = lib.getCreateCredentialInstruction({
+       payer: payerSigner,
+       authority: payerSigner,
+       credential: credentialAddress,
+       name: credentialName,
+       signers: []
+     });
 
     const web3Ix = await kitInstructionToWeb3(createCredentialIx);
     const txSig = await sendTransaction(web3Ix, payer);
@@ -134,8 +187,8 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
       throw new Error('Credential does not exist');
     }
 
-    // Check if signer already in list
-    const currentSigners = credential.authorizedSigners || [];
+    // Check if signer already in list (handle both test and production data structures)
+    const currentSigners = credential.data?.authorizedSigners || credential.authorizedSigners || [];
     if (currentSigners.includes(newSignerAddress)) {
       throw new Error('Signer already authorized for this credential');
     }
@@ -174,13 +227,50 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
  */
 async function getAuthorizedSigners(credentialAddress) {
   try {
-    const credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+    console.log(`[SAS] Fetching authorized signers for credential: ${credentialAddress}`);
+    
+    // Retry logic in case of timing issues with on-chain indexing
+    let credential = null;
+    let lastError = null;
+    const maxRetries = 3;
+    const retryDelayMs = 500;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
+        console.log(`[SAS] Credential fetch result:`, credential);
+        
+        if (credential?.exists) {
+          break;
+        }
+        
+        if (attempt < maxRetries - 1) {
+          console.log(`[SAS] Credential not ready, retrying (attempt ${attempt + 1}/${maxRetries - 1})...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        }
+      } catch (fetchError) {
+        lastError = fetchError;
+        console.error(`[SAS] Error fetching credential (attempt ${attempt + 1}):`, fetchError.message);
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+    
     if (!credential?.exists) {
+      console.log(`[SAS] Credential does not exist or fetch failed after ${maxRetries} retries`);
+      if (lastError) {
+        console.error(`[SAS] Last error:`, lastError.message);
+      }
       return [];
     }
-    return credential.authorizedSigners || [];
+    
+    // Extract signers from the credential data structure (handle both test and production formats)
+    const signers = credential.data?.authorizedSigners || credential.authorizedSigners || [];
+    console.log(`[SAS] Found ${signers.length} authorized signers:`, signers);
+    return signers;
   } catch (error) {
-    console.error('Error fetching authorized signers:', error);
+    console.error('[SAS] Error fetching authorized signers:', error.message);
     return [];
   }
 }

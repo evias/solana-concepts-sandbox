@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareCircle - Caregiver Delegation & File Sharing</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="/assets/base.min.css" rel="stylesheet">
+    <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Markdown parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Solana Web3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+    <style>
+        .prose {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .prose h1 {
+            font-size: 1.875rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .prose h2 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .prose h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .prose p {
+            margin-bottom: 1rem;
+        }
+        .prose ul, .prose ol {
+            margin-bottom: 1rem;
+            margin-left: 1.5rem;
+        }
+        .prose li {
+            margin-bottom: 0.25rem;
+        }
+        .prose code {
+            background-color: #f3f4f6;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #dc2626;
+        }
+        .prose pre {
+            background-color: #1f2937;
+            color: #f3f4f6;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        .prose pre code {
+            background-color: transparent;
+            color: #f3f4f6;
+            padding: 0;
+        }
+        .prose blockquote {
+            border-left: 4px solid #d1d5db;
+            padding-left: 1rem;
+            margin-left: 0;
+            color: #6b7280;
+            font-style: italic;
+        }
+        .prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+        }
+        .prose table td, .prose table th {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem;
+        }
+        .prose table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .prose a {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        .prose a:hover {
+            color: #1d4ed8;
+        }
+        .file-tree {
+            font-family: monospace;
+            font-size: 0.9rem;
+            background-color: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 1rem;
+        }
+        .file-item {
+            padding: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .file-item:hover {
+            background-color: #f3f4f6;
+        }
+        .file-item.folder {
+            color: #2563eb;
+            font-weight: 500;
+        }
+        .file-item.file {
+            color: #4b5563;
+        }
+        .file-item.parent {
+            color: #7c3aed;
+        }
+        .file-icon {
+            width: 1rem;
+            display: inline-block;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8" x-data="careCircle()" @load="init()" x-init="init()">
+        <header class="mb-8 flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">CareCircle</h1>
+                <p class="text-gray-600">Caregiver Delegation & Secure File Sharing</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                    ← Back
+                </a>
+                <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                    📚 Documentation
+                </button>
+            </div>
+        </header>
+
+        <!-- Documentation Modal -->
+        <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+            <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">CareCircle Documentation</h2>
+                    <button
+                        @click="showDocumentation = false"
+                        class="text-gray-500 hover:text-gray-700 text-2xl">
+                        ✕
+                    </button>
+                </div>
+                <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- Wallet Connection -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <button 
+                        type="button"
+                        @click="showWalletModal = true"
+                        :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                        class="text-white px-4 py-2 rounded-md transition-colors">
+                        <span x-show="!userAddress">Connect Wallet</span>
+                        <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+                    </button>
+                    <button 
+                        type="button"
+                        x-show="userAddress"
+                        @click="disconnectWallet"
+                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                        Disconnect
+                    </button>
+                </div>
+                <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage shared files</p>
+            </section>
+
+            <!-- Authorized Signers Display -->
+            <template x-if="userAddress">
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">👥 Authorized Signers</h2>
+                    <p class="text-gray-600 mb-4">Caregivers authorized to access your credentials:</p>
+                    
+                    <div x-show="loadingSigners" class="text-center py-8">
+                        <p class="text-gray-500">Loading authorized signers...</p>
+                    </div>
+
+                    <div x-show="!loadingSigners">
+                        <div x-show="browsing.credentials.length === 0" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <p class="text-gray-500 text-center">No credentials available</p>
+                        </div>
+
+                        <div x-show="browsing.credentials.length > 0">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <template x-for="credential in browsing.credentials" :key="credential.id">
+                                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                        <div class="mb-4">
+                                            <h3 class="font-semibold text-gray-900 text-lg" x-text="credential.name || credential.id"></h3>
+                                            <p class="text-xs text-gray-500 break-all" x-text="'ID: ' + credential.id"></p>
+                                        </div>
+
+                                        <div class="space-y-2 mb-4 text-sm">
+                                            <div>
+                                                <p class="text-gray-600 font-medium">Mint Address:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono">
+                                                    <a :href="'https://solscan.io/token/' + credential.mint + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline" x-text="credential.mint || 'N/A'"></a>
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">Owner:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono">
+                                                    <a :href="'https://solscan.io/account/' + credential.owner + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline" x-text="credential.owner || 'N/A'"></a>
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">DID ID:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono" x-text="credential.didId || 'N/A'"></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">SAS Credential ID:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono" x-text="credential.sasCredentialId || 'N/A'"></p>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-t pt-4">
+                                            <h4 class="font-semibold text-gray-900 text-sm mb-3">Authorized Caregivers</h4>
+
+                                            <div x-show="!getSignerInfo(credential.id).loaded" class="text-xs text-gray-500">
+                                                Loading...
+                                            </div>
+
+                                            <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0" class="text-xs text-gray-500">
+                                                No authorized signers
+                                            </div>
+                                            
+                                            <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0" class="space-y-2">
+                                                <template x-for="signer in getSignerInfo(credential.id).signers" :key="signer">
+                                                    <a :href="'https://solscan.io/account/' + signer + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="block text-xs text-blue-600 hover:text-blue-800 break-all underline font-mono">
+                                                        <span x-text="signer.substring(0, 8) + '...' + signer.substring(signer.length - 8)"></span>
+                                                    </a>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </template>
+
+            <!-- Wallet Modal -->
+            <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
+                    <div class="border-b p-4 flex justify-between items-center">
+                        <h2 class="text-xl font-bold">Connect Wallet</h2>
+                        <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
+                            🌐 Connect Phantom Wallet
+                        </button>
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white text-gray-500">or</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Enter Account Address Manually</label>
+                            <input 
+                                x-model="manualAddress"
+                                type="text" 
+                                placeholder="Solana account address"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                            <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
+                                Use This Address
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filesystem Browser -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold mb-4">📁 Credential Uploads Browser</h2>
+                <p class="text-gray-600 mb-4">Browse files uploaded to your credentials and accessible shared files.</p>
+                
+                <template x-if="!userAddress">
+                    <div class="text-center py-8 bg-gray-50 rounded-lg">
+                        <p class="text-gray-500 mb-2">Connect your wallet to browse credentials and files</p>
+                    </div>
+                </template>
+
+                    <template x-if="userAddress">
+                        <div class="mb-4">
+                            <button @click="refreshFiles()" class="text-blue-600 hover:text-blue-700 text-sm">
+                                🔄 Refresh
+                            </button>
+                        </div>
+
+                        <div x-show="browsing.loading" class="text-center py-8">
+                            <p class="text-gray-500">Loading...</p>
+                        </div>
+
+                        <div x-show="!browsing.loading" class="file-tree">
+                            <template x-if="browsing.path.length > 0">
+                                <div @click="browsing.path = []" class="file-item parent cursor-pointer">
+                                    <span class="file-icon">📂</span>
+                                    <span>..</span>
+                                </div>
+                            </template>
+
+                            <template x-if="browsing.path.length === 0">
+                                <template x-if="browsing.credentials.length === 0">
+                                    <div class="text-center py-4 text-gray-500">
+                                        <p>No credentials accessible</p>
+                                    </div>
+                                </template>
+                                <template x-if="browsing.credentials.length > 0">
+                                    <template x-for="credential in browsing.credentials" :key="credential.id">
+                                        <div @click="openCredential(credential.id)" class="file-item folder cursor-pointer">
+                                            <span class="file-icon">📂</span>
+                                            <span x-text="credential.name || credential.id"></span>
+                                        </div>
+                                    </template>
+                                </template>
+                            </template>
+
+                            <template x-if="browsing.path.length > 0">
+                                <template x-if="browsing.files.length === 0">
+                                    <div class="text-center py-4 text-gray-500">
+                                        <p>No files in this folder</p>
+                                    </div>
+                                </template>
+                                <template x-if="browsing.files.length > 0">
+                                    <template x-for="file in browsing.files" :key="file">
+                                        <div class="file-item file">
+                                            <span class="file-icon">📄</span>
+                                            <span x-text="file"></span>
+                                        </div>
+                                    </template>
+                                </template>
+                            </template>
+                        </div>
+
+                        <div x-show="browsing.error" class="mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            <span x-text="browsing.error"></span>
+                        </div>
+                    </template>
+            </section>
+
+            <!-- File Upload Form -->
+            <template x-if="userAddress">
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">📤 Upload File</h2>
+                        <button 
+                            @click="showUploadForm = !showUploadForm"
+                            class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                            :title="showUploadForm ? 'Collapse' : 'Expand'">
+                            <span x-show="showUploadForm">▼</span>
+                            <span x-show="!showUploadForm">▶</span>
+                        </button>
+                    </div>
+                    <form @submit.prevent="submitFileUpload()" class="space-y-4" x-show="showUploadForm" x-collapse>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Credential *</label>
+                            <select 
+                                x-model="uploadForm.credentialId"
+                                required
+                                :disabled="!userAddress || browsing.credentials.length === 0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select credential to upload to...</option>
+                                <template x-for="cred in browsing.credentials" :key="cred.id">
+                                    <option :value="cred.id" x-text="getCredentialLabel(cred)"></option>
+                                </template>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Choose which credential's uploads folder to save to</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Upload Name *</label>
+                            <input 
+                                x-model="uploadForm.uploadName"
+                                type="text"
+                                placeholder="e.g., Lab Results - January 2026"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Give your upload a descriptive name for easy identification</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">File *</label>
+                            <input 
+                                @change="onFileSelected"
+                                type="file" 
+                                accept=".pdf,.docx,.xlsx,.doc,.xls,.csv,.json,.yaml,.txt,.md,.jpg,.png,.gif,.mp4"
+                                required
+                                class="w-full">
+                            <p class="text-xs text-gray-500 mt-1">Accepted: PDF, DOCX, XLSX, DOC, XLS, CSV, JSON, YAML, TXT, MD, JPG, PNG, GIF, MP4 (max 5MB)</p>
+                        </div>
+
+                        <template x-if="uploadForm.file">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p class="text-sm"><strong>File:</strong> <span x-text="uploadForm.file.name"></span></p>
+                                <p class="text-sm"><strong>Size:</strong> <span x-text="(uploadForm.file.size / 1024 / 1024).toFixed(2) + ' MB'"></span></p>
+                            </div>
+                        </template>
+
+                        <div class="flex gap-2">
+                            <button 
+                                type="submit"
+                                :disabled="!userAddress || !uploadForm.credentialId || !uploadForm.uploadName || !uploadForm.file || uploading"
+                                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!uploading">📤 Upload File</span>
+                                <span x-show="uploading">Uploading...</span>
+                            </button>
+                        </div>
+
+                        <div x-show="uploadError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            <span x-text="uploadError"></span>
+                        </div>
+                        <div x-show="uploadSuccess" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                            <span x-text="uploadSuccess"></span>
+                        </div>
+                    </form>
+                </section>
+            </template>
+
+            <!-- Authorize Caregiver Form -->
+            <template x-if="userAddress">
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">👥 Authorize a Caregiver</h2>
+                        <button 
+                            @click="showCaregiverForm = !showCaregiverForm"
+                            class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                            :title="showCaregiverForm ? 'Collapse' : 'Expand'">
+                            <span x-show="showCaregiverForm">▼</span>
+                            <span x-show="!showCaregiverForm">▶</span>
+                        </button>
+                    </div>
+                    <p class="text-gray-600 mb-4">Add authorized caregivers who can access your shared files and credentials.</p>
+                    <form @submit.prevent="submitAuthorizeCaregiverForm" class="space-y-4" x-show="showCaregiverForm" x-collapse>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Credential *</label>
+                            <select 
+                                x-model="caregiverForm.credentialId"
+                                required
+                                :disabled="!userAddress || browsing.credentials.length === 0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select credential to authorize for...</option>
+                                <template x-for="cred in browsing.credentials" :key="cred.id">
+                                    <option :value="cred.id" x-text="getCredentialLabel(cred)"></option>
+                                </template>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Choose which credential the caregiver will have access to</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Caregiver Solana Address *</label>
+                            <input 
+                                type="text"
+                                x-model="caregiverForm.address"
+                                placeholder="e.g.: Eu1ZYNxv4wVWZtoHtJw4bncmKDQxL9RdYJLAHr6H1H55"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                            />
+                            <p class="text-xs text-gray-500 mt-1">Enter the caregiver's Solana wallet address (32-44 characters, base58 encoded)</p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button 
+                                type="submit"
+                                :disabled="authorizingCaregiver || !caregiverForm.credentialId || !caregiverForm.address"
+                                :class="authorizingCaregiver || !caregiverForm.credentialId || !caregiverForm.address ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'"
+                                class="bg-blue-600 text-white px-4 py-2 rounded-md">
+                                <span x-show="!authorizingCaregiver">✓ Authorize Caregiver</span>
+                                <span x-show="authorizingCaregiver">Authorizing...</span>
+                            </button>
+                        </div>
+
+                        <div x-show="caregiverError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            <span x-text="caregiverError"></span>
+                        </div>
+                        <div x-show="caregiverSuccess" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                            <span x-text="caregiverSuccess"></span>
+                        </div>
+                    </form>
+                </section>
+            </template>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-12">
+      <div class="max-w-7xl mx-auto px-8 py-8">
+        <!-- Sponsors in Footer -->
+        <div class="mb-6 flex flex-col md:flex-row items-center justify-center gap-6 opacity-60">
+          <a href="https://evi.as" target="_blank" rel="noopener noreferrer" title="Visit Evi.as">
+            <img src="/assets/evias-logo.png" alt="Evi.as logo" class="h-8 hover:opacity-100 transition-opacity">
+          </a>
+          <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" title="Visit re:Software">
+            <img src="/assets/resoftware-logo.png" alt="re:Software logo" class="h-8 hover:opacity-100 transition-opacity">
+          </a>
+          <a href="https://dhealth.com" target="_blank" rel="noopener noreferrer" title="Visit dHealth">
+            <img src="/assets/dhealth-logo.png" alt="dHealth logo" class="h-8 hover:opacity-100 transition-opacity">
+          </a>
+        </div>
+        <!-- Copyright -->
+        <div class="text-center text-gray-600 text-sm border-t pt-6">
+          <p>© 2026 <a href="https://evi.as" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a> All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+        function careCircle() {
+            return {
+                userAddress: '',
+                manualAddress: '',
+                showWalletModal: false,
+                showDocumentation: false,
+                documentationContent: '',
+                showUploadForm: true,
+                showCaregiverForm: true,
+                uploading: false,
+                uploadError: '',
+                uploadSuccess: '',
+                authorizingCaregiver: false,
+                caregiverError: '',
+                caregiverSuccess: '',
+                loadingSigners: false,
+
+                uploadForm: {
+                    credentialId: '',
+                    uploadName: '',
+                    file: null
+                },
+
+                caregiverForm: {
+                    credentialId: '',
+                    address: ''
+                },
+
+                browsing: {
+                    loading: false,
+                    error: '',
+                    credentials: [],
+                    files: [],
+                    path: [] // will hold [credentialId, ...subdirs]
+                },
+
+                signersMap: {}, // Maps credential.id -> { loaded, signers: [] }
+
+                async init() {
+                    // On page load, if user already has a wallet connected (from localStorage or other source)
+                    // Load their credentials list
+                    console.log('CareCircle initialized, userAddress:', this.userAddress);
+                    if (this.userAddress && this.browsing.credentials.length === 0) {
+                        console.log('Loading credentials for:', this.userAddress);
+                        await this.loadCredentialsList();
+                    }
+                },
+
+                async connectPhantom() {
+                    try {
+                        if (!window.solana) {
+                            alert('Phantom wallet not installed. Please install it from https://phantom.app');
+                            return;
+                        }
+
+                        const response = await window.solana.connect();
+                        this.userAddress = response.publicKey.toString();
+                        this.showWalletModal = false;
+                        await this.loadCredentialsList();
+                    } catch (error) {
+                        console.error('Error connecting Phantom:', error);
+                        alert('Failed to connect Phantom wallet');
+                        this.loadingSigners = false;
+                    }
+                },
+
+                connectManually() {
+                    if (!this.manualAddress.trim()) {
+                        alert('Please enter a valid address');
+                        return;
+                    }
+                    
+                    const addressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+                    if (!addressRegex.test(this.manualAddress)) {
+                        alert('Invalid Solana address format');
+                        return;
+                    }
+
+                    this.userAddress = this.manualAddress;
+                    this.manualAddress = '';
+                    this.showWalletModal = false;
+                    this.loadCredentialsList();
+                },
+
+                disconnectWallet() {
+                    this.userAddress = '';
+                    this.browsing.credentials = [];
+                    this.browsing.path = [];
+                    this.browsing.files = [];
+                    this.uploadForm.credentialId = '';
+                    this.caregiverForm.address = '';
+                    this.signersMap = {};
+                    this.loadingSigners = false;
+                },
+
+                async loadCredentialsList() {
+                    this.browsing.loading = true;
+                    this.browsing.error = '';
+                    this.loadingSigners = true;
+                    console.log('[CareCircle Browser] Loading credentials for wallet:', this.userAddress);
+                    try {
+                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                        console.log('[CareCircle Browser] Fetching:', url);
+                        const response = await fetch(url);
+                        console.log('[CareCircle Browser] Response status:', response.status);
+                        if (!response.ok) {
+                            throw new Error(`Failed to load credentials: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        console.log('[CareCircle Browser] Received credentials:', data.credentials);
+                        
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.credentials = data.credentials || [];
+                        this.browsing.files = [];
+                        this.browsing.path = [];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
+                        console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
+                        
+                        // Load authorized signers for each credential
+                        for (const credential of this.browsing.credentials) {
+                            await this.loadAuthorizedSigners(credential);
+                        }
+                        this.loadingSigners = false;
+                    } catch (error) {
+                        console.error('[CareCircle Browser] Error loading credentials:', error);
+                        this.browsing.error = 'Failed to load credentials list: ' + error.message;
+                        this.browsing.loading = false;
+                        this.loadingSigners = false;
+                    }
+                },
+
+                getCredentialLabel(cred) {
+                    if (!cred) return '';
+                    let label = cred.name || cred.id;
+                    if (cred.name && cred.id) {
+                        label += ` (${cred.id}`;
+                        if (cred.mint) {
+                            label += `, ${cred.mint.substring(0, 6)}...${cred.mint.substring(cred.mint.length - 4)}`;
+                        }
+                        label += ')';
+                    }
+                    return label;
+                },
+
+                getSignerInfo(credentialId) {
+                    return {
+                        loaded: this.signersMap[credentialId]?.loaded === true,
+                        signers: this.signersMap[credentialId]?.signers || [],
+                        count: this.signersMap[credentialId]?.signerCount || 0
+                    };
+                },
+
+                async openCredential(credentialId) {
+                    this.browsing.loading = true;
+                    this.browsing.error = '';
+                    console.log('[CareCircle Browser] Opening credential:', credentialId);
+                    try {
+                        const url = `/api/v1/carecircle/files?wallet=${this.userAddress}&credentialId=${credentialId}`;
+                        console.log('[CareCircle Browser] Fetching files:', url);
+                        const response = await fetch(url);
+                        if (!response.ok) {
+                            throw new Error(`Failed to load files: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        console.log('[CareCircle Browser] Received files:', data.files);
+                        
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.files = data.files || [];
+                        this.browsing.path = [credentialId];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
+                        console.log('[CareCircle Browser] Updated browsing.files:', this.browsing.files.length, 'items');
+                    } catch (error) {
+                        console.error('[CareCircle Browser] Error loading files:', error);
+                        this.browsing.error = 'Failed to load files: ' + error.message;
+                        this.browsing.loading = false;
+                    }
+                },
+
+                async loadAuthorizedSigners(credential) {
+                    try {
+                        console.log('[CareCircle] Fetching authorized signers for credential:', credential.id);
+                        const url = `/api/v1/carecircle/authorized-signers?wallet=${this.userAddress}&credentialId=${credential.id}`;
+                        const response = await fetch(url);
+                        
+                        if (!response.ok) {
+                            console.warn('[CareCircle] Could not fetch signers:', response.status);
+                            this.signersMap = {
+                                ...this.signersMap,
+                                [credential.id]: {
+                                    loaded: true,
+                                    signers: [],
+                                    signerCount: 0
+                                }
+                            };
+                            return;
+                        }
+                        
+                        const data = await response.json();
+                        console.log('[CareCircle] Fetched signers for', credential.id, ':', data.signers);
+                        console.log('[CareCircle] TEST - is array:', Array.isArray(data.signers));
+                        console.log('[CareCircle] TEST - length:', data.signers ? data.signers.length : 'undefined');
+                        
+                        // Store as plain array, not wrapped
+                        const signerArray = Array.isArray(data.signers) ? [...data.signers] : [];
+                        console.log('[CareCircle] TEST - stored array:', signerArray);
+                        
+                        this.signersMap = {
+                            ...this.signersMap,
+                            [credential.id]: {
+                                signers: signerArray,
+                                signerCount: signerArray.length,
+                                loaded: true
+                            }
+                        };
+                        console.log('[CareCircle] TEST - after store, count:', this.signersMap[credential.id]?.signerCount);
+                    } catch (error) {
+                        console.error('[CareCircle] Error loading signers:', error);
+                        this.signersMap = {
+                            ...this.signersMap,
+                            [credential.id]: {
+                                signers: [],
+                                signerCount: 0,
+                                loaded: true
+                            }
+                        };
+                    }
+                },
+
+                async refreshFiles() {
+                    console.log('[CareCircle Browser] Refresh clicked, path:', this.browsing.path);
+                    if (this.browsing.path.length === 0) {
+                        await this.loadCredentialsList();
+                    } else {
+                        const credentialId = this.browsing.path[0];
+                        await this.openCredential(credentialId);
+                    }
+                },
+
+                onFileSelected(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    if (file.size > maxSize) {
+                        this.uploadError = `File size exceeds 5MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`;
+                        this.uploadForm.file = null;
+                        event.target.value = '';
+                        return;
+                    }
+
+                    const allowedTypes = ['pdf', 'docx', 'xlsx', 'doc', 'xls', 'csv', 'json', 'yaml', 'txt', 'md', 'jpg', 'png', 'gif', 'mp4'];
+                    const fileExt = file.name.split('.').pop().toLowerCase();
+                    if (!allowedTypes.includes(fileExt)) {
+                        this.uploadError = `File type .${fileExt} is not allowed`;
+                        this.uploadForm.file = null;
+                        event.target.value = '';
+                        return;
+                    }
+
+                    this.uploadError = '';
+                    this.uploadSuccess = '';
+                    this.uploadForm.file = file;
+                },
+
+                async submitFileUpload() {
+                    if (!this.uploadForm.credentialId || !this.uploadForm.uploadName || !this.uploadForm.file) {
+                        this.uploadError = 'Please select a credential, enter an upload name, and select a file';
+                        return;
+                    }
+
+                    this.uploading = true;
+                    this.uploadError = '';
+                    this.uploadSuccess = '';
+
+                    try {
+                        // Read file as ArrayBuffer and convert to base64
+                        const reader = new FileReader();
+                        reader.onload = async (e) => {
+                            try {
+                                // Convert ArrayBuffer to base64 string for JSON transmission
+                                const arrayBuffer = e.target.result;
+                                const uint8Array = new Uint8Array(arrayBuffer);
+                                let binary = '';
+                                for (let i = 0; i < uint8Array.length; i++) {
+                                  binary += String.fromCharCode(uint8Array[i]);
+                                }
+                                const base64String = btoa(binary);
+
+                                const response = await fetch('/api/v1/carecircle/upload', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        wallet: this.userAddress,
+                                        credentialId: this.uploadForm.credentialId,
+                                        uploadName: this.uploadForm.uploadName,
+                                        filename: this.uploadForm.file.name,
+                                        fileBuffer: base64String,
+                                        fileSize: this.uploadForm.file.size,
+                                        fileType: this.uploadForm.file.type
+                                    })
+                                });
+
+                                if (!response.ok) {
+                                    const error = await response.json();
+                                    throw new Error(error.message || 'Upload failed');
+                                }
+
+                                this.uploadSuccess = 'File uploaded successfully!';
+                                this.uploadForm.file = null;
+                                this.uploadForm.credentialId = '';
+                                this.uploadForm.uploadName = '';
+                                document.querySelector('input[type="file"]').value = '';
+                                await this.loadCredentialsList();
+                            } catch (error) {
+                                console.error('Error uploading file:', error);
+                                this.uploadError = error.message || 'Failed to upload file';
+                            } finally {
+                                this.uploading = false;
+                            }
+                        };
+                        reader.readAsArrayBuffer(this.uploadForm.file);
+                    } catch (error) {
+                        console.error('Error reading file:', error);
+                        this.uploadError = 'Failed to read file';
+                        this.uploading = false;
+                    }
+                },
+
+                async submitAuthorizeCaregiverForm() {
+                    if (!this.caregiverForm.credentialId || !this.caregiverForm.address) {
+                        this.caregiverError = 'Please select a credential and enter a caregiver address';
+                        return;
+                    }
+
+                    this.authorizingCaregiver = true;
+                    this.caregiverError = '';
+                    this.caregiverSuccess = '';
+
+                    try {
+                        const response = await fetch('/api/v1/carecircle/authorize-caregiver', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                wallet: this.userAddress,
+                                credentialId: this.caregiverForm.credentialId,
+                                caregiverAddress: this.caregiverForm.address
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const error = await response.json();
+                            throw new Error(error.message || 'Authorization failed');
+                        }
+
+                        this.caregiverSuccess = 'Caregiver authorized successfully!';
+                        this.caregiverForm.credentialId = '';
+                        this.caregiverForm.address = '';
+                        
+                        // Reload authorized signers to display updated list
+                        const updatedCredential = this.browsing.credentials.find(c => c.id === this.caregiverForm.credentialId);
+                        if (updatedCredential) {
+                            await this.loadAuthorizedSigners(updatedCredential);
+                        }
+                    } catch (error) {
+                        console.error('Error authorizing caregiver:', error);
+                        this.caregiverError = error.message || 'Failed to authorize caregiver';
+                    } finally {
+                        this.authorizingCaregiver = false;
+                    }
+                },
+
+                async openDocumentation() {
+                    try {
+                        const response = await fetch('/api/v1/carecircle/documentation');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.documentationContent = marked.parse(data.content);
+                        } else {
+                            this.documentationContent = '<p>Documentation not available</p>';
+                        }
+                    } catch (error) {
+                        console.error('Error loading documentation:', error);
+                        this.documentationContent = '<p>Error loading documentation</p>';
+                    }
+                    this.showDocumentation = true;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

@@ -27,6 +27,10 @@ app.use('/api/v1/petdiet', petdietApi);
 const healthcredApi = require('./api/healthcred');
 app.use('/api/v1/healthcred', healthcredApi);
 
+// CareCircle API routes
+const carecircleApi = require('./api/carecircle');
+app.use('/api/v1/carecircle', carecircleApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
