@@ -117,11 +117,33 @@ router.get('/credentials', async (req, res) => {
     // Fetch all credentials from database
     const allCredentials = credentialDb.getAllCredentials(1000, 0);
     const credentials = [];
+    const payer = require('./payer').getPayerKeypair();
+    const sasIntegration = require('./sas-integration');
 
-    // Filter credentials where wallet is owner
-    // Only return owned credentials for now - checking authorized signers requires async SAS calls
+    // Get credentials where wallet is owner or authorized signer
     for (const cred of allCredentials) {
+      let hasAccess = false;
+      
+      // Check if wallet is the owner
       if (cred.wallet_address === wallet) {
+        hasAccess = true;
+      } else {
+        // Check if wallet is an authorized signer on the SAS credential
+        try {
+          // Get the SAS credential address
+          const sasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer, cred.sas_credential_id);
+          const { getAuthorizedSigners } = require('./sas-integration');
+          const authorizedSigners = await getAuthorizedSigners(sasResult.credentialAddress);
+          if (authorizedSigners && authorizedSigners.includes(wallet)) {
+            hasAccess = true;
+          }
+        } catch (error) {
+          console.warn(`[CareCircle] Could not check authorized signers for credential ${cred.id}:`, error.message);
+          // Don't fail the request if SAS lookup fails
+        }
+      }
+      
+      if (hasAccess) {
         credentials.push({
           id: extractCredentialUuid(cred.id),
           name: cred.full_name,
