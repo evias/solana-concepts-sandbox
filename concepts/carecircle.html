@@ -193,44 +193,67 @@
                         <p class="text-gray-500">Loading authorized signers...</p>
                     </div>
 
-                    <template x-if="!loadingSigners">
-                        <template x-if="browsing.credentials.length === 0">
-                            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                <p class="text-gray-500 text-center">No credentials available</p>
-                            </div>
-                        </template>
+                    <div x-show="!loadingSigners">
+                        <div x-show="browsing.credentials.length === 0" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <p class="text-gray-500 text-center">No credentials available</p>
+                        </div>
 
                         <div x-show="browsing.credentials.length > 0">
-                            <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 <template x-for="credential in browsing.credentials" :key="credential.id">
                                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                        <div class="flex justify-between items-start mb-2">
+                                        <div class="mb-4">
+                                            <h3 class="font-semibold text-gray-900 text-lg" x-text="credential.name || credential.id"></h3>
+                                            <p class="text-xs text-gray-500 break-all" x-text="'ID: ' + credential.id"></p>
+                                        </div>
+
+                                        <div class="space-y-2 mb-4 text-sm">
                                             <div>
-                                                <h3 class="font-semibold text-gray-900" x-text="credential.name || credential.id"></h3>
-                                                <p class="text-xs text-gray-500" x-text="'ID: ' + credential.id.substring(0, 8) + '...'"></p>
+                                                <p class="text-gray-600 font-medium">Mint Address:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono">
+                                                    <a :href="'https://solscan.io/token/' + credential.mint + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline" x-text="credential.mint || 'N/A'"></a>
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">Owner:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono">
+                                                    <a :href="'https://solscan.io/account/' + credential.owner + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline" x-text="credential.owner || 'N/A'"></a>
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">DID ID:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono" x-text="credential.didId || 'N/A'"></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-600 font-medium">SAS Credential ID:</p>
+                                                <p class="text-xs text-gray-700 break-all font-mono" x-text="credential.sasCredentialId || 'N/A'"></p>
                                             </div>
                                         </div>
 
-                                        <div x-show="!getSignerInfo(credential.id).loaded" class="text-sm text-gray-500">
-                                            Loading signers...
-                                        </div>
+                                        <div class="border-t pt-4">
+                                            <h4 class="font-semibold text-gray-900 text-sm mb-3">Authorized Caregivers</h4>
 
-                                        <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0" class="text-sm text-gray-500">
-                                            No authorized signers
-                                        </div>
-                                        
-                                        <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0">
-                                            <div class="space-y-2">
-                                                <div x-for="signer in getSignerInfo(credential.id).signers" :key="signer" class="bg-white border border-gray-300 rounded p-2 text-sm">
-                                                    <code class="text-blue-600 break-all" x-text="signer"></code>
-                                                </div>
+                                            <div x-show="!getSignerInfo(credential.id).loaded" class="text-xs text-gray-500">
+                                                Loading...
+                                            </div>
+
+                                            <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count === 0" class="text-xs text-gray-500">
+                                                No authorized signers
+                                            </div>
+                                            
+                                            <div x-show="getSignerInfo(credential.id).loaded && getSignerInfo(credential.id).count > 0" class="space-y-2">
+                                                <template x-for="signer in getSignerInfo(credential.id).signers" :key="signer">
+                                                    <a :href="'https://solscan.io/account/' + signer + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="block text-xs text-blue-600 hover:text-blue-800 break-all underline font-mono">
+                                                        <span x-text="signer.substring(0, 8) + '...' + signer.substring(signer.length - 8)"></span>
+                                                    </a>
+                                                </template>
                                             </div>
                                         </div>
                                     </div>
                                 </template>
                             </div>
                         </div>
-                    </template>
+                    </div>
                 </section>
             </template>
 

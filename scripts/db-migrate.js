@@ -383,28 +383,50 @@ try {
            }
          },
          
-         // Migration 9: Add certification_name column to certifications table
-         {
-           name: 'Add certification_name column to certifications table',
-           up: (db) => {
-             try {
-               const certTableInfo = db.prepare("PRAGMA table_info(certifications)").all();
-               const hasCertName = certTableInfo.some(col => col.name === 'certification_name');
-               
-               if (!hasCertName) {
-                 db.exec(`ALTER TABLE certifications ADD COLUMN certification_name TEXT;`);
-                 return true;
-               }
-               return false;
-             } catch (error) {
-               if (error.message.includes('duplicate column')) {
-                 return false;
-               }
-               throw error;
-             }
-           }
-         }
-    ];
+          // Migration 9: Add certification_name column to certifications table
+          {
+            name: 'Add certification_name column to certifications table',
+            up: (db) => {
+              try {
+                const certTableInfo = db.prepare("PRAGMA table_info(certifications)").all();
+                const hasCertName = certTableInfo.some(col => col.name === 'certification_name');
+                
+                if (!hasCertName) {
+                  db.exec(`ALTER TABLE certifications ADD COLUMN certification_name TEXT;`);
+                  return true;
+                }
+                return false;
+              } catch (error) {
+                if (error.message.includes('duplicate column')) {
+                  return false;
+                }
+                throw error;
+              }
+            }
+          },
+          
+          // Migration 10: Add sas_credential_address column to credentials table
+          {
+            name: 'Add sas_credential_address column to credentials table for backward compatibility',
+            up: (db) => {
+              try {
+                const credTableInfo = db.prepare("PRAGMA table_info(credentials)").all();
+                const hasSasAddress = credTableInfo.some(col => col.name === 'sas_credential_address');
+                
+                if (!hasSasAddress) {
+                  db.exec(`ALTER TABLE credentials ADD COLUMN sas_credential_address TEXT;`);
+                  return true;
+                }
+                return false;
+              } catch (error) {
+                if (error.message.includes('duplicate column')) {
+                  return false;
+                }
+                throw error;
+              }
+            }
+          }
+     ];
   
   console.log(`   Total migrations defined: ${migrations.length}`);
   

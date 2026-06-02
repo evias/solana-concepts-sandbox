@@ -125,7 +125,10 @@ router.get('/credentials', async (req, res) => {
         credentials.push({
           id: extractCredentialUuid(cred.id),
           name: cred.full_name,
-          mint: cred.mint_address
+          mint: cred.mint_address,
+          owner: cred.wallet_address,
+          didId: cred.did_id,
+          sasCredentialId: cred.sas_credential_id
         });
       }
     }
@@ -319,7 +322,7 @@ router.post('/authorize-caregiver', async (req, res) => {
 
       // Ensure SAS credential exists and get its actual on-chain address
       console.log(`[CareCircle] Ensuring SAS credential for wallet ${wallet}...`);
-      const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
+      const sasResult = await sasIntegration.ensureSasCredential(wallet, payer, credential.sas_credential_id);
       console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
 
       // Add the caregiver as an authorized signer to the SAS Credential
@@ -428,13 +431,26 @@ router.get('/authorized-signers', async (req, res) => {
       // IMPORTANT: Derive SAS credential from the credential OWNER (not the requesting wallet)
       // This ensures we get the correct on-chain credential that contains the signers
       console.log(`[CareCircle] Deriving SAS credential for owner: ${credential.wallet_address}`);
-      const sasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
-      console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
+       const sasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer, credential.sas_credential_id);
+       console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
 
-      // Get the authorized signers for this SAS Credential
-      console.log(`[CareCircle] Calling getAuthorizedSigners for address: ${sasResult.credentialAddress}`);
-      const signers = await getAuthorizedSigners(sasResult.credentialAddress) || [];
-      console.log(`[CareCircle] getAuthorizedSigners returned: ${signers.length} signers`, signers);
+       // Store the credential address in database for future use (backward compatibility migration)
+       if (sasResult.credentialAddress && credential.sas_credential_id) {
+         try {
+           // Update the database with the new credential address
+           const db = require('./database').db;
+           db.prepare(`UPDATE credentials SET sas_credential_address = ? WHERE sas_credential_id = ?`)
+             .run(sasResult.credentialAddress, credential.sas_credential_id);
+         } catch (dbError) {
+           console.warn('[CareCircle] Could not store SAS credential address:', dbError.message);
+           // Don't fail the request if this fails
+         }
+       }
+
+       // Get the authorized signers for this SAS Credential
+       console.log(`[CareCircle] Calling getAuthorizedSigners for address: ${sasResult.credentialAddress}`);
+       const signers = await getAuthorizedSigners(sasResult.credentialAddress) || [];
+       console.log(`[CareCircle] getAuthorizedSigners returned: ${signers.length} signers`, signers);
 
       return res.json({ 
         signers: signers,
