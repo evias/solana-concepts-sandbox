@@ -1,7 +1,7 @@
 {
   "name": "solana-concepts-sandbox",
-  "version": "1.0.0",
-  "description": "Concept Sandbox using Solana token accounts and mandates",
+  "version": "0.11.0",
+  "description": "Solana Concepts - SPL Token Mints, Credentials, Attestations (SAS), Transactions",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
