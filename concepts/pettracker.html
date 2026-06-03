@@ -7,8 +7,6 @@
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
     <script src="/assets/alpinejs.min.js" defer></script>
-    <!-- Client-side logger -->
-    <script src="/assets/logger.js"></script>
     <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -727,7 +725,7 @@
                             return;
                         }
                         
-                        const log = window.createLogger('concept/pettracker'); log.info(`Attempting to connect to ${wallet.name}...`);
+                        console.log(`Attempting to connect to ${wallet.name}...`);
                         
                         // Close modal immediately to show we're processing
                         this.showWalletModal = false;
@@ -739,7 +737,7 @@
                             }, 10000);
                         });
                         
-                        const log = window.createLogger('concept/pettracker'); log.info('Making connection request...');
+                        console.log('Making connection request...');
                         
                         // Race between the actual connect call and timeout
                         const response = await Promise.race([
@@ -747,7 +745,7 @@
                             timeoutPromise
                         ]);
                         
-                        const log = window.createLogger('concept/pettracker'); log.info('Connection response', { response });
+                        console.log('Connection response:', response);
                         
                         // Extract public key
                         const publicKey = response?.publicKey?.toString?.() || provider.publicKey?.toString();
@@ -760,11 +758,11 @@
                         localStorage.setItem('solana_wallet_address', publicKey);
                         this.manualAddress = '';
                         
-                        const log = window.createLogger('concept/pettracker'); log.info('Successfully connected', { publicKey });
+                        console.log('Successfully connected:', publicKey);
                         alert(`Connected to ${wallet.name}!\n${publicKey}`);
                         
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Connection error', { error: error.message });
+                        console.error('Connection error:', error);
                         this.showWalletModal = true; // Show modal again so they can try again
                         alert(`Connection failed: ${error.message}`);
                     }
@@ -787,7 +785,7 @@
                     this.showWalletModal = false;
                     this.manualAddress = '';
                     
-                    const log = window.createLogger('concept/pettracker'); log.info('Connected with manual address', { address: this.ownerAddress });
+                    console.log('Connected with manual address:', this.ownerAddress);
                 },
                 
                 disconnectWallet() {
@@ -803,10 +801,10 @@
                         if (response.ok) {
                             this.pets = await response.json();
                         } else {
-                            const log = window.createLogger('concept/pettracker'); log.error('Failed to load pets');
+                            console.error('Failed to load pets');
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error loading pets', { error: error.message });
+                        console.error('Error loading pets:', error);
                     }
                 },
                 
@@ -842,13 +840,13 @@
                             
                             if (response.ok) {
                                 const result = await response.json();
-                                const log = window.createLogger('concept/pettracker'); log.info('Pet updated', { result });
+                                console.log('Pet updated:', result);
                                 this.resetForm();
                                 this.loadPets();
                                 alert('Pet updated successfully!');
                             } else {
                                 const error = await response.json();
-                                const log = window.createLogger('concept/pettracker'); log.error('Failed to update pet', { error });
+                                console.error('Failed to update pet:', error);
                                 if (response.status === 403) {
                                     alert('You do not have permission to update this pet.');
                                 } else {
@@ -856,7 +854,7 @@
                                 }
                             }
                         } catch (error) {
-                            const log = window.createLogger('concept/pettracker'); log.error('Error updating pet', { error: error.message });
+                            console.error('Error updating pet:', error);
                             alert('Error updating pet: ' + error.message);
                         }
                     } else {
@@ -883,17 +881,17 @@
                             
                             if (response.ok) {
                                 const result = await response.json();
-                                const log = window.createLogger('concept/pettracker'); log.info('Pet registered', { result });
+                                console.log('Pet registered:', result);
                                 this.resetForm();
                                 this.loadPets();
                                 alert('Pet registered successfully!');
                             } else {
                                 const error = await response.json();
-                                const log = window.createLogger('concept/pettracker'); log.error('Failed to register pet', { error });
+                                console.error('Failed to register pet:', error);
                                 alert('Failed to register pet: ' + error.error);
                             }
                         } catch (error) {
-                            const log = window.createLogger('concept/pettracker'); log.error('Error registering pet', { error: error.message });
+                            console.error('Error registering pet:', error);
                             alert('Error registering pet: ' + error.message);
                         }
                     }
@@ -932,7 +930,7 @@
                             alert('Failed to load pet: ' + error.error);
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error loading pet for editing', { error: error.message });
+                        console.error('Error loading pet for editing:', error);
                         alert('Error loading pet: ' + error.message);
                     }
                 },
@@ -956,7 +954,7 @@
                             alert('Failed to load pet: ' + error.error);
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error loading pet', { error: error.message });
+                        console.error('Error loading pet:', error);
                         alert('Error loading pet: ' + error.message);
                     }
                 },
@@ -976,7 +974,7 @@
                             this.petDetailsVaccinations = [];
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error loading vaccinations', { error: error.message });
+                        console.error('Error loading vaccinations:', error);
                         this.petDetailsVaccinations = [];
                     }
                 },
@@ -1000,12 +998,12 @@
                         
                         if (response.ok) {
                             const result = await response.json();
-                            const log = window.createLogger('concept/pettracker'); log.info('Pet deleted', { result });
+                            console.log('Pet deleted:', result);
                             this.loadPets();
                             alert('Pet deleted successfully!');
                         } else {
                             const error = await response.json();
-                            const log = window.createLogger('concept/pettracker'); log.error('Failed to delete pet', { error });
+                            console.error('Failed to delete pet:', error);
                             if (response.status === 403) {
                                 alert('You do not have permission to delete this pet. Only the owner or mandate authority can delete it.');
                             } else {
@@ -1013,7 +1011,7 @@
                             }
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error deleting pet', { error: error.message });
+                        console.error('Error deleting pet:', error);
                         alert('Error deleting pet: ' + error.message);
                     }
                 },
@@ -1042,7 +1040,7 @@
                     try {
                         return JSON.parse(pet.authorizedVets || '[]');
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Failed to parse authorizedVets', { error: error.message });
+                        console.error('Failed to parse authorizedVets:', error);
                         return [];
                     }
                 },
@@ -1062,7 +1060,7 @@
                             }
                         });
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Failed to parse authorized vets', { error: error.message });
+                        console.error('Failed to parse authorized vets:', error);
                         return [];
                     }
                 },
@@ -1121,15 +1119,15 @@
                         ownerAddress: this.ownerAddress,
                         vetAddress: this.newVetAddress
                     };
-                    const log = window.createLogger('concept/pettracker'); log.info('[DEBUG] Sending authorization request', { requestData });
+                    console.log('[DEBUG] Sending authorization request:', requestData);
                     if (!requestData.ownerAddress) {
-                        const log = window.createLogger('concept/pettracker'); log.error('[ERROR] ownerAddress is empty! Did you connect your wallet?');
+                        console.error('[ERROR] ownerAddress is empty! Did you connect your wallet?');
                     }
                     if (!requestData.petId) {
-                        const log = window.createLogger('concept/pettracker'); log.error('[ERROR] petId is empty! Did you select a pet?');
+                        console.error('[ERROR] petId is empty! Did you select a pet?');
                     }
                     if (!requestData.vetAddress) {
-                        const log = window.createLogger('concept/pettracker'); log.error('[ERROR] vetAddress is empty!');
+                        console.error('[ERROR] vetAddress is empty!');
                     }
                     
                     try {
@@ -1170,7 +1168,7 @@
                             };
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error authorizing veterinary', { error: error.message });
+                        console.error('Error authorizing veterinary:', error);
                         this.vetAuthMessage = {
                             type: 'error',
                             text: `✗ Authorization failed: ${error.message}`
@@ -1232,18 +1230,18 @@
                 
                 async openDocumentation() {
                     try {
-                        const log = window.createLogger('concept/pettracker'); log.info('Opening documentation...');
-                        const log = window.createLogger('concept/pettracker'); log.info('Marked library available', { available: typeof marked !== 'undefined' });
+                        console.log('Opening documentation...');
+                        console.log('Marked library available:', typeof marked !== 'undefined');
                         
                         const response = await fetch('/concepts/docs/pettracker.md');
-                        const log = window.createLogger('concept/pettracker'); log.info('Fetch response status', { status: response.status });
+                        console.log('Fetch response status:', response.status);
                         
                         if (!response.ok) {
                             throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         
                         const markdown = await response.text();
-                        const log = window.createLogger('concept/pettracker'); log.info('Markdown loaded', { length: markdown.length });
+                        console.log('Markdown loaded, length:', markdown.length);
                         
                         if (typeof marked === 'undefined') {
                             throw new Error('marked.js library not loaded');
@@ -1252,9 +1250,9 @@
                         // Parse markdown to HTML using marked
                         this.documentationContent = marked.parse(markdown);
                         this.showDocumentation = true;
-                        const log = window.createLogger('concept/pettracker'); log.info('Documentation content set successfully');
+                        console.log('Documentation content set successfully');
                     } catch (error) {
-                        const log = window.createLogger('concept/pettracker'); log.error('Error loading documentation', { error: error.message });
+                        console.error('Error loading documentation:', error);
                         alert(`Error loading documentation: ${error.message}`);
                     }
                 }
