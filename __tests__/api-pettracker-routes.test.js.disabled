@@ -1,0 +1,526 @@
+/**
+ * Test suite for api/pettracker.js
+ * Tests PetTracker API endpoints
+ */
+
+const request = require('supertest');
+const express = require('express');
+
+// Mock the dependencies
+jest.mock('../api/database', () => ({
+  petDb: {
+    getAllPets: jest.fn(),
+    getPetById: jest.fn(),
+    petExists: jest.fn(),
+    createPet: jest.fn(),
+    updatePet: jest.fn(),
+    deletePet: jest.fn(),
+    verifyMandate: jest.fn(),
+    getMandateInfo: jest.fn(),
+    isVetAuthorizedForPet: jest.fn()
+  }
+}));
+
+jest.mock('../api/solana-tokens', () => ({
+  createPetTokenMint: jest.fn(),
+  createAssociatedTokenAccount: jest.fn(),
+  mintPetToken: jest.fn(),
+  getTokenInfo: jest.fn()
+}));
+
+jest.mock('../api/payer', () => ({
+  getPayerKeypair: jest.fn(() => ({
+    publicKey: { toBase58: () => 'payer-key' }
+  }))
+}));
+
+jest.mock('../api/sas-integration', () => ({
+  ensureSasCredential: jest.fn(),
+  addAuthorizedSigner: jest.fn()
+}));
+
+const petTrackerRouter = require('../api/pettracker');
+const { petDb } = require('../api/database');
+
+describe('PetTracker API Router', () => {
+  let app;
+  const validSolanaAddress = 'DRVzS8jWD16aJ1B6tMcjsR1k87mzJjvAqR9RpZMKcqEu';
+  const testPetId = 'pet-123';
+  const testPet = {
+    id: testPetId,
+    name: 'Buddy',
+    species: 'Dog',
+    breed: 'Golden Retriever',
+    age: 5,
+    owner: validSolanaAddress,
+    mandateAuthority: validSolanaAddress
+  };
+
+  beforeEach(() => {
+    app = express();
+    app.use(express.json());
+    app.use('/api/v1/pettracker', petTrackerRouter);
+    jest.clearAllMocks();
+  });
+
+  describe('GET /api/v1/pettracker/list - List all pets', () => {
+    test('should return all pets', async () => {
+      const pets = [testPet];
+      petDb.getAllPets.mockReturnValue(pets);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(pets);
+      expect(petDb.getAllPets).toHaveBeenCalled();
+    });
+
+    test('should return empty array when no pets exist', async () => {
+      petDb.getAllPets.mockReturnValue([]);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual([]);
+    });
+
+    test('should return multiple pets', async () => {
+      const pets = [
+        { ...testPet, id: 'pet-1' },
+        { ...testPet, id: 'pet-2' },
+        { ...testPet, id: 'pet-3' }
+      ];
+      petDb.getAllPets.mockReturnValue(pets);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(3);
+    });
+
+    test('should handle database errors', async () => {
+      petDb.getAllPets.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Failed to list pets');
+    });
+  });
+
+  describe('GET /api/v1/pettracker/get - Get specific pet', () => {
+    test('should return pet by ID', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/get')
+        .query({ id: testPetId });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(testPet);
+      expect(petDb.getPetById).toHaveBeenCalledWith(testPetId);
+    });
+
+    test('should return 404 when pet not found', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/get')
+        .query({ id: 'non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+
+    test('should require pet ID parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/get');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should handle empty pet ID parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/get')
+        .query({ id: '' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should handle database errors', async () => {
+      petDb.getPetById.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/get')
+        .query({ id: testPetId });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Failed to get pet');
+    });
+  });
+
+  describe('POST /api/v1/pettracker/edit - Create or update pet', () => {
+    test('should create new pet', async () => {
+      const petData = {
+        id: testPetId,
+        name: 'Buddy',
+        species: 'Dog',
+        breed: 'Golden Retriever',
+        age: 5
+      };
+
+      petDb.petExists.mockReturnValue(false);
+      petDb.createPet.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: petData,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.pet).toEqual(testPet);
+      expect(response.body.message).toBe('Pet created successfully');
+    });
+
+    test('should update existing pet', async () => {
+      const petData = { id: testPetId, age: 6 };
+      const updatedPet = { ...testPet, age: 6 };
+
+      petDb.petExists.mockReturnValue(true);
+      petDb.verifyMandate.mockReturnValue({ valid: true });
+      petDb.updatePet.mockReturnValue(updatedPet);
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: petData,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Pet updated successfully');
+    });
+
+    test('should reject update if mandate not verified', async () => {
+      const petData = { id: testPetId, age: 6 };
+
+      petDb.petExists.mockReturnValue(true);
+      petDb.verifyMandate.mockReturnValue({ valid: false, reason: 'Not owner' });
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: petData,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Unauthorized');
+      expect(response.body.reason).toBe('Not owner');
+    });
+
+    test('should require petData parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({ ownerAddress: validSolanaAddress });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid pet data or missing id');
+    });
+
+    test('should require pet ID in petData', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: { name: 'Buddy' },
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid pet data or missing id');
+    });
+
+    test('should require ownerAddress parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: { id: testPetId, name: 'Buddy' }
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Owner address is required');
+    });
+
+    test('should validate Solana address format', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: { id: testPetId, name: 'Buddy' },
+          ownerAddress: 'invalid-address'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid Solana address');
+    });
+
+    test('should include mandate authority in response', async () => {
+      const petData = { id: testPetId };
+
+      petDb.petExists.mockReturnValue(false);
+      petDb.createPet.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .send({
+          petData: petData,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.mandate).toBeDefined();
+      expect(response.body.mandate.authority).toBe(validSolanaAddress);
+    });
+  });
+
+  describe('POST /api/v1/pettracker/delete - Delete pet', () => {
+    test('should delete pet successfully', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      petDb.verifyMandate.mockReturnValue({ valid: true });
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({
+          id: testPetId,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.deletedId).toBe(testPetId);
+      expect(petDb.deletePet).toHaveBeenCalledWith(testPetId);
+    });
+
+    test('should return 404 when pet not found', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({
+          id: 'non-existent',
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+
+    test('should reject deletion if mandate not verified', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      petDb.verifyMandate.mockReturnValue({ valid: false, reason: 'Not owner' });
+
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({
+          id: testPetId,
+          ownerAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toBe('Unauthorized');
+    });
+
+    test('should require pet ID', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({ ownerAddress: validSolanaAddress });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should require ownerAddress', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({ id: testPetId });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Owner address is required');
+    });
+
+    test('should validate Solana address format', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/delete')
+        .send({
+          id: testPetId,
+          ownerAddress: 'invalid-address'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid Solana address');
+    });
+  });
+
+  describe('GET /api/v1/pettracker/verify-mandate - Verify mandate authority', () => {
+    test('should verify valid mandate', async () => {
+      const mandateInfo = { authority: validSolanaAddress };
+      petDb.verifyMandate.mockReturnValue({ valid: true });
+      petDb.getMandateInfo.mockReturnValue(mandateInfo);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/verify-mandate')
+        .query({ petId: testPetId, authority: validSolanaAddress });
+
+      expect(response.status).toBe(200);
+      expect(response.body.valid).toBe(true);
+      expect(response.body.authority).toBe(validSolanaAddress);
+    });
+
+    test('should reject invalid mandate', async () => {
+      petDb.verifyMandate.mockReturnValue({ valid: false, reason: 'Not authorized' });
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/verify-mandate')
+        .query({ petId: testPetId, authority: 'different-address' });
+
+      expect(response.status).toBe(403);
+      expect(response.body.valid).toBe(false);
+      expect(response.body.reason).toBe('Not authorized');
+    });
+
+    test('should require petId parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/verify-mandate')
+        .query({ authority: validSolanaAddress });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should require authority parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/verify-mandate')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Authority address is required');
+    });
+
+    test('should validate Solana address format', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/verify-mandate')
+        .query({ petId: testPetId, authority: 'invalid-address' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid Solana address');
+    });
+  });
+
+  describe('GET /api/v1/pettracker/token-info - Get token information', () => {
+    test('should return token info', async () => {
+      const tokenInfo = {
+        supply: '1000',
+        decimals: 0,
+        owner: validSolanaAddress
+      };
+
+      jest.requireMock('../api/solana-tokens').getTokenInfo.mockResolvedValue(tokenInfo);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/token-info')
+        .query({ mint: 'DRVzS8jWD16aJ1B6tMcjsR1k87mzJjvAqR9RpZMKcqEu' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(tokenInfo);
+    });
+
+    test('should require mint parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/pettracker/token-info');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Mint address is required');
+    });
+
+    test('should handle token info fetch errors', async () => {
+      jest.requireMock('../api/solana-tokens').getTokenInfo.mockRejectedValue(
+        new Error('Token not found')
+      );
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/token-info')
+        .query({ mint: 'invalid-mint' });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Failed to get token info');
+    });
+  });
+
+  describe('Error Handling', () => {
+    test('should handle database errors in list endpoint', async () => {
+      petDb.getAllPets.mockImplementation(() => {
+        throw new Error('DB connection failed');
+      });
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toBe('Failed to list pets');
+    });
+
+    test('should handle malformed JSON in POST request', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .set('Content-Type', 'application/json')
+        .send('{ invalid json }');
+
+      expect(response.status).toBe(400);
+    });
+
+    test('should handle missing Content-Type header', async () => {
+      const response = await request(app)
+        .post('/api/v1/pettracker/edit')
+        .set('Content-Type', '')
+        .send({ petData: { id: testPetId }, ownerAddress: validSolanaAddress });
+
+      expect([200, 400, 415]).toContain(response.status);
+    });
+  });
+
+  describe('Response Format', () => {
+    test('should return JSON response with correct Content-Type', async () => {
+      petDb.getAllPets.mockReturnValue([testPet]);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/list');
+
+      expect(response.headers['content-type']).toMatch(/json/);
+    });
+
+    test('should include required fields in pet response', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .get('/api/v1/pettracker/get')
+        .query({ id: testPetId });
+
+      expect(response.body).toHaveProperty('id');
+      expect(response.body).toHaveProperty('name');
+      expect(response.body).toHaveProperty('owner');
+    });
+  });
+});
