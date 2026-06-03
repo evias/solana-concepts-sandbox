@@ -1,5 +1,7 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const swaggerUi = require('swagger-ui-express');
 const config = require('./api/config');
 const { createLogger } = require('./api/logger');
 
@@ -15,6 +17,25 @@ app.use(express.json({ limit: '5mb' }));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Swagger UI documentation at /docs/v1
+try {
+  const swaggerFile = path.join(__dirname, 'docs', 'openapi.json');
+  if (fs.existsSync(swaggerFile)) {
+    const swaggerDocument = JSON.parse(fs.readFileSync(swaggerFile, 'utf-8'));
+    app.use('/docs/v1', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      swaggerOptions: {
+        persistAuthorization: true
+      }
+    }));
+    log.info('Swagger UI available at /docs/v1');
+  } else {
+    log.warn('OpenAPI spec not found at docs/openapi.json. Run: npm run docs:generate');
+  }
+} catch (error) {
+  log.error('Failed to load Swagger UI', { error: error.message });
+}
 
 // Logs API routes
 const logsApi = require('./api/logs');

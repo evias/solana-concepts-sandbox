@@ -17,7 +17,43 @@ const connection = new web3.Connection(
 // Memo program address
 const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
-// GET /api/v1/petdiet/plans - Get nutrition plans for a pet
+/**
+ * @swagger
+ * /api/v1/petdiet/plans:
+ *   get:
+ *     tags:
+ *       - PetDiet
+ *     summary: Get nutrition plans for a pet
+ *     description: Returns all nutrition plans associated with a specific pet, including ingredients and SPL token information.
+ *     parameters:
+ *       - in: query
+ *         name: petId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Pet ID
+ *     responses:
+ *       200:
+ *         description: Nutrition plans retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: { type: string }
+ *                   petId: { type: string }
+ *                   planName: { type: string }
+ *                   startDate: { type: string }
+ *                   duration: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.get('/plans', async (req, res) => {
   try {
     const { petId } = req.query;
@@ -42,7 +78,93 @@ router.get('/plans', async (req, res) => {
   }
 });
 
-// POST /api/v1/petdiet/create-plan - Create a new nutrition plan with SPL token minting
+/**
+ * @swagger
+ * /api/v1/petdiet/plans:
+ *   post:
+ *     tags:
+ *       - PetDiet
+ *     summary: Create a new nutrition plan with SPL token
+ *     description: Creates a nutrition plan for a pet with daily ingredient information. Creates SPL token mint and records on-chain via memo transaction. Pet owner authorization required.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - petId
+ *               - planName
+ *               - startDate
+ *               - duration
+ *               - durationEndDate
+ *               - ownerAddress
+ *             properties:
+ *               petId:
+ *                 type: string
+ *               planName:
+ *                 type: string
+ *               startDate:
+ *                 type: string
+ *                 format: date
+ *               ingredientsMonday:
+ *                 type: string
+ *               ingredientsTuesday:
+ *                 type: string
+ *               ingredientsWednesday:
+ *                 type: string
+ *               ingredientsThursday:
+ *                 type: string
+ *               ingredientsFriday:
+ *                 type: string
+ *               ingredientsSaturday:
+ *                 type: string
+ *               ingredientsSunday:
+ *                 type: string
+ *               duration:
+ *                 type: string
+ *               durationEndDate:
+ *                 type: string
+ *                 format: date
+ *               authorizedNutritioner:
+ *                 type: string
+ *               ownerAddress:
+ *                 type: string
+ *                 description: Pet owner wallet address
+ *     responses:
+ *       200:
+ *         description: Nutrition plan created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 plan:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     petId: { type: string }
+ *                     planName: { type: string }
+ *                     startDate: { type: string }
+ *                     mintAddress: { type: string }
+ *                 message: { type: string }
+ *                 onChain:
+ *                   type: object
+ *                   properties:
+ *                     mint: { type: string }
+ *                     tokenAccount: { type: string }
+ *                     tokenTransactionSignature: { type: string }
+ *                     memoTransactionSignature: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Unauthorized - not pet owner
+ *       404:
+ *         description: Pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/create-plan', express.json(), async (req, res) => {
   try {
     const { 
@@ -299,7 +421,66 @@ router.post('/create-plan', express.json(), async (req, res) => {
   }
 });
 
-// POST /api/v1/petdiet/feed - Record a feeding action
+/**
+ * @swagger
+ * /api/v1/petdiet/feeding-actions:
+ *   post:
+ *     tags:
+ *       - PetDiet
+ *     summary: Record a feeding action
+ *     description: Records a feeding action for a nutrition plan with on-chain memo transaction. Creates proof that pet was fed according to plan.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nutritionPlanId
+ *               - petId
+ *               - ingredients
+ *               - userAddress
+ *               - petSignature
+ *             properties:
+ *               nutritionPlanId:
+ *                 type: string
+ *               petId:
+ *                 type: string
+ *               ingredients:
+ *                 type: string
+ *               userAddress:
+ *                 type: string
+ *               petSignature:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Feeding action recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 feedingAction:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     nutritionPlanId: { type: string }
+ *                     petId: { type: string }
+ *                     ingredients: { type: string }
+ *                     recordedBy: { type: string }
+ *                 message: { type: string }
+ *                 onChain:
+ *                   type: object
+ *                   properties:
+ *                     transactionSignature: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Nutrition plan or pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/feed', express.json(), async (req, res) => {
   try {
     const { 

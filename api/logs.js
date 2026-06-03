@@ -9,8 +9,52 @@ const { createLogger } = require('./logger');
 const log = createLogger('http/logs');
 
 /**
- * POST /api/v1/logs
- * Receive logs from client-side applications
+ * @swagger
+ * /api/v1/logs:
+ *   post:
+ *     tags:
+ *       - Logs
+ *     summary: Submit client-side logs to server
+ *     description: Receives and centralizes logs from client-side applications. Logs are re-emitted through the server's logger with client scope prefixes.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - message
+ *               - scope
+ *             properties:
+ *               level:
+ *                 type: string
+ *                 enum: [info, error, warn, debug]
+ *                 description: Log level (defaults to 'info')
+ *               message:
+ *                 type: string
+ *                 description: Log message
+ *               scope:
+ *                 type: string
+ *                 description: Scope/component name for the log
+ *               timestamp:
+ *                 type: string
+ *                 format: date-time
+ *               meta:
+ *                 type: object
+ *                 description: Additional metadata
+ *     responses:
+ *       200:
+ *         description: Log received successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/', (req, res) => {
   try {

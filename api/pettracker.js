@@ -30,7 +30,35 @@ async function ensureTokenAccountExists(ownerPublicKey) {
   }
 }
 
-// GET /api/v1/pettracker/list - List all pets (from database)
+/**
+ * @swagger
+ * /api/v1/pettracker/pets:
+ *   get:
+ *     tags:
+ *       - PetTracker
+ *     summary: List all pets
+ *     description: Returns all pets from the database with their details.
+ *     responses:
+ *       200:
+ *         description: Pets retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id: { type: string }
+ *                   name: { type: string }
+ *                   species: { type: string }
+ *                   breed: { type: string }
+ *                   age: { type: number }
+ *                   owner: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.get('/list', async (req, res) => {
   try {
     const pets = petDb.getAllPets();
@@ -41,7 +69,42 @@ router.get('/list', async (req, res) => {
   }
 });
 
-// GET /api/v1/pettracker/get?id=<petId> - Get pet by ID (from database)
+/**
+ * @swagger
+ * /api/v1/pettracker/pets/{id}:
+ *   get:
+ *     tags:
+ *       - PetTracker
+ *     summary: Get a specific pet by ID
+ *     description: Returns pet details including name, species, breed, age and owner information.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Pet ID
+ *     responses:
+ *       200:
+ *         description: Pet retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: { type: string }
+ *                 name: { type: string }
+ *                 species: { type: string }
+ *                 breed: { type: string }
+ *                 age: { type: number }
+ *                 owner: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.get('/get', async (req, res) => {
   try {
     const petId = req.query.id;
@@ -61,7 +124,67 @@ router.get('/get', async (req, res) => {
   }
 });
 
-// POST /api/v1/pettracker/edit - Add or update a pet
+/**
+ * @swagger
+ * /api/v1/pettracker/pets:
+ *   post:
+ *     tags:
+ *       - PetTracker
+ *     summary: Create or update a pet
+ *     description: Creates a new pet or updates an existing pet's information. Owner authorization required for updates.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - petData
+ *               - ownerAddress
+ *             properties:
+ *               petData:
+ *                 type: object
+ *                 required:
+ *                   - id
+ *                 properties:
+ *                   id: { type: string }
+ *                   name: { type: string }
+ *                   species: { type: string }
+ *                   breed: { type: string }
+ *                   age: { type: number }
+ *               ownerAddress:
+ *                 type: string
+ *                 description: Solana wallet address of pet owner
+ *     responses:
+ *       200:
+ *         description: Pet created or updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 pet:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     name: { type: string }
+ *                     species: { type: string }
+ *                     breed: { type: string }
+ *                     age: { type: number }
+ *                     owner: { type: string }
+ *                 message: { type: string }
+ *                 mandate:
+ *                   type: object
+ *                   properties:
+ *                     authority: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Unauthorized - not pet owner
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/edit', express.json(), async (req, res) => {
   try {
     const { petData, ownerAddress } = req.body;
