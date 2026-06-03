@@ -1,7 +1,10 @@
 const express = require('express');
 const path = require('path');
+const config = require('./api/config');
+
 const app = express();
-const port = process.env.PORT || 3000;
+const bindHost = config.server.bindHost;
+const bindPort = config.server.bindPort;
 
 // Middleware to parse JSON with increased size limit for file uploads
 app.use(express.json({ limit: '5mb' }));
@@ -55,6 +58,6 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
 
 
-app.listen(port, () => {
-  console.log(`Concept Sandbox listening at http://localhost:${port}`);
+app.listen(bindPort, bindHost, () => {
+  console.log(`Concept Sandbox listening at http://${bindHost}:${bindPort}`);
 });

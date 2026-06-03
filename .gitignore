@@ -4,3 +4,5 @@ TASKS.md
 sandbox.db
 sandbox.test.db
 .payer-keypair.json
+.env
+sandbox.log

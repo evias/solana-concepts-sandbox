@@ -1,10 +1,17 @@
 const web3 = require('@solana/web3.js');
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
 
 // Get or create a persistent backend payer keypair
 function initializePayerKeypair() {
-  const payerPath = path.join(__dirname, '..', '.payer-keypair.json');
+  // Use config for keypair file path
+  let payerPath = config.payer.keypairFile;
+  
+  // If it's a relative path, resolve it relative to project root
+  if (!path.isAbsolute(payerPath)) {
+    payerPath = path.join(__dirname, '..', payerPath);
+  }
   
   let payer;
   
