@@ -109,8 +109,8 @@ function calculateFileHash(buffer) {
  *   get:
  *     tags:
  *       - CareCircle
- *     summary: List credentials accessible by wallet
- *     description: Returns all credentials where the wallet is either the owner or an authorized signer. Fetches metadata including name and mint address from database.
+ *     summary: List credentials owned by wallet
+ *     description: Returns all credentials where the wallet is the owner. For authorized access to other wallets' credentials, use the files or authorized-signers endpoints directly with the credential ID.
  *     parameters:
  *       - in: query
  *         name: wallet
@@ -152,33 +152,12 @@ router.get('/credentials', async (req, res) => {
     // Fetch all credentials from database
     const allCredentials = credentialDb.getAllCredentials(1000, 0);
     const credentials = [];
-    const payer = require('./payer').getPayerKeypair();
-    const sasIntegration = require('./sas-integration');
 
-    // Get credentials where wallet is owner or authorized signer
+    // Filter credentials where wallet is owner
+    // Note: Checking authorized signers for every credential is expensive
+    // The frontend handles authorized access via hasCredentialAccess checks on individual operations
     for (const cred of allCredentials) {
-      let hasAccess = false;
-      
-      // Check if wallet is the owner
       if (cred.wallet_address === wallet) {
-        hasAccess = true;
-      } else {
-        // Check if wallet is an authorized signer on the SAS credential
-        try {
-          // Get the SAS credential address
-          const sasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer, cred.sas_credential_id);
-          const { getAuthorizedSigners } = require('./sas-integration');
-          const authorizedSigners = await getAuthorizedSigners(sasResult.credentialAddress);
-          if (authorizedSigners && authorizedSigners.includes(wallet)) {
-            hasAccess = true;
-          }
-       } catch (error) {
-         log.warn(`Could not check authorized signers for credential ${cred.id}`, { error: error.message });
-         // Don't fail the request if SAS lookup fails
-       }
-      }
-      
-      if (hasAccess) {
         credentials.push({
           id: extractCredentialUuid(cred.id),
           name: cred.full_name,
@@ -191,10 +170,10 @@ router.get('/credentials', async (req, res) => {
     }
 
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
-   } catch (error) {
-     log.error('Error listing credentials', { error });
-     return res.status(500).json({ error: 'Failed to list credentials' });
-   }
+  } catch (error) {
+    log.error('Error listing credentials', { error });
+    return res.status(500).json({ error: 'Failed to list credentials' });
+  }
 });
 
 /**
