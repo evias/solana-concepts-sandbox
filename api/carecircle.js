@@ -182,7 +182,15 @@ router.get('/files', async (req, res) => {
       return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
     }
 
-    const credentialPath = path.join(__dirname, '..', 'uploads', credentialId);
+    const config = require('./config');
+    let uploadsBasePath = config.uploads.path;
+    
+    // If it's a relative path, resolve it relative to project root
+    if (!path.isAbsolute(uploadsBasePath)) {
+      uploadsBasePath = path.join(__dirname, '..', uploadsBasePath);
+    }
+    
+    const credentialPath = path.join(uploadsBasePath, credentialId);
     const files = [];
 
     if (fs.existsSync(credentialPath)) {
@@ -234,41 +242,48 @@ router.post('/upload', async (req, res) => {
       buffer = Buffer.from(base64String, 'base64');
     } else if (fileBuffer instanceof ArrayBuffer) {
       // Handle ArrayBuffer directly
-      buffer = Buffer.from(fileBuffer);
-    } else if (typeof fileBuffer === 'object' && fileBuffer.type === 'Buffer' && Array.isArray(fileBuffer.data)) {
-      // Handle serialized Buffer objects
-      buffer = Buffer.from(fileBuffer.data);
-    } else {
-      console.error('[CareCircle] Unknown fileBuffer type:', typeof fileBuffer, 'keys:', Object.keys(fileBuffer || {}));
-      return res.status(400).json({ error: 'Invalid file buffer format' });
-    }
-    
-    const fileHash = calculateFileHash(buffer);
+     buffer = Buffer.from(fileBuffer);
+     } else if (typeof fileBuffer === 'object' && fileBuffer.type === 'Buffer' && Array.isArray(fileBuffer.data)) {
+       // Handle serialized Buffer objects
+       buffer = Buffer.from(fileBuffer.data);
+     } else {
+       console.error('[CareCircle] Unknown fileBuffer type:', typeof fileBuffer, 'keys:', Object.keys(fileBuffer || {}));
+       return res.status(400).json({ error: 'Invalid file buffer format' });
+     }
+     
+     const fileHash = calculateFileHash(buffer);
 
-    // Store file to filesystem (skip during tests)
-    if (process.env.NODE_ENV !== 'test') {
-      console.log('[CareCircle] Storing file to filesystem...');
-      const uploadsDir = path.join(__dirname, '..', 'uploads');
-      const credentialPath = path.join(uploadsDir, credentialId);
+     // Store file to filesystem (skip during tests)
+     if (process.env.NODE_ENV !== 'test') {
+       console.log('[CareCircle] Storing file to filesystem...');
+       const config = require('./config');
+       let uploadsBasePath = config.uploads.path;
+       
+       // If it's a relative path, resolve it relative to project root
+       if (!path.isAbsolute(uploadsBasePath)) {
+         uploadsBasePath = path.join(__dirname, '..', uploadsBasePath);
+       }
+       
+       const credentialPath = path.join(uploadsBasePath, credentialId);
 
-      try {
-        // Create credential directory if it doesn't exist
-        if (!fs.existsSync(credentialPath)) {
-          fs.mkdirSync(credentialPath, { recursive: true });
-          console.log('[CareCircle] Created uploads directory:', credentialPath);
-        }
+       try {
+         // Create credential directory if it doesn't exist
+         if (!fs.existsSync(credentialPath)) {
+           fs.mkdirSync(credentialPath, { recursive: true });
+           console.log('[CareCircle] Created uploads directory:', credentialPath);
+         }
 
-        // Store file
-        const filePath = path.join(credentialPath, filename);
-        fs.writeFileSync(filePath, buffer);
-        console.log('[CareCircle] File stored at:', filePath);
-      } catch (err) {
-        console.error('[CareCircle] Error storing file:', err.message);
-        // Don't fail the upload if file storage fails, but log it
-      }
-    } else {
-      console.log('[CareCircle] Skipping file storage during tests (NODE_ENV=test)');
-    }
+         // Store file
+         const filePath = path.join(credentialPath, filename);
+         fs.writeFileSync(filePath, buffer);
+         console.log('[CareCircle] File stored at:', filePath);
+       } catch (err) {
+         console.error('[CareCircle] Error storing file:', err.message);
+         // Don't fail the upload if file storage fails, but log it
+       }
+     } else {
+       console.log('[CareCircle] Skipping file storage during tests (NODE_ENV=test)');
+     }
 
     return res.status(200).json({
       success: true,
