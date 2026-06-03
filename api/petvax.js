@@ -8,6 +8,8 @@ const {
   verifyVaccinationSignature,
   getVaccinationTransactionInfo
 } = require('./vaccination-tx');
+const { createLogger } = require('./logger');
+const log = createLogger('concept/petvax');
 
 const router = express.Router();
 
@@ -47,7 +49,7 @@ router.get('/verify', async (req, res) => {
       onChainProofs: vaccinations.filter(v => v.transaction_signature).length
     });
    } catch (error) {
-     console.error('Error verifying vaccinations:', error);
+     log.error('Error verifying vaccinations:', { error: error });
      res.status(500).json({ error: 'Failed to verify vaccinations' });
    }
  });
@@ -80,10 +82,10 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
        return res.status(403).json({ error: 'Only pet owner or authorized veterinarian can record vaccinations' });
      }
     
-    console.log(`[PetVax] Recording vaccination for pet ${petId} with SPL token...`);
+    log.info(`Recording vaccination for pet ${petId} with SPL token...`);
     
     // Create SPL token mint for this vaccination
-    console.log(`[PetVax] Creating SPL token mint...`);
+    log.info(`Creating SPL token mint...`);
     const mint = await splToken.createMint(
       connection,
       payer,
@@ -93,10 +95,10 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
     );
     
     const mintAddress = mint.toBase58();
-    console.log(`[PetVax] Token mint created:`, mintAddress);
+    log.info(`Token mint created:`, { value: mintAddress });
     
     // Create associated token account for the owner
-    console.log(`[PetVax] Creating associated token account...`);
+    log.info(`Creating associated token account...`);
     const ownerPublicKey = new web3.PublicKey(ownerAddress);
     const associatedTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
       connection,
@@ -106,10 +108,10 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
     );
     
     const tokenAccount = associatedTokenAccount.address.toBase58();
-    console.log(`[PetVax] Token account created:`, tokenAccount);
+    log.info(`Token account created:`, { value: tokenAccount });
     
     // Mint 1 token to represent this vaccination
-    console.log(`[PetVax] Minting vaccination token...`);
+    log.info(`Minting vaccination token...`);
     const signature = await splToken.mintTo(
       connection,
       payer,
@@ -119,7 +121,7 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
       1
     );
     
-    console.log(`[PetVax] Token minted, signature:`, signature);
+    log.info(`Token minted, signature:`, { value: signature });
     
     // Create vaccination record with token references
     const vaccinationId = 'vax_' + Date.now();
@@ -138,7 +140,7 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
          transactionHash: signature          // Use signature as hash for now
        });
       
-      console.log(`[PetVax] Vaccination recorded:`, vaccinationId);
+      log.info(`Vaccination recorded:`, { value: vaccinationId });
       
       res.json({
         success: true,
@@ -165,7 +167,7 @@ router.post('/record-with-spl', express.json(), async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('[PetVax] Error recording vaccination with SPL token:', error);
+    log.error('Error recording vaccination with SPL token:', { error: error });
     res.status(500).json({ error: `Failed to record vaccination: ${error.message}` });
   }
 });
@@ -231,7 +233,7 @@ router.post('/prepare', express.json(), async (req, res) => {
       petSpecies: pet.species
     });
   } catch (error) {
-    console.error('Error preparing vaccination transaction:', error);
+    log.error('Error preparing vaccination transaction:', { error: error });
     res.status(500).json({ error: `Failed to prepare transaction: ${error.message}` });
   }
 });
@@ -283,7 +285,7 @@ router.post('/record', express.json(), async (req, res) => {
     if (transactionSignature) {
       const isValidTx = await verifyVaccinationSignature(transactionSignature, petId);
       if (!isValidTx) {
-        console.warn('Transaction signature could not be verified on-chain:', transactionSignature);
+        log.warn('Transaction signature could not be verified on-chain:', { value: transactionSignature });
         // Don't fail, but note it in logs - transaction might not be finalized yet
       }
     }
@@ -314,12 +316,12 @@ router.post('/record', express.json(), async (req, res) => {
         })
       });
       
-      console.log('Vaccination recorded:', vaccinationId, 'for pet:', petId);
+      log.info('Vaccination recorded', { vaccinationId, petId });
       if (transactionSignature) {
-        console.log('  with transaction signature:', transactionSignature);
+        log.info('with transaction signature', { transactionSignature });
       }
       if (transactionHash) {
-        console.log('  with transaction hash:', transactionHash);
+        log.info('with transaction hash', { transactionHash });
       }
       
       res.json({
@@ -342,7 +344,7 @@ router.post('/record', express.json(), async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('Error recording vaccination:', error);
+    log.error('Error recording vaccination:', { error: error });
     res.status(500).json({ error: `Failed to record vaccination: ${error.message}` });
   }
 });
@@ -363,7 +365,7 @@ router.get('/signature', async (req, res) => {
     
     res.json(txInfo);
   } catch (error) {
-    console.error('Error getting transaction info:', error);
+    log.error('Error getting transaction info:', { error: error });
     res.status(500).json({ error: 'Failed to get transaction info' });
   }
 });
@@ -394,7 +396,7 @@ router.get('/pet', async (req, res) => {
       vaccinations: vaccinations
     });
   } catch (error) {
-    console.error('Error getting pet vaccinations:', error);
+    log.error('Error getting pet vaccinations:', { error: error });
     res.status(500).json({ error: 'Failed to get vaccinations' });
   }
 });
@@ -425,7 +427,7 @@ router.get('/vet', async (req, res) => {
       vaccinations: vaccinations
     });
   } catch (error) {
-    console.error('Error getting vet vaccinations:', error);
+    log.error('Error getting vet vaccinations:', { error: error });
     res.status(500).json({ error: 'Failed to get vaccinations' });
   }
 });
@@ -458,7 +460,7 @@ router.get('/tx', async (req, res) => {
       solscanUrl: `https://solscan.io/tx/${hash}?cluster=devnet`
     });
   } catch (error) {
-    console.error('Error getting vaccination by transaction hash:', error);
+    log.error('Error getting vaccination by transaction hash:', { error: error });
     res.status(500).json({ error: 'Failed to get vaccination' });
   }
 });

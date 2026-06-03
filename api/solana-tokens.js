@@ -1,6 +1,8 @@
 const web3 = require('@solana/web3.js');
 const splToken = require('@solana/spl-token');
 const { payer } = require('./payer');
+const { createLogger } = require('./logger');
+const log = createLogger('solana-tokens');
 
 const connection = new web3.Connection(
   'https://api.devnet.solana.com',
@@ -16,9 +18,9 @@ const connection = new web3.Connection(
  */
 async function createPetTokenMint(ownerPublicKey) {
   try {
-    // Check payer balance
-    const balance = await connection.getBalance(payer.publicKey);
-    console.log('Payer balance:', balance, 'lamports');
+     // Check payer balance
+     const balance = await connection.getBalance(payer.publicKey);
+     log.info('Payer balance', { balance });
     
     if (balance < 5000000) {
       throw new Error(
@@ -39,14 +41,14 @@ async function createPetTokenMint(ownerPublicKey) {
       0                     // Decimals (no fractions since 1 pet = 1 token)
     );
     
-    console.log('Created token mint for pet:', mint.toBase58());
+    log.info('Created token mint for pet:', { value: mint.toBase58() });
     
     return {
       mintAddress: mint.toBase58(),
       success: true
     };
   } catch (error) {
-    console.error('Error creating pet token mint:', error);
+    log.error('Error creating pet token mint:', { error: error });
     throw error;
   }
 }
@@ -79,14 +81,14 @@ async function createAssociatedTokenAccount(ownerPublicKey, mintAddress) {
       ownerPublicKey
     );
     
-    console.log('Created/Got associated token account:', associatedTokenAccount.address.toBase58());
+    log.info('Created/Got associated token account:', { value: associatedTokenAccount.address.toBase58() });
     
     return {
       tokenAccount: associatedTokenAccount.address.toBase58(),
       success: true
     };
   } catch (error) {
-    console.error('Error creating associated token account:', error);
+    log.error('Error creating associated token account:', { error: error });
     throw error;
   }
 }
@@ -122,14 +124,14 @@ async function mintPetToken(mintAddress, tokenAccountAddress, owner) {
       1                                                 // Amount to mint
     );
     
-    console.log('Minted pet token, signature:', signature);
+    log.info('Minted pet token, signature:', { value: signature });
     
     return {
       signature: signature,
       success: true
     };
   } catch (error) {
-    console.error('Error minting pet token:', error);
+    log.error('Error minting pet token:', { error: error });
     throw error;
   }
 }
@@ -150,7 +152,7 @@ async function getTokenInfo(mintAddress) {
       owner: mint.owner.toBase58()
     };
   } catch (error) {
-    console.error('Error getting token info:', error);
+    log.error('Error getting token info:', { error: error });
     throw error;
   }
 }
@@ -171,7 +173,7 @@ async function getTokenAccountBalance(tokenAccountAddress) {
       mint: account.mint.toBase58()
     };
   } catch (error) {
-    console.error('Error getting token account balance:', error);
+    log.error('Error getting token account balance:', { error: error });
     throw error;
   }
 }

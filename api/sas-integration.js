@@ -5,6 +5,8 @@ const {
 } = require('@solana/kit');
 const web3 = require('@solana/web3.js');
 const crypto = require('crypto');
+const { createLogger } = require('./logger');
+const log = createLogger('sas-integration');
 
 // Initialize RPC
 const rpc = createSolanaRpc('https://api.devnet.solana.com');
@@ -79,7 +81,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
       const cred = allCreds.find(c => extractCredentialUuid(c.sas_credential_id) === extractCredentialUuid(credentialId));
       if (cred && cred.sas_credential_address) {
         oldCredentialAddress = cred.sas_credential_address;
-        console.log(`[SAS] Found stored old credential address for backward compatibility: ${oldCredentialAddress}`);
+        log.info(`Found stored old credential address for backward compatibility: ${oldCredentialAddress}`);
       }
     }
     
@@ -101,19 +103,19 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     });
 
     const credentialAddress = credentialPda[0].toString();
-    console.log(`[SAS] Derived credential PDA: ${credentialAddress}`);
+    log.info(`Derived credential PDA: ${credentialAddress}`);
 
     // Check if credential exists at new address
-    console.log(`[SAS] Fetching credential from new address...`);
+    log.info(`Fetching credential from new address...`);
     let existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
     // If not found at new address, check old address for backward compatibility
     if (!existingCredential || existingCredential?.exists === false) {
       if (oldCredentialAddress) {
-        console.log(`[SAS] Credential not found at new address, checking old address...`);
+        log.info(`Credential not found at new address, checking old address...`);
         existingCredential = await lib.fetchMaybeCredential(rpc, oldCredentialAddress);
         if (existingCredential?.exists !== false) {
-          console.log(`[SAS] Found credential at old address, returning old address for compatibility`);
+          log.info(`Found credential at old address, returning old address for compatibility`);
           const signers = existingCredential?.data?.authorizedSigners || existingCredential?.authorizedSigners || [];
           // Note: returning old address to preserve existing signers
           return {
@@ -129,7 +131,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     if (existingCredential?.exists !== false) {
       // Handle both test and production data structures
       const signers = existingCredential?.data?.authorizedSigners || existingCredential?.authorizedSigners || [];
-      console.log(`[SAS] Credential exists with ${signers.length} signers`);
+      log.info(`Credential exists with ${signers.length} signers`);
       return {
         credentialAddress,
         exists: true,
@@ -139,7 +141,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     }
 
     // Create new credential
-    console.log(`[SAS] Creating new credential...`);
+    log.info(`Creating new credential...`);
     
     const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
       new Uint8Array(payer.secretKey.slice(0, 32))
@@ -156,7 +158,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     const web3Ix = await kitInstructionToWeb3(createCredentialIx);
     const txSig = await sendTransaction(web3Ix, payer);
 
-    console.log(`[SAS] Transaction confirmed: ${txSig}`);
+    log.info(`Transaction confirmed: ${txSig}`);
 
     return {
       credentialAddress,
@@ -165,7 +167,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
       authorizedSigners: []
     };
   } catch (error) {
-    console.error('Error ensuring SAS credential:', error);
+    log.error('Error ensuring SAS credential:', { error: error });
     throw new Error(`Failed to ensure SAS credential: ${error.message}`);
   }
 }
@@ -180,7 +182,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
  */
 async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAddress, payer) {
   try {
-    console.log(`[SAS] Fetching credential...`);
+    log.info(`Fetching credential...`);
     const credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
     if (!credential?.exists) {
@@ -193,7 +195,7 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
       throw new Error('Signer already authorized for this credential');
     }
 
-    console.log(`[SAS] Adding signer ${newSignerAddress}...`);
+    log.info(`Adding signer ${newSignerAddress}...`);
     const updatedSigners = [...currentSigners, newSignerAddress];
 
     const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
@@ -210,14 +212,14 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
     const web3Ix = await kitInstructionToWeb3(changeSignersIx);
     const txSig = await sendTransaction(web3Ix, payer);
 
-    console.log(`[SAS] Transaction confirmed: ${txSig}`);
+    log.info(`Transaction confirmed: ${txSig}`);
 
     return {
       transactionSignature: txSig,
       authorizedSigners: updatedSigners
     };
   } catch (error) {
-    console.error('Error adding authorized signer:', error);
+    log.error('Error adding authorized signer:', { error: error });
     throw new Error(`Failed to add authorized signer: ${error.message}`);
   }
 }
@@ -227,7 +229,7 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
  */
 async function getAuthorizedSigners(credentialAddress) {
   try {
-    console.log(`[SAS] Fetching authorized signers for credential: ${credentialAddress}`);
+    log.info(`Fetching authorized signers for credential: ${credentialAddress}`);
     
     // Retry logic in case of timing issues with on-chain indexing
     let credential = null;
@@ -238,19 +240,19 @@ async function getAuthorizedSigners(credentialAddress) {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         credential = await lib.fetchMaybeCredential(rpc, credentialAddress);
-        console.log(`[SAS] Credential fetch result:`, credential);
+        log.info(`Credential fetch result:`, { value: credential });
         
         if (credential?.exists) {
           break;
         }
         
         if (attempt < maxRetries - 1) {
-          console.log(`[SAS] Credential not ready, retrying (attempt ${attempt + 1}/${maxRetries - 1})...`);
+          log.info(`Credential not ready, retrying (attempt ${attempt + 1}/${maxRetries - 1})...`);
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
         }
       } catch (fetchError) {
         lastError = fetchError;
-        console.error(`[SAS] Error fetching credential (attempt ${attempt + 1}):`, fetchError.message);
+        log.error(`Error fetching credential (attempt ${attempt + 1}):`, { error: fetchError.message });
         if (attempt < maxRetries - 1) {
           await new Promise(resolve => setTimeout(resolve, retryDelayMs));
         }
@@ -258,19 +260,19 @@ async function getAuthorizedSigners(credentialAddress) {
     }
     
     if (!credential?.exists) {
-      console.log(`[SAS] Credential does not exist or fetch failed after ${maxRetries} retries`);
+      log.info(`Credential does not exist or fetch failed after ${maxRetries} retries`);
       if (lastError) {
-        console.error(`[SAS] Last error:`, lastError.message);
+        log.error(`Last error:`, { error: lastError.message });
       }
       return [];
     }
     
     // Extract signers from the credential data structure (handle both test and production formats)
     const signers = credential.data?.authorizedSigners || credential.authorizedSigners || [];
-    console.log(`[SAS] Found ${signers.length} authorized signers:`, signers);
+    log.info(`Found ${signers.length} authorized signers:`, { value: signers });
     return signers;
   } catch (error) {
-    console.error('[SAS] Error fetching authorized signers:', error.message);
+    log.error('Error fetching authorized signers:', { error: error.message });
     return [];
   }
 }

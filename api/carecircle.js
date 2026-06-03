@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
+const { createLogger } = require('./logger');
+const log = createLogger('concept/carecircle');
 const { credentialDb } = require('./database');
 const { getAuthorizedSigners, addAuthorizedSigner } = require('./sas-integration');
 const router = express.Router();
@@ -30,10 +32,10 @@ async function getSasCredentialAddress(wallet) {
     const sasIntegration = require('./sas-integration');
     const sasResult = await sasIntegration.ensureSasCredential(wallet, payer);
     return sasResult.credentialAddress;
-  } catch (error) {
-    console.error('[CareCircle] Error deriving SAS credential address:', error.message);
-    return null;
-  }
+   } catch (error) {
+     log.error('Error deriving SAS credential address', { error: error.message });
+     return null;
+   }
 }
 
 /**
@@ -62,10 +64,10 @@ async function hasCredentialAccess(wallet, credentialId) {
       return sasUuid === credentialUuid || idUuid === credentialUuid;
     });
 
-    if (credential && credential.wallet_address === wallet) {
-      console.log(`[CareCircle] Wallet ${wallet} authorized as owner of credential ${credentialUuid}`);
-      return true;
-    }
+     if (credential && credential.wallet_address === wallet) {
+       log.info(`Wallet ${wallet} authorized as owner of credential ${credentialUuid}`);
+       return true;
+     }
 
     // Check if wallet is an authorized signer (need to derive actual credential address)
     if (credential && credential.sas_credential_id) {
@@ -76,22 +78,22 @@ async function hasCredentialAccess(wallet, credentialId) {
         const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
         
         const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
-        if (authorizedSigners && authorizedSigners.includes(wallet)) {
-          console.log(`[CareCircle] Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
-          return true;
-        }
-      } catch (error) {
-        console.error(`[CareCircle] Error checking authorized signers:`, error.message);
-        // Don't fail access check if SAS lookup fails
-      }
+         if (authorizedSigners && authorizedSigners.includes(wallet)) {
+           log.info(`Wallet ${wallet} authorized as signer of credential ${credentialUuid}`);
+           return true;
+         }
+       } catch (error) {
+         log.error('Error checking authorized signers', { error: error.message });
+         // Don't fail access check if SAS lookup fails
+       }
     }
 
-    console.log(`[CareCircle] Wallet ${wallet} denied access to credential ${credentialUuid}`);
-    return false;
-  } catch (error) {
-    console.error('[CareCircle] Error checking credential access:', error);
-    return false;
-  }
+     log.info(`Wallet ${wallet} denied access to credential ${credentialUuid}`);
+     return false;
+   } catch (error) {
+     log.error('Error checking credential access', { error });
+     return false;
+   }
 }
 
 /**
@@ -137,10 +139,10 @@ router.get('/credentials', async (req, res) => {
           if (authorizedSigners && authorizedSigners.includes(wallet)) {
             hasAccess = true;
           }
-        } catch (error) {
-          console.warn(`[CareCircle] Could not check authorized signers for credential ${cred.id}:`, error.message);
-          // Don't fail the request if SAS lookup fails
-        }
+       } catch (error) {
+         log.warn(`Could not check authorized signers for credential ${cred.id}`, { error: error.message });
+         // Don't fail the request if SAS lookup fails
+       }
       }
       
       if (hasAccess) {
@@ -156,10 +158,10 @@ router.get('/credentials', async (req, res) => {
     }
 
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
-  } catch (error) {
-    console.error('[CareCircle] Error listing credentials:', error);
-    return res.status(500).json({ error: 'Failed to list credentials' });
-  }
+   } catch (error) {
+     log.error('Error listing credentials', { error });
+     return res.status(500).json({ error: 'Failed to list credentials' });
+   }
 });
 
 /**
@@ -202,10 +204,10 @@ router.get('/files', async (req, res) => {
     }
 
     return res.json({ files: files.sort() });
-  } catch (error) {
-    console.error('[CareCircle] Error listing files:', error);
-    return res.status(500).json({ error: 'Failed to list files' });
-  }
+   } catch (error) {
+     log.error('Error listing files', { error });
+     return res.status(500).json({ error: 'Failed to list files' });
+   }
 });
 
 /**
@@ -246,44 +248,44 @@ router.post('/upload', async (req, res) => {
      } else if (typeof fileBuffer === 'object' && fileBuffer.type === 'Buffer' && Array.isArray(fileBuffer.data)) {
        // Handle serialized Buffer objects
        buffer = Buffer.from(fileBuffer.data);
-     } else {
-       console.error('[CareCircle] Unknown fileBuffer type:', typeof fileBuffer, 'keys:', Object.keys(fileBuffer || {}));
-       return res.status(400).json({ error: 'Invalid file buffer format' });
-     }
+      } else {
+        log.error('Unknown fileBuffer type', { type: typeof fileBuffer, keys: Object.keys(fileBuffer || {}) });
+        return res.status(400).json({ error: 'Invalid file buffer format' });
+      }
      
      const fileHash = calculateFileHash(buffer);
 
-     // Store file to filesystem (skip during tests)
-     if (process.env.NODE_ENV !== 'test') {
-       console.log('[CareCircle] Storing file to filesystem...');
-       const config = require('./config');
-       let uploadsBasePath = config.uploads.path;
-       
-       // If it's a relative path, resolve it relative to project root
-       if (!path.isAbsolute(uploadsBasePath)) {
-         uploadsBasePath = path.join(__dirname, '..', uploadsBasePath);
-       }
-       
-       const credentialPath = path.join(uploadsBasePath, credentialId);
+      // Store file to filesystem (skip during tests)
+      if (process.env.NODE_ENV !== 'test') {
+        log.info('Storing file to filesystem...');
+        const config = require('./config');
+        let uploadsBasePath = config.uploads.path;
+        
+        // If it's a relative path, resolve it relative to project root
+        if (!path.isAbsolute(uploadsBasePath)) {
+          uploadsBasePath = path.join(__dirname, '..', uploadsBasePath);
+        }
+        
+        const credentialPath = path.join(uploadsBasePath, credentialId);
 
-       try {
-         // Create credential directory if it doesn't exist
-         if (!fs.existsSync(credentialPath)) {
-           fs.mkdirSync(credentialPath, { recursive: true });
-           console.log('[CareCircle] Created uploads directory:', credentialPath);
-         }
+        try {
+          // Create credential directory if it doesn't exist
+          if (!fs.existsSync(credentialPath)) {
+            fs.mkdirSync(credentialPath, { recursive: true });
+            log.info('Created uploads directory', { credentialPath });
+          }
 
-         // Store file
-         const filePath = path.join(credentialPath, filename);
-         fs.writeFileSync(filePath, buffer);
-         console.log('[CareCircle] File stored at:', filePath);
-       } catch (err) {
-         console.error('[CareCircle] Error storing file:', err.message);
-         // Don't fail the upload if file storage fails, but log it
-       }
-     } else {
-       console.log('[CareCircle] Skipping file storage during tests (NODE_ENV=test)');
-     }
+          // Store file
+          const filePath = path.join(credentialPath, filename);
+          fs.writeFileSync(filePath, buffer);
+          log.info('File stored at', { filePath });
+        } catch (err) {
+          log.error('Error storing file', { error: err.message });
+          // Don't fail the upload if file storage fails, but log it
+        }
+      } else {
+        log.info('Skipping file storage during tests (NODE_ENV=test)');
+      }
 
     return res.status(200).json({
       success: true,
@@ -296,10 +298,10 @@ router.post('/upload', async (req, res) => {
         uploadedAt: new Date().toISOString()
       }
     });
-  } catch (error) {
-    console.error('[CareCircle] Error uploading file:', error);
-    return res.status(500).json({ error: 'Failed to upload file' });
-  }
+   } catch (error) {
+     log.error('Error uploading file', { error });
+     return res.status(500).json({ error: 'Failed to upload file' });
+   }
 });
 
 /**
@@ -327,17 +329,17 @@ router.post('/authorize-caregiver', async (req, res) => {
       return res.status(400).json({ error: 'Invalid caregiver address format' });
     }
 
-    // In test mode, skip SAS operations and return success
-    if (process.env.NODE_ENV === 'test') {
-      console.log('[CareCircle] [TEST MODE] Caregiver authorization (SAS skipped):', caregiverAddress);
-      return res.status(200).json({
-        success: true,
-        message: 'Caregiver authorized successfully (test mode)',
-        credential: credentialId,
-        caregiver: caregiverAddress,
-        wallet: wallet
-      });
-    }
+     // In test mode, skip SAS operations and return success
+     if (process.env.NODE_ENV === 'test') {
+       log.info('Caregiver authorization (SAS skipped)', { caregiverAddress });
+       return res.status(200).json({
+         success: true,
+         message: 'Caregiver authorized successfully (test mode)',
+         credential: credentialId,
+         caregiver: caregiverAddress,
+         wallet: wallet
+       });
+     }
 
     try {
       // Get the credential from database
@@ -357,36 +359,36 @@ router.post('/authorize-caregiver', async (req, res) => {
       const payer = require('./payer').getPayerKeypair();
       const sasIntegration = require('./sas-integration');
 
-      // Ensure SAS credential exists and get its actual on-chain address
-      console.log(`[CareCircle] Ensuring SAS credential for wallet ${wallet}...`);
-      const sasResult = await sasIntegration.ensureSasCredential(wallet, payer, credential.sas_credential_id);
-      console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
+       // Ensure SAS credential exists and get its actual on-chain address
+       log.info(`Ensuring SAS credential for wallet ${wallet}...`);
+       const sasResult = await sasIntegration.ensureSasCredential(wallet, payer, credential.sas_credential_id);
+       log.info(`SAS credential address: ${sasResult.credentialAddress}`);
 
-      // Add the caregiver as an authorized signer to the SAS Credential
-      console.log(`[CareCircle] Adding caregiver ${caregiverAddress} to SAS credential...`);
-      let addResult;
-      try {
-        addResult = await sasIntegration.addAuthorizedSigner(
-          sasResult.credentialAddress,
-          wallet,
-          caregiverAddress,
-          payer
-        );
-        console.log(`[CareCircle] Caregiver added successfully. Tx: ${addResult.transactionSignature}`);
-      } catch (addError) {
-        console.error('[CareCircle] Error adding caregiver to SAS credential:', addError.message);
-        // If error is "signer already authorized", continue anyway
-        if (!addError.message.includes('Signer already authorized')) {
-          throw addError;
-        }
-        console.log('[CareCircle] Caregiver was already added, continuing...');
-        addResult = {
-          transactionSignature: null,
-          authorizedSigners: await getAuthorizedSigners(sasResult.credentialAddress)
-        };
-      }
+       // Add the caregiver as an authorized signer to the SAS Credential
+       log.info(`Adding caregiver ${caregiverAddress} to SAS credential...`);
+       let addResult;
+       try {
+         addResult = await sasIntegration.addAuthorizedSigner(
+           sasResult.credentialAddress,
+           wallet,
+           caregiverAddress,
+           payer
+         );
+         log.info(`Caregiver added successfully. Tx: ${addResult.transactionSignature}`);
+       } catch (addError) {
+         log.error('Error adding caregiver to SAS credential', { error: addError.message });
+         // If error is "signer already authorized", continue anyway
+         if (!addError.message.includes('Signer already authorized')) {
+           throw addError;
+         }
+         log.info('Caregiver was already added, continuing...');
+         addResult = {
+           transactionSignature: null,
+           authorizedSigners: await getAuthorizedSigners(sasResult.credentialAddress)
+         };
+       }
 
-      console.log('[CareCircle] Caregiver authorized:', caregiverAddress, 'for credential:', credentialId, 'wallet:', wallet);
+       log.info('Caregiver authorized', { caregiverAddress, credentialId, wallet });
 
       return res.status(200).json({
         success: true,
@@ -403,17 +405,17 @@ router.post('/authorize-caregiver', async (req, res) => {
           authorizedSigners: addResult.authorizedSigners
         }
       });
-    } catch (sasError) {
-      console.error('[CareCircle] Error during SAS operations:', sasError.message);
-      return res.status(500).json({ 
-        error: 'Failed to update SAS Credential',
-        details: sasError.message 
-      });
-    }
-  } catch (error) {
-    console.error('[CareCircle] Error authorizing caregiver:', error);
-    return res.status(500).json({ error: 'Failed to authorize caregiver' });
-  }
+     } catch (sasError) {
+       log.error('Error during SAS operations', { error: sasError.message });
+       return res.status(500).json({ 
+         error: 'Failed to update SAS Credential',
+         details: sasError.message 
+       });
+     }
+   } catch (error) {
+     log.error('Error authorizing caregiver', { error });
+     return res.status(500).json({ error: 'Failed to authorize caregiver' });
+   }
 });
 
 /**
@@ -430,7 +432,7 @@ router.get('/authorized-signers', async (req, res) => {
       return res.status(400).json({ error: 'Wallet and credentialId required' });
     }
 
-    console.log(`[CareCircle] Fetching authorized signers for credential: ${credentialId}, wallet: ${wallet}`);
+    log.info(`Fetching authorized signers for credential: ${credentialId}, wallet: ${wallet}`);
 
     // Check if wallet has access to this credential
     const hasAccess = await hasCredentialAccess(wallet, credentialId);
@@ -448,18 +450,18 @@ router.get('/authorized-signers', async (req, res) => {
         return sasUuid === credentialUuid || idUuid === credentialUuid;
       });
 
-      if (!credential) {
-        console.log(`[CareCircle] Credential not found in database: ${credentialId}`);
-        return res.status(404).json({ error: 'Credential not found' });
-      }
+       if (!credential) {
+         log.info(`Credential not found in database: ${credentialId}`);
+         return res.status(404).json({ error: 'Credential not found' });
+       }
 
-      console.log(`[CareCircle] Found credential in database, owner: ${credential.wallet_address}, SAS ID: ${credential.sas_credential_id}`);
+       log.info(`Found credential in database, owner: ${credential.wallet_address}, SAS ID: ${credential.sas_credential_id}`);
 
-      // In test mode, return empty signers
-      if (process.env.NODE_ENV === 'test') {
-        console.log('[CareCircle] [TEST MODE] Returning empty signers');
-        return res.json({ signers: [] });
-      }
+       // In test mode, return empty signers
+       if (process.env.NODE_ENV === 'test') {
+         log.info('Returning empty signers');
+         return res.json({ signers: [] });
+       }
 
       // Get payer for SAS operations
       const payer = require('./payer').getPayerKeypair();
@@ -467,9 +469,9 @@ router.get('/authorized-signers', async (req, res) => {
 
       // IMPORTANT: Derive SAS credential from the credential OWNER (not the requesting wallet)
       // This ensures we get the correct on-chain credential that contains the signers
-      console.log(`[CareCircle] Deriving SAS credential for owner: ${credential.wallet_address}`);
+      log.info(`Deriving SAS credential for owner: ${credential.wallet_address}`);
        const sasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer, credential.sas_credential_id);
-       console.log(`[CareCircle] SAS credential address: ${sasResult.credentialAddress}`);
+       log.info(`SAS credential address: ${sasResult.credentialAddress}`);
 
        // Store the credential address in database for future use (backward compatibility migration)
        if (sasResult.credentialAddress && credential.sas_credential_id) {
@@ -479,15 +481,15 @@ router.get('/authorized-signers', async (req, res) => {
            db.prepare(`UPDATE credentials SET sas_credential_address = ? WHERE sas_credential_id = ?`)
              .run(sasResult.credentialAddress, credential.sas_credential_id);
          } catch (dbError) {
-           console.warn('[CareCircle] Could not store SAS credential address:', dbError.message);
+           log.warn('Could not store SAS credential address', { error: dbError.message });
            // Don't fail the request if this fails
          }
        }
 
        // Get the authorized signers for this SAS Credential
-       console.log(`[CareCircle] Calling getAuthorizedSigners for address: ${sasResult.credentialAddress}`);
+       log.info(`Calling getAuthorizedSigners for address: ${sasResult.credentialAddress}`);
        const signers = await getAuthorizedSigners(sasResult.credentialAddress) || [];
-       console.log(`[CareCircle] getAuthorizedSigners returned: ${signers.length} signers`, signers);
+       log.info(`getAuthorizedSigners returned ${signers.length} signers`, { signers });
 
       return res.json({ 
         signers: signers,
@@ -495,16 +497,15 @@ router.get('/authorized-signers', async (req, res) => {
         credentialName: credential.full_name,
         credentialOwner: credential.wallet_address
       });
-    } catch (sasError) {
-      console.error('[CareCircle] Error fetching authorized signers:', sasError.message);
-      console.error('[CareCircle] Stack trace:', sasError.stack);
-      // Return empty list if SAS lookup fails
-      return res.json({ signers: [], error: 'Could not fetch signers from on-chain' });
-    }
-  } catch (error) {
-    console.error('[CareCircle] Error getting authorized signers:', error);
-    return res.status(500).json({ error: 'Failed to get authorized signers' });
-  }
+     } catch (sasError) {
+       log.error('Error fetching authorized signers', { error: sasError.message, stack: sasError.stack });
+       // Return empty list if SAS lookup fails
+       return res.json({ signers: [], error: 'Could not fetch signers from on-chain' });
+     }
+   } catch (error) {
+     log.error('Error getting authorized signers', { error });
+     return res.status(500).json({ error: 'Failed to get authorized signers' });
+   }
 });
 
 /**
@@ -519,10 +520,10 @@ router.get('/documentation', (req, res) => {
       return res.json({ content });
     }
     return res.status(404).json({ error: 'Documentation not found' });
-  } catch (error) {
-    console.error('[CareCircle] Error loading documentation:', error);
-    return res.status(500).json({ error: 'Failed to load documentation' });
-  }
+   } catch (error) {
+     log.error('Error loading documentation', { error });
+     return res.status(500).json({ error: 'Failed to load documentation' });
+   }
 });
 
 module.exports = router;

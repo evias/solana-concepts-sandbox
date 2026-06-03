@@ -1,6 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
+const { createLogger } = require('./logger');
+const log = createLogger('database');
 
 // Use test database in test environment, production database otherwise
 const dbFileName = process.env.NODE_ENV === 'test' ? 'sandbox.test.db' : 'sandbox.db';
@@ -129,7 +131,7 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
   `);
   
-  console.log('Database schema created at:', dbPath);
+  log.info('Database schema created at:', { value: dbPath });
 }
 
 // Database migrations
@@ -138,10 +140,10 @@ function runMigrations() {
     // Note: All database migrations are now managed in scripts/db-migrate.js
     // This function is kept for backward compatibility but is no longer needed
     // Migrations should be run via: npm run db:migrate
-    console.log('ℹ️  Migrations are managed by scripts/db-migrate.js');
-    console.log('  Run: npm run db:migrate');
+    log.info('ℹ️  Migrations are managed by scripts/db-migrate.js');
+    log.info('  Run: npm run db:migrate');
   } catch (error) {
-    console.error('Migration error:', error.message);
+    log.error('Migration error:', { error: error.message });
   }
 }
 
@@ -264,12 +266,12 @@ const petDb = {
     if (!pet) {
       return [];
     }
-    try {
-      return JSON.parse(pet.authorizedVets || '[]');
-    } catch (error) {
-      console.error(`Failed to parse authorizedVets for pet ${petId}:`, error);
-      return [];
-    }
+     try {
+       return JSON.parse(pet.authorizedVets || '[]');
+     } catch (error) {
+       log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
+       return [];
+     }
   },
   
   // Check if a vet address is authorized for a pet
@@ -295,10 +297,10 @@ const petDb = {
         }
         return false;
       });
-    } catch (error) {
-      console.error(`Failed to parse authorizedVets for pet ${petId}:`, error);
-      return false;
-    }
+     } catch (error) {
+       log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
+       return false;
+     }
   }
 };
 

@@ -5,6 +5,8 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { petDb, nutritionPlanDb, feedingActionDb, db } = require('./database');
 const { payer } = require('./payer');
+const { createLogger } = require('./logger');
+const log = createLogger('concept/petdiet');
 
 // Solana connection
 const connection = new web3.Connection(
@@ -35,7 +37,7 @@ router.get('/plans', async (req, res) => {
     
     res.json(plans);
   } catch (error) {
-    console.error('Error getting nutrition plans:', error);
+    log.error('Error getting nutrition plans:', { error: error });
     res.status(500).json({ error: `Failed to get nutrition plans: ${error.message}` });
   }
 });
@@ -101,10 +103,10 @@ router.post('/create-plan', express.json(), async (req, res) => {
       return res.status(403).json({ error: 'Only pet owner can create nutrition plans' });
     }
 
-    console.log(`[PetDiet] Creating nutrition plan for pet ${petId}...`);
+    log.info(`Creating nutrition plan for pet ${petId}...`);
 
     // Create SPL token mint for this nutrition plan
-    console.log(`[PetDiet] Creating SPL token mint...`);
+    log.info(`Creating SPL token mint...`);
     const mint = await splToken.createMint(
       connection,
       payer,
@@ -114,10 +116,10 @@ router.post('/create-plan', express.json(), async (req, res) => {
     );
 
     const mintAddress = mint.toBase58();
-    console.log(`[PetDiet] Token mint created:`, mintAddress);
+    log.info(`Token mint created:`, { value: mintAddress });
 
     // Create associated token account for the owner
-    console.log(`[PetDiet] Creating associated token account...`);
+    log.info(`Creating associated token account...`);
     const ownerPublicKey = new web3.PublicKey(ownerAddress);
     const associatedTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
       connection,
@@ -127,10 +129,10 @@ router.post('/create-plan', express.json(), async (req, res) => {
     );
 
     const tokenAccount = associatedTokenAccount.address.toBase58();
-    console.log(`[PetDiet] Token account created:`, tokenAccount);
+    log.info(`Token account created:`, { value: tokenAccount });
 
     // Mint 1 token to represent this nutrition plan
-    console.log(`[PetDiet] Minting nutrition plan token...`);
+    log.info(`Minting nutrition plan token...`);
     const signature = await splToken.mintTo(
       connection,
       payer,
@@ -140,13 +142,13 @@ router.post('/create-plan', express.json(), async (req, res) => {
       1
     );
 
-     console.log(`[PetDiet] Token minted, signature:`, signature);
+     log.info(`Token minted, signature:`, { value: signature });
 
      // Create nutrition plan ID upfront so we can use it in memo (with random component to ensure uniqueness)
       const planId = 'diet_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
      // Create memo transaction with nutrition plan details
-     console.log(`[PetDiet] Creating memo transaction with nutrition plan data...`);
+     log.info(`Creating memo transaction with nutrition plan data...`);
      const transaction = new web3.Transaction();
      
      // Create memo data with nutrition plan information
@@ -171,7 +173,7 @@ router.post('/create-plan', express.json(), async (req, res) => {
        recordedAt: new Date().toISOString()
      });
 
-     console.log('[PetDiet] Memo data:', memoData);
+     log.info('Memo data:', { value: memoData });
 
       // Add compute budget instruction to increase units for large memo
       const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
@@ -210,10 +212,10 @@ router.post('/create-plan', express.json(), async (req, res) => {
        
        // Wait for confirmation
        await connection.confirmTransaction(memoTxSignature, 'confirmed');
-       console.log(`[PetDiet] Memo transaction confirmed:`, memoTxSignature);
+       log.info(`Memo transaction confirmed:`, { value: memoTxSignature });
      } catch (memoError) {
-       console.error(`[PetDiet] Error creating memo transaction:`, memoError.message);
-       console.error(`[PetDiet] Will fall back to using token signature`);
+       log.error(`Error creating memo transaction:`, { error: memoError.message });
+       log.error(`Will fall back to using token signature`);
        memoTxSignature = signature; // Fallback to token signature if memo fails
      }
 
@@ -263,7 +265,7 @@ router.post('/create-plan', express.json(), async (req, res) => {
          transactionHash: memoTxSignature  // Memo transaction with plan data
        });
 
-      console.log(`[PetDiet] Nutrition plan created:`, planId);
+      log.info(`Nutrition plan created:`, { value: planId });
 
        res.json({
          success: true,
@@ -292,7 +294,7 @@ router.post('/create-plan', express.json(), async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('[PetDiet] Error creating nutrition plan:', error);
+    log.error('Error creating nutrition plan:', { error: error });
     res.status(500).json({ error: `Failed to create nutrition plan: ${error.message}` });
   }
 });
@@ -336,10 +338,10 @@ router.post('/feed', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Nutrition plan is not linked to this pet' });
     }
 
-    console.log(`[PetDiet] Recording feeding action for plan ${nutritionPlanId}...`);
+    log.info(`Recording feeding action for plan ${nutritionPlanId}...`);
 
     // Create memo transaction for feeding action
-    console.log(`[PetDiet] Creating memo transaction...`);
+    log.info(`Creating memo transaction...`);
     
     const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
     const transaction = new web3.Transaction();
@@ -356,7 +358,7 @@ router.post('/feed', express.json(), async (req, res) => {
       recordedAt: new Date().toISOString()
     });
 
-     console.log('[PetDiet] Memo data:', memoData);
+     log.info('Memo data:', { value: memoData });
 
      // Add compute budget instruction to increase units for large memo
      const computeBudgetProgram = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
@@ -387,19 +389,19 @@ router.post('/feed', express.json(), async (req, res) => {
      transaction.recentBlockhash = latestBlockhash.blockhash;
      transaction.feePayer = payer.publicKey;  // Backend payer signs and pays
 
-     console.log('[PetDiet] Transaction prepared for signing');
+     log.info('Transaction prepared for signing');
 
      // Sign transaction with payer
      transaction.sign(payer);
     const signature = transaction.signature?.toString() || Buffer.from(transaction.signatures[0].signature || '').toString('hex');
 
     // Send transaction
-    console.log(`[PetDiet] Sending transaction...`);
+    log.info(`Sending transaction...`);
     const txSignature = await connection.sendRawTransaction(transaction.serialize());
     
     // Wait for confirmation
     const confirmation = await connection.confirmTransaction(txSignature, 'confirmed');
-    console.log(`[PetDiet] Transaction confirmed:`, txSignature);
+    log.info(`Transaction confirmed:`, { value: txSignature });
 
      // Create feeding action record
      const feedingActionId = 'action_' + Date.now();
@@ -416,7 +418,7 @@ router.post('/feed', express.json(), async (req, res) => {
          recordedBy: userAddress
        });
 
-      console.log(`[PetDiet] Feeding action recorded:`, feedingActionId);
+      log.info(`Feeding action recorded:`, { value: feedingActionId });
 
       res.json({
         success: true,
@@ -440,7 +442,7 @@ router.post('/feed', express.json(), async (req, res) => {
       throw error;
     }
   } catch (error) {
-    console.error('[PetDiet] Error recording feeding action:', error);
+    log.error('Error recording feeding action:', { error: error });
     res.status(500).json({ error: `Failed to record feeding action: ${error.message}` });
   }
 });
@@ -465,7 +467,7 @@ router.get('/feeding-history', async (req, res) => {
     
     res.json(feedingActions);
   } catch (error) {
-    console.error('Error getting feeding history:', error);
+    log.error('Error getting feeding history:', { error: error });
     res.status(500).json({ error: `Failed to get feeding history: ${error.message}` });
   }
 });
