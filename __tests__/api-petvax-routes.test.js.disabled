@@ -1,0 +1,560 @@
+/**
+ * Test suite for api/petvax.js
+ * Tests PetVax API endpoints for vaccination records
+ */
+
+const request = require('supertest');
+const express = require('express');
+
+// Mock the dependencies
+jest.mock('../api/database', () => ({
+  petDb: {
+    getPetById: jest.fn(),
+    isVetAuthorizedForPet: jest.fn()
+  },
+  vaccinationDb: {
+    getVaccinationsByPetId: jest.fn(),
+    createVaccination: jest.fn(),
+    getVaccinationsByVet: jest.fn(),
+    getVaccinationByTransactionHash: jest.fn()
+  }
+}));
+
+jest.mock('../api/payer', () => ({
+  payer: {
+    publicKey: { toBase58: () => 'payer-key' }
+  }
+}));
+
+jest.mock('../api/vaccination-tx', () => ({
+  createVaccinationTransaction: jest.fn(),
+  verifyVaccinationSignature: jest.fn(),
+  getVaccinationTransactionInfo: jest.fn()
+}));
+
+const petvaxRouter = require('../api/petvax');
+const { petDb, vaccinationDb } = require('../api/database');
+
+describe('PetVax API Router', () => {
+  let app;
+  const validSolanaAddress = 'DRVzS8jWD16aJ1B6tMcjsR1k87mzJjvAqR9RpZMKcqEu';
+  const testPetId = 'pet-123';
+  const testPet = {
+    id: testPetId,
+    name: 'Buddy',
+    species: 'Dog',
+    owner: validSolanaAddress
+  };
+  const testVaccination = {
+    id: 'vax-123',
+    petId: testPetId,
+    vaccineName: 'Rabies',
+    vaccinationDate: '2026-06-03',
+    vetAddress: validSolanaAddress,
+    transaction_signature: 'sig123'
+  };
+
+  beforeEach(() => {
+    app = express();
+    app.use(express.json());
+    app.use('/api/v1/petvax', petvaxRouter);
+    jest.clearAllMocks();
+  });
+
+  describe('GET /api/v1/petvax/verify - Verify vaccination status', () => {
+    test('should return vaccination status for pet', async () => {
+      const vaccinations = [testVaccination];
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.getVaccinationsByPetId.mockReturnValue(vaccinations);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pet).toEqual({
+        id: testPet.id,
+        name: testPet.name,
+        species: testPet.species,
+        owner: testPet.owner
+      });
+      expect(response.body.vaccinations).toEqual(vaccinations);
+      expect(response.body.vaccinationCount).toBe(1);
+    });
+
+    test('should count on-chain proofs', async () => {
+      const vaccinations = [
+        { ...testVaccination, transaction_signature: 'sig1' },
+        { ...testVaccination, id: 'vax-124', transaction_signature: null }
+      ];
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.getVaccinationsByPetId.mockReturnValue(vaccinations);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.vaccinationCount).toBe(2);
+      expect(response.body.onChainProofs).toBe(1);
+    });
+
+    test('should require petId parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/verify');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should return 404 when pet not found', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: 'non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+
+    test('should return empty vaccinations array when pet has none', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.getVaccinationsByPetId.mockReturnValue([]);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.vaccinations).toEqual([]);
+      expect(response.body.vaccinationCount).toBe(0);
+      expect(response.body.onChainProofs).toBe(0);
+    });
+  });
+
+  describe('POST /api/v1/petvax/record - Record vaccination', () => {
+    test('should record new vaccination', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.createVaccination.mockReturnValue(testVaccination);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.vaccination).toBeDefined();
+      expect(response.body.message).toBeDefined();
+      expect(response.body.metadata).toBeDefined();
+    });
+
+    test('should record vaccination with on-chain proof', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.createVaccination.mockReturnValue(testVaccination);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress,
+          transactionSignature: 'sig123',
+          transactionHash: 'hash123'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.metadata.onChainProof).toBe(true);
+    });
+
+    test('should accept additional vaccination fields', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.createVaccination.mockReturnValue(testVaccination);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress,
+          notes: 'Test note',
+          mustRenew: true,
+          renewalPeriod: 'annual'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+    });
+
+    test('should require petId parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Missing required fields');
+    });
+
+    test('should require vaccineName parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Missing required fields');
+    });
+
+    test('should require vaccinationDate parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Missing required fields');
+    });
+
+    test('should require vetAddress parameter', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Missing required fields');
+    });
+
+    test('should validate Solana address format', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: 'invalid-address'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Invalid');
+    });
+
+    test('should validate vaccination date format', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: 'invalid-date',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Invalid vaccination date');
+    });
+
+    test('should return 404 when pet not found', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: 'non-existent',
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+  });
+
+  describe('POST /api/v1/petvax/prepare - Prepare vaccination transaction', () => {
+    test('should prepare vaccination transaction for signing', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      jest.requireMock('../api/vaccination-tx').createVaccinationTransaction
+        .mockResolvedValue({ signature: 'mock-sig' });
+
+      const response = await request(app)
+        .post('/api/v1/petvax/prepare')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress,
+          petSignature: 'pet-sig',
+          vaccinationToken: 'token'
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.petName).toBe(testPet.name);
+      expect(response.body.petSpecies).toBe(testPet.species);
+    });
+
+    test('should require required fields for prepare endpoint', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/prepare')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies'
+          // Missing other required fields
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toContain('Missing required fields');
+    });
+
+    test('should return 404 when pet not found for prepare', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/prepare')
+        .send({
+          petId: 'non-existent',
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress,
+          petSignature: 'sig',
+          vaccinationToken: 'token'
+        });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+  });
+
+  describe('GET /api/v1/petvax/pet - Get pet vaccinations', () => {
+    test('should return vaccinations for pet', async () => {
+      const vaccinations = [testVaccination];
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.getVaccinationsByPetId.mockReturnValue(vaccinations);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/pet')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.pet).toEqual(testPet);
+      expect(response.body.vaccinations).toEqual(vaccinations);
+    });
+
+    test('should require petId parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/pet');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Pet ID is required');
+    });
+
+    test('should return 404 when pet not found', async () => {
+      petDb.getPetById.mockReturnValue(null);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/pet')
+        .query({ petId: 'non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Pet not found');
+    });
+  });
+
+  describe('GET /api/v1/petvax/vet - Get vet vaccinations', () => {
+    test('should return vaccinations by vet', async () => {
+      const vaccinations = [testVaccination];
+      vaccinationDb.getVaccinationsByVet.mockReturnValue(vaccinations);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/vet')
+        .query({ vetAddress: validSolanaAddress });
+
+      expect(response.status).toBe(200);
+      expect(response.body.vetAddress).toBe(validSolanaAddress);
+      expect(response.body.vaccinationCount).toBe(1);
+      expect(response.body.vaccinations).toEqual(vaccinations);
+    });
+
+    test('should count on-chain proofs in vet endpoint', async () => {
+      const vaccinations = [
+        { ...testVaccination, transaction_signature: 'sig1', transaction_hash: 'hash1' },
+        { ...testVaccination, id: 'vax-124', transaction_signature: null }
+      ];
+      vaccinationDb.getVaccinationsByVet.mockReturnValue(vaccinations);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/vet')
+        .query({ vetAddress: validSolanaAddress });
+
+      expect(response.status).toBe(200);
+      expect(response.body.onChainProofs).toBe(1);
+      expect(response.body.transactionHashes).toBe(1);
+    });
+
+    test('should require vetAddress parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/vet');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Vet address is required');
+    });
+
+    test('should validate Solana address format for vet', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/vet')
+        .query({ vetAddress: 'invalid-address' });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Invalid vet address');
+    });
+  });
+
+  describe('GET /api/v1/petvax/tx - Get vaccination by transaction hash', () => {
+    test('should return vaccination by transaction hash', async () => {
+      const vaccination = { ...testVaccination, pet_id: testPetId };
+      vaccinationDb.getVaccinationByTransactionHash.mockReturnValue(vaccination);
+      petDb.getPetById.mockReturnValue(testPet);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/tx')
+        .query({ hash: 'hash123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.vaccination).toBeDefined();
+      expect(response.body.pet).toBeDefined();
+      expect(response.body.solscanUrl).toContain('hash123');
+    });
+
+    test('should require hash parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/tx');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Transaction hash is required');
+    });
+
+    test('should return 404 when vaccination not found', async () => {
+      vaccinationDb.getVaccinationByTransactionHash.mockReturnValue(null);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/tx')
+        .query({ hash: 'non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toContain('not found');
+    });
+  });
+
+  describe('GET /api/v1/petvax/signature - Get transaction info', () => {
+    test('should return transaction info', async () => {
+      const txInfo = { confirmed: true };
+      jest.requireMock('../api/vaccination-tx').getVaccinationTransactionInfo
+        .mockResolvedValue(txInfo);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/signature')
+        .query({ txSignature: 'sig123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(txInfo);
+    });
+
+    test('should require txSignature parameter', async () => {
+      const response = await request(app)
+        .get('/api/v1/petvax/signature');
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('Transaction signature is required');
+    });
+
+    test('should return 404 when transaction not found', async () => {
+      jest.requireMock('../api/vaccination-tx').getVaccinationTransactionInfo
+        .mockResolvedValue(null);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/signature')
+        .query({ txSignature: 'non-existent' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('Transaction not found');
+    });
+  });
+
+  describe('Error Handling', () => {
+    test('should handle database errors', async () => {
+      petDb.getPetById.mockImplementation(() => {
+        throw new Error('Database error');
+      });
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: testPetId });
+
+      expect(response.status).toBe(500);
+      expect(response.body.error).toContain('Failed');
+    });
+
+    test('should handle malformed JSON in POST request', async () => {
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .set('Content-Type', 'application/json')
+        .send('{ invalid json }');
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('Response Format', () => {
+    test('should return JSON response', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.getVaccinationsByPetId.mockReturnValue([]);
+
+      const response = await request(app)
+        .get('/api/v1/petvax/verify')
+        .query({ petId: testPetId });
+
+      expect(response.headers['content-type']).toMatch(/json/);
+    });
+
+    test('should include metadata in record response', async () => {
+      petDb.getPetById.mockReturnValue(testPet);
+      vaccinationDb.createVaccination.mockReturnValue(testVaccination);
+
+      const response = await request(app)
+        .post('/api/v1/petvax/record')
+        .send({
+          petId: testPetId,
+          vaccineName: 'Rabies',
+          vaccinationDate: '2026-06-03',
+          vetAddress: validSolanaAddress
+        });
+
+      expect(response.body.metadata).toHaveProperty('petId');
+      expect(response.body.metadata).toHaveProperty('petName');
+      expect(response.body.metadata).toHaveProperty('vetAddress');
+      expect(response.body.metadata).toHaveProperty('onChainProof');
+    });
+  });
+});
