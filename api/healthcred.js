@@ -37,21 +37,65 @@ const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget1111111111111111
  * Returns: Credential object with on-chain transaction details
  */
 /**
- * POST /register
- * Prepare credential registration (unsigned transaction)
- * User will sign with their wallet, then submit to /submit-signed-transaction
- * 
- * Body:
- * {
- *   walletAddress: string (currently connected wallet - will be payer and mint owner),
- *   fullName: string,
- *   dateOfBirth: string (YYYY-MM-DD),
- *   email: string,
- *   profession: string,
- *   didDocumentJson: string (JSON stringified DID document)
- * }
- * 
- * Returns: Unsigned transaction (base64) for user to sign
+ * @swagger
+ * /api/v1/healthcred/register-start:
+ *   post:
+ *     tags:
+ *       - HealthCred
+ *     summary: Prepare credential registration
+ *     description: Prepares an unsigned transaction for healthcare worker credential registration. User signs the transaction with their wallet, then submits to /register-verify endpoint.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - walletAddress
+ *               - fullName
+ *               - dateOfBirth
+ *               - email
+ *               - profession
+ *               - didDocumentJson
+ *             properties:
+ *               walletAddress:
+ *                 type: string
+ *                 description: Currently connected Solana wallet address
+ *               fullName:
+ *                 type: string
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 description: Format YYYY-MM-DD
+ *               email:
+ *                 type: string
+ *               profession:
+ *                 type: string
+ *               didDocumentJson:
+ *                 type: string
+ *                 description: JSON stringified DID document
+ *     responses:
+ *       200:
+ *         description: Registration prepared - user should sign the transaction
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 registrationId: { type: string }
+ *                 transaction: { type: string, description: "Base64 encoded unsigned transaction" }
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     walletAddress: { type: string }
+ *                     fullName: { type: string }
+ *                     profession: { type: string }
+ *                     message: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/register', async (req, res) => {
   try {
@@ -213,14 +257,65 @@ router.post('/register', async (req, res) => {
 });
 
 /**
- * POST /submit-signed-transaction
- * Submit a signed transaction to complete credential registration
- * 
- * Body:
- * {
- *   registrationId: string (from /register response),
- *   signedTransaction: string (base64 signed transaction from Phantom)
- * }
+ * @swagger
+ * /api/v1/healthcred/register-verify:
+ *   post:
+ *     tags:
+ *       - HealthCred
+ *     summary: Submit signed registration transaction
+ *     description: Completes credential registration by submitting a user-signed transaction. Creates NFT mint and stores credential record in database.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - registrationId
+ *               - signedTransaction
+ *             properties:
+ *               registrationId:
+ *                 type: string
+ *                 description: From /register-start response
+ *               signedTransaction:
+ *                 type: string
+ *                 description: Base64 signed transaction from user's wallet
+ *     responses:
+ *       200:
+ *         description: Registration completed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 credential:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     wallet_address: { type: string }
+ *                     full_name: { type: string }
+ *                     profession: { type: string }
+ *                     did_id: { type: string }
+ *                     created_at: { type: string }
+ *                 onChain:
+ *                   type: object
+ *                   properties:
+ *                     mint: { type: string }
+ *                     transactionSignature: { type: string }
+ *                     memoUrl: { type: string }
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     solscanUrl: { type: string }
+ *                     didDocumentHash: { type: string }
+ *                     sasCredentialId: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Registration not found or expired
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/submit-signed-transaction', async (req, res) => {
   try {

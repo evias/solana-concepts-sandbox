@@ -13,7 +13,8 @@
     "db:init": "node scripts/db-init.js",
     "db:seed": "node scripts/db-seed.js",
     "db:migrate": "node scripts/db-migrate.js",
-    "db:fresh": "npm run db:init && npm run db:seed && npm run db:migrate"
+    "db:fresh": "npm run db:init && npm run db:seed && npm run db:migrate",
+    "docs:generate": "node scripts/generate-docs.js"
   },
   "dependencies": {
     "@solana/kit": "^5.5.1",
@@ -23,6 +24,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.22.2",
     "sas-lib": "^1.0.10",
+    "swagger-ui-express": "^5.0.0",
     "winston": "^3.14.0",
     "winston-daily-rotate-file": "^4.7.1"
   },
@@ -30,6 +32,8 @@
     "@tailwindcss/cli": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "jest": "^30.4.2",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "swagger-ui-express": "^5.0.0",
+    "swagger-jsdoc": "^6.2.8"
   }
 }

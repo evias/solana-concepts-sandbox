@@ -19,7 +19,48 @@ const connection = new web3.Connection(
   'confirmed'
 );
 
-// GET /api/v1/petvax/verify?petId=<id> - Verify vaccination status for a pet
+/**
+ * @swagger
+ * /api/v1/petvax/vaccinations:
+ *   get:
+ *     tags:
+ *       - PetVax
+ *     summary: Verify vaccination status for a pet
+ *     description: Returns all vaccinations recorded for a specific pet, including on-chain proof counts.
+ *     parameters:
+ *       - in: query
+ *         name: petId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Pet ID
+ *     responses:
+ *       200:
+ *         description: Vaccination status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 pet:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     name: { type: string }
+ *                     species: { type: string }
+ *                     owner: { type: string }
+ *                 vaccinations:
+ *                   type: array
+ *                   items: { type: object }
+ *                 vaccinationCount: { type: number }
+ *                 onChainProofs: { type: number }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.get('/verify', async (req, res) => {
   try {
     const { petId } = req.query;
@@ -238,7 +279,90 @@ router.post('/prepare', express.json(), async (req, res) => {
   }
 });
 
-// POST /api/v1/petvax/record - Record a new vaccination with transaction signature and hash
+/**
+ * @swagger
+ * /api/v1/petvax/vaccinations:
+ *   post:
+ *     tags:
+ *       - PetVax
+ *     summary: Record a new vaccination
+ *     description: Records a new vaccination for a pet with optional transaction signature and hash for on-chain proof.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - petId
+ *               - vaccineName
+ *               - vaccinationDate
+ *               - vetAddress
+ *             properties:
+ *               petId:
+ *                 type: string
+ *               vaccineName:
+ *                 type: string
+ *               vaccinationDate:
+ *                 type: string
+ *                 format: date
+ *               vetAddress:
+ *                 type: string
+ *                 description: Solana wallet address of veterinarian
+ *               notes:
+ *                 type: string
+ *               mustRenew:
+ *                 type: boolean
+ *               renewalPeriod:
+ *                 type: string
+ *               customRenewalPeriod:
+ *                 type: string
+ *               vaccinationToken:
+ *                 type: string
+ *               vaccineUrl:
+ *                 type: string
+ *               clinicUrl:
+ *                 type: string
+ *               petSignature:
+ *                 type: string
+ *               transactionSignature:
+ *                 type: string
+ *               transactionHash:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Vaccination recorded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 vaccination:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     petId: { type: string }
+ *                     vaccineName: { type: string }
+ *                     vaccinationDate: { type: string }
+ *                     vetAddress: { type: string }
+ *                 message: { type: string }
+ *                 metadata:
+ *                   type: object
+ *                   properties:
+ *                     petId: { type: string }
+ *                     petName: { type: string }
+ *                     vetAddress: { type: string }
+ *                     onChainProof: { type: boolean }
+ *                     transactionHash: { type: string }
+ *                     solscanUrl: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Pet not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
 router.post('/record', express.json(), async (req, res) => {
   try {
     const { 

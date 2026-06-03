@@ -104,10 +104,43 @@ function calculateFileHash(buffer) {
 }
 
 /**
- * GET /api/v1/carecircle/credentials
- * List credentials accessible by the wallet with metadata (name, mint)
- * Returns credentials where wallet is owner or authorized signer
- * Fetches from database, not filesystem
+ * @swagger
+ * /api/v1/carecircle/credentials:
+ *   get:
+ *     tags:
+ *       - CareCircle
+ *     summary: List credentials accessible by wallet
+ *     description: Returns all credentials where the wallet is either the owner or an authorized signer. Fetches metadata including name and mint address from database.
+ *     parameters:
+ *       - in: query
+ *         name: wallet
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Solana wallet address
+ *     responses:
+ *       200:
+ *         description: Credentials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 credentials:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string }
+ *                       name: { type: string }
+ *                       mint: { type: string }
+ *                       owner: { type: string }
+ *                       didId: { type: string }
+ *                       sasCredentialId: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/credentials', async (req, res) => {
   try {
@@ -165,9 +198,44 @@ router.get('/credentials', async (req, res) => {
 });
 
 /**
- * GET /api/v1/carecircle/files
- * List files in a credential's uploads folder
- * Only returns if wallet has access to the credential
+ * @swagger
+ * /api/v1/carecircle/files:
+ *   get:
+ *     tags:
+ *       - CareCircle
+ *     summary: List files in a credential's uploads folder
+ *     description: Returns all files uploaded to a credential. Requires wallet to have access (owner or authorized signer).
+ *     parameters:
+ *       - in: query
+ *         name: wallet
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Solana wallet address
+ *       - in: query
+ *         name: credentialId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Credential UUID
+ *     responses:
+ *       200:
+ *         description: Files retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 files:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - wallet not authorized for credential
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/files', async (req, res) => {
   try {
@@ -211,9 +279,67 @@ router.get('/files', async (req, res) => {
 });
 
 /**
- * POST /api/v1/carecircle/upload
- * Upload a file to a credential's uploads folder
- * Only allows if wallet has access to the credential
+ * @swagger
+ * /api/v1/carecircle/upload:
+ *   post:
+ *     tags:
+ *       - CareCircle
+ *     summary: Upload a file to credential storage
+ *     description: Uploads a file to a credential's uploads folder. Requires wallet to have access. Includes file hash validation and size limits (5MB max).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - wallet
+ *               - credentialId
+ *               - filename
+ *               - fileBuffer
+ *             properties:
+ *               wallet:
+ *                 type: string
+ *                 description: Solana wallet address
+ *               credentialId:
+ *                 type: string
+ *                 description: Credential UUID
+ *               filename:
+ *                 type: string
+ *                 description: Name of file to upload
+ *               fileBuffer:
+ *                 type: string
+ *                 description: File content as base64 or Buffer
+ *               fileSize:
+ *                 type: number
+ *                 description: File size in bytes
+ *               fileType:
+ *                 type: string
+ *                 description: MIME type of file
+ *     responses:
+ *       200:
+ *         description: File uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 file:
+ *                   type: object
+ *                   properties:
+ *                     credentialId: { type: string }
+ *                     filename: { type: string }
+ *                     fileSize: { type: number }
+ *                     fileHash: { type: string }
+ *                     fileType: { type: string }
+ *                     uploadedAt: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - wallet not authorized for credential
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/upload', async (req, res) => {
   try {
@@ -305,9 +431,66 @@ router.post('/upload', async (req, res) => {
 });
 
 /**
- * POST /api/v1/carecircle/authorize-caregiver
- * Add a caregiver to the authorized signers of a SAS Credential
- * Requires wallet to own or have access to the credential
+ * @swagger
+ * /api/v1/carecircle/authorize-caregiver:
+ *   post:
+ *     tags:
+ *       - CareCircle
+ *     summary: Add caregiver as authorized signer
+ *     description: Authorizes a caregiver wallet address to sign transactions for a SAS Credential. Requires wallet to own or have access to the credential.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - wallet
+ *               - credentialId
+ *               - caregiverAddress
+ *             properties:
+ *               wallet:
+ *                 type: string
+ *                 description: Wallet address of credential owner/authorizer
+ *               credentialId:
+ *                 type: string
+ *                 description: Credential UUID
+ *               caregiverAddress:
+ *                 type: string
+ *                 description: Solana wallet address of caregiver to authorize
+ *     responses:
+ *       200:
+ *         description: Caregiver authorized successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 message: { type: string }
+ *                 credential:
+ *                   type: object
+ *                   properties:
+ *                     id: { type: string }
+ *                     name: { type: string }
+ *                 caregiver: { type: string }
+ *                 wallet: { type: string }
+ *                 sasTransaction:
+ *                   type: object
+ *                   properties:
+ *                     credentialAddress: { type: string }
+ *                     signature: { type: string }
+ *                     authorizedSigners:
+ *                       type: array
+ *                       items: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - wallet not authorized for credential
+ *       404:
+ *         description: Credential not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/authorize-caregiver', async (req, res) => {
   try {
@@ -419,9 +602,49 @@ router.post('/authorize-caregiver', async (req, res) => {
 });
 
 /**
- * GET /api/v1/carecircle/authorized-signers
- * Get authorized signers for a specific credential
- * Returns list of wallet addresses that can sign with this credential
+ * @swagger
+ * /api/v1/carecircle/authorized-signers:
+ *   get:
+ *     tags:
+ *       - CareCircle
+ *     summary: Get authorized signers for a credential
+ *     description: Returns list of wallet addresses that are authorized to sign with this credential. Requires wallet to have access to the credential.
+ *     parameters:
+ *       - in: query
+ *         name: wallet
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Solana wallet address
+ *       - in: query
+ *         name: credentialId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Credential UUID
+ *     responses:
+ *       200:
+ *         description: Authorized signers retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 signers:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 credentialId: { type: string }
+ *                 credentialName: { type: string }
+ *                 credentialOwner: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - wallet not authorized for credential
+ *       404:
+ *         description: Credential not found
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/authorized-signers', async (req, res) => {
   try {
