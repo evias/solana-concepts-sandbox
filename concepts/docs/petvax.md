@@ -40,6 +40,7 @@ You need SOL on Solana devnet to record vaccinations (approximately 0.005 SOL pe
    - **Type**: SPL Token Mint (✙ icon)
    - **Status**: 🔐 On-Chain (purple badge)
    - Unique on-chain SPL token created
+   - Token mint address for verification
 
 ### Renewal Shot (Vaccine Tx)
 
@@ -57,6 +58,7 @@ You need SOL on Solana devnet to record vaccinations (approximately 0.005 SOL pe
    - **Type**: Vaccine Tx (Shot) (💉 icon)
    - **Status**: ✓ Signed (blue badge)
    - Complete vaccination data and renewal schedule stored on-chain
+   - Full vaccination information encoded in transaction memo
 
 ## Viewing Vaccination History
 
@@ -67,26 +69,32 @@ Search and filter vaccinations by:
 - Veterinary clinic address
 - Vaccination date
 - Notes or memo data
+- Transaction signature or hash
 
 ### Vaccination Types
 
-| Type | Icon | Status | Purpose |
-|------|------|--------|---------|
-| SPL Token Mint | ✙ | 🔐 On-Chain | Initial vaccination with on-chain token proof |
-| Vaccine Tx (Shot) | 💉 | ✓ Signed | Renewal shot with signature and memo data |
+| Type | Icon | Status | Purpose | Proof |
+|------|------|--------|---------|-------|
+| SPL Token Mint | ✙ | 🔐 On-Chain | Initial vaccination with on-chain token proof | Token Mint Address |
+| Vaccine Tx (Shot) | 💉 | ✓ Signed | Renewal shot with signature and memo data | Transaction Hash |
 
 ### Vaccination Details
 
 Click "📋 View Details" on any vaccination to see:
 - **Type**: SPL Token Mint or Vaccine Tx (Shot)
 - **Vaccine Information**: Name, date, veterinary clinic
-- **Token Mint Address**: (SPL Token Mint type only)
-- **Transaction Hash**: (both types)
-- **Memo Data**: Complete vaccination information in JSON format (Vaccine Tx type only)
+- **Token Mint Address**: (SPL Token Mint type only) - the unique token representing this vaccination
+- **Transaction Hash**: The blockchain transaction signature
+- **Memo Data**: Complete vaccination information in JSON format (Vaccine Tx type only) including renewal details
 - **Record Created**: Timestamp
 - **Solscan Link**: View transaction on blockchain explorer
 
 ## Vaccination Features
+
+### Authorization Model
+- **Pet Owner**: Can record vaccinations and see all vaccination history
+- **Authorized Veterinarian**: Added via PetTracker authorization, can record vaccinations for authorized pets
+- **Access Control**: Only pet owner or authorized vet (via SAS Credential) can record vaccinations
 
 ### Search & Filter
 - Real-time search by vaccine name, vet address, date, or notes
@@ -101,6 +109,11 @@ Click "📋 View Details" on any vaccination to see:
 - View any vaccination on Solscan blockchain explorer
 - Verify on-chain proof of vaccination
 - Access memo data for renewal vaccinations
+- Verify token mint addresses for initial vaccinations
+
+### Two-Step Vaccination Recording
+- **Initial Vaccination**: Uses SPL Token Mint as proof (one-time proof of vaccination)
+- **Renewal Shots**: Uses signed memo transactions (supports recurring vaccinations with schedule)
 
 ## Troubleshooting
 

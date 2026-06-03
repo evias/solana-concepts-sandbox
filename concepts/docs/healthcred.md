@@ -8,7 +8,7 @@ HealthCred is a decentralized registry for healthcare worker credentials and ach
 
 Healthcare workers can register their professional credentials by providing:
 - **Full Name**: Your official name
-- **Date of Birth**: For verification purposes
+- **Date of Birth**: For verification purposes (YYYY-MM-DD format)
 - **Email Address**: Contact information
 - **Professional Title**: Your role (e.g., Dentist, Nurse, Doctor)
 - **DID Document**: A W3C-compliant DID document containing:
@@ -16,11 +16,13 @@ Healthcare workers can register their professional credentials by providing:
   - `authentication` array with your authentication keys
 
 Upon registration, a unique credential is created and:
-- Stored on-chain with full DID document in a memo transaction
+- An unsigned transaction is prepared for you to sign with your wallet
+- After you sign and submit, the DID document is stored on-chain in a memo transaction
+- An SPL token (NFT) mint is created for on-chain verification
 - Assigned a SHA2-256 hash for data integrity verification
-- Linked to an SPL token mint for On-chain verification
+- Your credential is assigned a unique SAS Credential ID for future features
 
-**Note**: Each wallet address can only have one active credential.
+**Note**: Each wallet address can have one active credential registered at a time.
 
 ### Earn Badges
 
@@ -42,12 +44,14 @@ Document your professional qualifications by uploading certification files:
   - Calculates SHA2-256 hash of file content
   - Creates on-chain transaction memo with filename and hash
   - Stores file metadata for audit trail
+  - Stores file on server for persistent access
 
 Each certification:
-- Requires you to sign the transaction with your connected wallet
-- Creates an SPL token mint
+- Requires you to sign a transaction with your connected wallet (you pay for the transaction)
+- Creates an on-chain memo recording the certification metadata and file hash
+- Stores the file on the server for download access
 - Is verifiable via the on-chain memo containing the file hash
-- Records issuer wallet for accountability
+- Records issuer (uploader) wallet for accountability
 
 ### View Registered Credentials
 
@@ -68,16 +72,19 @@ Access DID documents programmatically:
 
 1. **Connect Your Wallet**: Click "Connect Wallet" and approve Phantom wallet connection
 2. **Register Credential**: Fill in your professional information and DID document
-3. **Verify On-Chain**: Use Solscan to verify your credential and transaction memo
-4. **Receive Badges**: Other professionals can send you achievement badges
-5. **Upload Certifications**: Document your qualifications by uploading files
-6. **Share**: Direct others to your credential or download your DID document
+3. **Sign Transaction**: Sign the transaction with your wallet via Phantom (you pay the fee)
+4. **Verify On-Chain**: Use Solscan to verify your credential and transaction memo
+5. **Receive Badges**: Other professionals can send you achievement badges
+6. **Upload Certifications**: Document your qualifications by uploading files (you sign and pay for each upload)
 
 ## On-Chain Data
 
 All HealthCred data is recorded on Solana devnet with:
-- **Memo Transactions**: Full DID documents and badge/certification metadata stored in transaction memos
-- **SPL Token Mints**: One token issued per credential, badge, and certification for reference
+- **Memo Transactions**: DID documents stored in transaction memos during registration
+- **Badge Memos**: Badge metadata (emoji, description) stored in transaction memos
+- **Certification Memos**: Certification metadata (filename, file hash) stored in transaction memos
+- **SPL Token Mints**: One NFT token issued per credential and per badge for reference
+- **SAS Credential**: Each credential is assigned a unique SAS Credential ID for future authorization features
 - **Solscan Links**: All transactions are verifiable at [Solscan](https://solscan.io/?cluster=devnet)
 
 ## DID Document Example
@@ -109,10 +116,15 @@ All HealthCred data is recorded on Solana devnet with:
 
 ## Technical Details
 
+- **Registration Flow**: 2-step process where user signs transaction in Phantom (user pays)
+- **Badge Creation**: 2-step process where issuer signs transaction (issuer pays)
+- **Certification Upload**: 2-step process where uploader signs transaction (uploader pays)
 - **Compute Budget**: 300k CUs for credential registration, 200k CUs for badges/certifications
 - **File Hashing**: SHA2-256 for all uploaded files
 - **Memo Program**: `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`
-- **Token Standard**: SPL tokens with 9 decimals
+- **Token Standard**: SPL tokens with 0 decimals (NFTs)
+- **File Storage**: Certifications stored on server at `/uploads/{credentialId}/{filename}`
+- **SAS Integration**: Each credential gets a unique SAS Credential ID for future multi-signer scenarios
 
 ## FAQ
 
@@ -123,10 +135,16 @@ A: Your credential on-chain is permanent. You can register with a new wallet to 
 A: Currently, credentials cannot be modified. Register a new credential with updated information if needed.
 
 **Q: Are my credentials visible to everyone?**
-A: Yes, all registered credentials are public on the blockchain. Only the metadata is visible; your full DID document can be downloaded via the dedicated endpoint.
+A: Yes, all registered credentials are public on the blockchain. Only the metadata is visible; your full DID document can be downloaded via the dedicated endpoint (`/api/v1/healthcred/did/:didId`).
 
 **Q: How long does registration take?**
-A: Registration is typically confirmed within 15-30 seconds after signing the transaction.
+A: Registration is typically confirmed within 15-30 seconds after signing the transaction in Phantom.
 
-**Q: Can I download badges and certifications?**
-A: Badges and certifications are stored on-chain in transaction memos. Use Solscan to access the full data via transaction hashes.
+**Q: Can I download my DID document?**
+A: Yes, use the `/api/v1/healthcred/did/:didId` endpoint to download your W3C-compliant DID document.
+
+**Q: Who pays for transactions?**
+A: The user initiating the action pays the transaction fee:
+- Registration: Credential owner pays
+- Badges: Badge issuer pays
+- Certifications: File uploader pays
