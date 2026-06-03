@@ -7,8 +7,6 @@
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
     <script src="/assets/alpinejs.min.js" defer></script>
-    <!-- Client-side logger -->
-    <script src="/assets/logger.js"></script>
     <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Solana Web3.js -->
@@ -563,16 +561,14 @@
                 async init() {
                     // On page load, if user already has a wallet connected (from localStorage or other source)
                     // Load their credentials list
-                    const log = window.createLogger('concept/carecircle');
-                    log.info('CareCircle initialized', { userAddress: this.userAddress });
+                    console.log('CareCircle initialized, userAddress:', this.userAddress);
                     if (this.userAddress && this.browsing.credentials.length === 0) {
-                        log.info('Loading credentials for', { userAddress: this.userAddress });
+                        console.log('Loading credentials for:', this.userAddress);
                         await this.loadCredentialsList();
                     }
                 },
 
                 async connectPhantom() {
-                    const log = window.createLogger('concept/carecircle');
                     try {
                         if (!window.solana) {
                             alert('Phantom wallet not installed. Please install it from https://phantom.app');
@@ -584,7 +580,7 @@
                         this.showWalletModal = false;
                         await this.loadCredentialsList();
                     } catch (error) {
-                        log.error('Error connecting Phantom', { error: error.message });
+                        console.error('Error connecting Phantom:', error);
                         alert('Failed to connect Phantom wallet');
                         this.loadingSigners = false;
                     }
@@ -620,21 +616,20 @@
                 },
 
                 async loadCredentialsList() {
-                    const log = window.createLogger('concept/carecircle');
                     this.browsing.loading = true;
                     this.browsing.error = '';
                     this.loadingSigners = true;
-                    log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
+                    console.log('[CareCircle Browser] Loading credentials for wallet:', this.userAddress);
                     try {
                         const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
-                        log.info('[CareCircle Browser] Fetching', { url });
+                        console.log('[CareCircle Browser] Fetching:', url);
                         const response = await fetch(url);
-                        log.info('[CareCircle Browser] Response status', { status: response.status });
+                        console.log('[CareCircle Browser] Response status:', response.status);
                         if (!response.ok) {
                             throw new Error(`Failed to load credentials: ${response.status}`);
                         }
                         const data = await response.json();
-                        log.info('[CareCircle Browser] Received credentials', { credentials: data.credentials });
+                        console.log('[CareCircle Browser] Received credentials:', data.credentials);
                         
                         // Update properties directly for Alpine.js reactivity
                         this.browsing.credentials = data.credentials || [];
@@ -642,7 +637,7 @@
                         this.browsing.path = [];
                         this.browsing.error = '';
                         this.browsing.loading = false;
-                        log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
+                        console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                         
                         // Load authorized signers for each credential
                         for (const credential of this.browsing.credentials) {
@@ -650,7 +645,7 @@
                         }
                         this.loadingSigners = false;
                     } catch (error) {
-                        log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
+                        console.error('[CareCircle Browser] Error loading credentials:', error);
                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
                         this.browsing.loading = false;
                         this.loadingSigners = false;
@@ -679,42 +674,40 @@
                 },
 
                 async openCredential(credentialId) {
-                    const log = window.createLogger('concept/carecircle');
                     this.browsing.loading = true;
                     this.browsing.error = '';
-                    log.info('[CareCircle Browser] Opening credential', { credentialId });
+                    console.log('[CareCircle Browser] Opening credential:', credentialId);
                     try {
                         const url = `/api/v1/carecircle/files?wallet=${this.userAddress}&credentialId=${credentialId}`;
-                        log.info('[CareCircle Browser] Fetching files', { url });
+                        console.log('[CareCircle Browser] Fetching files:', url);
                         const response = await fetch(url);
                         if (!response.ok) {
                             throw new Error(`Failed to load files: ${response.status}`);
                         }
                         const data = await response.json();
-                        log.info('[CareCircle Browser] Received files', { files: data.files });
+                        console.log('[CareCircle Browser] Received files:', data.files);
                         
                         // Update properties directly for Alpine.js reactivity
                         this.browsing.files = data.files || [];
                         this.browsing.path = [credentialId];
                         this.browsing.error = '';
                         this.browsing.loading = false;
-                        log.info('[CareCircle Browser] Updated browsing.files', { count: this.browsing.files.length });
+                        console.log('[CareCircle Browser] Updated browsing.files:', this.browsing.files.length, 'items');
                     } catch (error) {
-                        log.error('[CareCircle Browser] Error loading files', { error: error.message });
+                        console.error('[CareCircle Browser] Error loading files:', error);
                         this.browsing.error = 'Failed to load files: ' + error.message;
                         this.browsing.loading = false;
                     }
                 },
 
                 async loadAuthorizedSigners(credential) {
-                    const log = window.createLogger('concept/carecircle');
                     try {
-                        log.info('[CareCircle] Fetching authorized signers for credential', { credentialId: credential.id });
+                        console.log('[CareCircle] Fetching authorized signers for credential:', credential.id);
                         const url = `/api/v1/carecircle/authorized-signers?wallet=${this.userAddress}&credentialId=${credential.id}`;
                         const response = await fetch(url);
                         
                         if (!response.ok) {
-                            log.warn('[CareCircle] Could not fetch signers', { status: response.status });
+                            console.warn('[CareCircle] Could not fetch signers:', response.status);
                             this.signersMap = {
                                 ...this.signersMap,
                                 [credential.id]: {
@@ -727,13 +720,13 @@
                         }
                         
                         const data = await response.json();
-                        log.info('[CareCircle] Fetched signers for credential', { credentialId: credential.id, signers: data.signers });
-                        log.info('[CareCircle] TEST - is array', { isArray: Array.isArray(data.signers) });
-                        log.info('[CareCircle] TEST - length', { length: data.signers ? data.signers.length : 'undefined' });
+                        console.log('[CareCircle] Fetched signers for', credential.id, ':', data.signers);
+                        console.log('[CareCircle] TEST - is array:', Array.isArray(data.signers));
+                        console.log('[CareCircle] TEST - length:', data.signers ? data.signers.length : 'undefined');
                         
                         // Store as plain array, not wrapped
                         const signerArray = Array.isArray(data.signers) ? [...data.signers] : [];
-                        log.info('[CareCircle] TEST - stored array', { storedArray: signerArray });
+                        console.log('[CareCircle] TEST - stored array:', signerArray);
                         
                         this.signersMap = {
                             ...this.signersMap,
@@ -743,9 +736,9 @@
                                 loaded: true
                             }
                         };
-                        log.info('[CareCircle] TEST - after store, count', { signerCount: this.signersMap[credential.id]?.signerCount });
+                        console.log('[CareCircle] TEST - after store, count:', this.signersMap[credential.id]?.signerCount);
                     } catch (error) {
-                        log.error('[CareCircle] Error loading signers', { error: error.message });
+                        console.error('[CareCircle] Error loading signers:', error);
                         this.signersMap = {
                             ...this.signersMap,
                             [credential.id]: {
@@ -758,8 +751,7 @@
                 },
 
                 async refreshCredentialsBrowser() {
-                    const log = window.createLogger('concept/carecircle');
-                    log.info('[CareCircle Browser] Refresh clicked', { path: this.browsing.path });
+                    console.log('[CareCircle Browser] Refresh clicked, path:', this.browsing.path);
                     if (this.browsing.path.length === 0) {
                         // Reload only credentials, not signers
                         await this.loadCredentialsOnly();
@@ -770,23 +762,22 @@
                 },
 
                 async loadCredentialsOnly() {
-                    const log = window.createLogger('concept/carecircle');
                     // Load only credentials without loading authorized signers
                     try {
                         this.browsing.loading = true;
                         this.browsing.error = '';
-                        log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
+                        console.log('[CareCircle Browser] Loading credentials for wallet:', this.userAddress);
                         const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
-                        log.info('[CareCircle Browser] Fetching', { url });
+                        console.log('[CareCircle Browser] Fetching:', url);
                         const response = await fetch(url);
-                        log.info('[CareCircle Browser] Response status', { status: response.status });
+                        console.log('[CareCircle Browser] Response status:', response.status);
                         
                         if (!response.ok) {
                             throw new Error(`Failed to load credentials: ${response.status}`);
                         }
                         
                         const data = await response.json();
-                        log.info('[CareCircle Browser] Received credentials', { credentials: data.credentials });
+                        console.log('[CareCircle Browser] Received credentials:', data.credentials);
                         
                         // Update properties directly for Alpine.js reactivity
                         this.browsing.credentials = data.credentials || [];
@@ -794,9 +785,9 @@
                         this.browsing.path = [];
                         this.browsing.error = '';
                         this.browsing.loading = false;
-                        log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
+                        console.log('[CareCircle Browser] Updated browsing.credentials:', this.browsing.credentials.length, 'items');
                     } catch (error) {
-                        log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
+                        console.error('[CareCircle Browser] Error loading credentials:', error);
                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
                         this.browsing.loading = false;
                     }
@@ -829,7 +820,6 @@
                 },
 
                 async submitFileUpload() {
-                    const log = window.createLogger('concept/carecircle');
                     if (!this.uploadForm.credentialId || !this.uploadForm.uploadName || !this.uploadForm.file) {
                         this.uploadError = 'Please select a credential, enter an upload name, and select a file';
                         return;
@@ -879,7 +869,7 @@
                                 document.querySelector('input[type="file"]').value = '';
                                 await this.loadCredentialsList();
                             } catch (error) {
-                                log.error('Error uploading file', { error: error.message });
+                                console.error('Error uploading file:', error);
                                 this.uploadError = error.message || 'Failed to upload file';
                             } finally {
                                 this.uploading = false;
@@ -887,14 +877,13 @@
                         };
                         reader.readAsArrayBuffer(this.uploadForm.file);
                     } catch (error) {
-                        log.error('Error reading file', { error: error.message });
+                        console.error('Error reading file:', error);
                         this.uploadError = 'Failed to read file';
                         this.uploading = false;
                     }
                 },
 
                 async submitAuthorizeCaregiverForm() {
-                    const log = window.createLogger('concept/carecircle');
                     if (!this.caregiverForm.credentialId || !this.caregiverForm.address) {
                         this.caregiverError = 'Please select a credential and enter a caregiver address';
                         return;
@@ -930,7 +919,7 @@
                             await this.loadAuthorizedSigners(updatedCredential);
                         }
                     } catch (error) {
-                        log.error('Error authorizing caregiver', { error: error.message });
+                        console.error('Error authorizing caregiver:', error);
                         this.caregiverError = error.message || 'Failed to authorize caregiver';
                     } finally {
                         this.authorizingCaregiver = false;
@@ -938,7 +927,6 @@
                 },
 
                 async openDocumentation() {
-                    const log = window.createLogger('concept/carecircle');
                     try {
                         const response = await fetch('/api/v1/carecircle/documentation');
                         if (response.ok) {
@@ -948,7 +936,7 @@
                             this.documentationContent = '<p>Documentation not available</p>';
                         }
                     } catch (error) {
-                        log.error('Error loading documentation', { error: error.message });
+                        console.error('Error loading documentation:', error);
                         this.documentationContent = '<p>Error loading documentation</p>';
                     }
                     this.showDocumentation = true;

@@ -7,8 +7,6 @@
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
     <script src="/assets/alpinejs.min.js" defer></script>
-    <!-- Client-side logger -->
-    <script src="/assets/logger.js"></script>
     <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Solana Web3.js -->
@@ -289,7 +287,7 @@
              <!-- Record Vaccination -->
              <section class="bg-white rounded-lg shadow-md p-6">
                  <h2 class="text-2xl font-bold mb-4">Record Vaccination</h2>
-                 <form @submit.prevent="recordVaccination(); const log = window.createLogger('concept/petvax'); log.info('[FORM] Form submitted')" class="space-y-4">
+                 <form @submit.prevent="recordVaccination(); console.log('[FORM] Form submitted')" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Vaccine Name</label>
@@ -647,32 +645,32 @@
                    },
                   
                   async init() {
-                     const log = window.createLogger('concept/petvax'); log.info('[INIT] petVax component initializing...');
+                     console.log('[INIT] petVax component initializing...');
                      await this.detectWallets();
                      this.checkStoredWallet();
-                     const log = window.createLogger('concept/petvax'); log.info('[INIT] userAddress after checkStoredWallet', { userAddress: this.userAddress });
+                     console.log('[INIT] userAddress after checkStoredWallet:', this.userAddress);
                      await this.loadPets();
-                     const log = window.createLogger('concept/petvax'); log.info('[INIT] petVax component initialized. Pets loaded', { count: this.availablePets.length });
+                     console.log('[INIT] petVax component initialized. Pets loaded:', this.availablePets.length);
                      
                      // Debug: check if form exists and is bound
                      setTimeout(() => {
                          const form = document.querySelector('form');
                          const submitBtn = document.querySelector('button[type="submit"]');
-                         const log = window.createLogger('concept/petvax'); log.info('[INIT] Form element found', { found: !!form });
-                         const log = window.createLogger('concept/petvax'); log.info('[INIT] Submit button found', { found: !!submitBtn });
+                         console.log('[INIT] Form element found:', !!form);
+                         console.log('[INIT] Submit button found:', !!submitBtn);
                          if (form) {
-                             const log = window.createLogger('concept/petvax'); log.info('[INIT] Form @submit attribute', { attr: form.getAttribute('@submit') });
+                             console.log('[INIT] Form @submit attribute:', form.getAttribute('@submit'));
                          }
                          if (submitBtn) {
-                             const log = window.createLogger('concept/petvax'); log.info('[INIT] Submit button disabled', { disabled: submitBtn.disabled });
-                             const log = window.createLogger('concept/petvax'); log.info('[INIT] Submit button display', { display: window.getComputedStyle(submitBtn).display });
-                             const log = window.createLogger('concept/petvax'); log.info('[INIT] Submit button visible', { visible: submitBtn.offsetHeight > 0 });
+                             console.log('[INIT] Submit button disabled:', submitBtn.disabled);
+                             console.log('[INIT] Submit button display:', window.getComputedStyle(submitBtn).display);
+                             console.log('[INIT] Submit button visible:', submitBtn.offsetHeight > 0);
                              
                              // Try attaching a direct click listener
                              submitBtn.addEventListener('click', () => {
-                                 const log = window.createLogger('concept/petvax'); log.info('[DIRECT-LISTENER] Submit button clicked directly!');
+                                 console.log('[DIRECT-LISTENER] Submit button clicked directly!');
                              });
-                             const log = window.createLogger('concept/petvax'); log.info('[INIT] Direct click listener attached to button');
+                             console.log('[INIT] Direct click listener attached to button');
                          }
                      }, 100);
                  },
@@ -680,7 +678,7 @@
                 async detectWallets() {
                     // Detection logic for Phantom
                     if (window.solana && window.solana.isPhantom) {
-                        const log = window.createLogger('concept/petvax'); log.info('Phantom wallet detected');
+                        console.log('Phantom wallet detected');
                     }
                 },
                 
@@ -701,11 +699,11 @@
                          this.userAddress = response.publicKey.toString();
                          localStorage.setItem('petvax_wallet', this.userAddress);
                          this.showWalletModal = false;
-                         const log = window.createLogger('concept/petvax'); log.info('[WALLET] Connected to Phantom', { userAddress: this.userAddress });
+                         console.log('[WALLET] Connected to Phantom:', this.userAddress);
                          // Reload available pets for the newly connected wallet
                          await this.loadPets();
                      } catch (error) {
-                         const log = window.createLogger('concept/petvax'); log.error('[WALLET] Error connecting to Phantom', { error: error.message });
+                         console.error('[WALLET] Error connecting to Phantom:', error);
                          alert('Failed to connect Phantom: ' + error.message);
                      }
                  },
@@ -762,16 +760,16 @@
                             alert('Failed to load pets');
                         }
                     } catch (error) {
-                        const log = window.createLogger('concept/petvax'); log.error('Error loading pets', { error: error.message });
+                        console.error('Error loading pets:', error);
                     }
                 },
                 
                  async loadSelectedPet() {
-                     const log = window.createLogger('concept/petvax'); log.info('[SELECT] loadSelectedPet called', { selectedPetId: this.selectedPetId });
+                     console.log('[SELECT] loadSelectedPet called with selectedPetId:', this.selectedPetId);
                      if (!this.selectedPetId) {
                          this.selectedPet = null;
                          this.vaccinations = [];
-                         const log = window.createLogger('concept/petvax'); log.info('[SELECT] No pet selected, cleared data');
+                         console.log('[SELECT] No pet selected, cleared data');
                          return;
                      }
                      
@@ -779,13 +777,13 @@
                          const response = await fetch(`/api/v1/pettracker/get?id=${this.selectedPetId}`);
                          if (response.ok) {
                              this.selectedPet = await response.json();
-                             const log = window.createLogger('concept/petvax'); log.info('[SELECT] Pet loaded', { name: this.selectedPet.name });
+                             console.log('[SELECT] Pet loaded:', this.selectedPet.name);
                              await this.loadVaccinationHistory();
                          } else {
                              alert('Failed to load pet');
                          }
                     } catch (error) {
-                        const log = window.createLogger('concept/petvax'); log.error('Error loading pet', { error: error.message });
+                        console.error('Error loading pet:', error);
                     }
                 },
                 
@@ -797,30 +795,30 @@
                          if (response.ok) {
                              const data = await response.json();
                              this.vaccinations = data.vaccinations;
-                             const log = window.createLogger('concept/petvax'); log.info('[HISTORY] Vaccinations loaded', { count: this.vaccinations.length });
+                             console.log('[HISTORY] Vaccinations loaded:', this.vaccinations);
                              if (this.vaccinations.length > 0) {
-                                 const log = window.createLogger('concept/petvax'); log.info('[HISTORY] First vaccination', { vaccination: this.vaccinations[0] });
+                                 console.log('[HISTORY] First vaccination:', JSON.stringify(this.vaccinations[0], null, 2));
                              }
                          }
                      } catch (error) {
-                         const log = window.createLogger('concept/petvax'); log.error('Error loading vaccination history', { error: error.message });
+                         console.error('Error loading vaccination history:', error);
                      }
                  },
                 
                   async recordVaccination() {
-                       const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] recordVaccination called');
-                       const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] this.selectedPetId', { selectedPetId: this.selectedPetId });
-                       const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] this.userAddress', { userAddress: this.userAddress });
-                       const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] this.vaccinationForm', { form: this.vaccinationForm });
+                       console.log('[SUBMIT] recordVaccination called');
+                       console.log('[SUBMIT] this.selectedPetId:', this.selectedPetId);
+                       console.log('[SUBMIT] this.userAddress:', this.userAddress);
+                       console.log('[SUBMIT] this.vaccinationForm:', this.vaccinationForm);
 
                        if (!this.selectedPetId) {
-                           const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] BLOCKED: No pet selected');
+                           console.log('[SUBMIT] BLOCKED: No pet selected');
                            alert('Please select a pet');
                            return;
                        }
                        
                        if (!this.userAddress) {
-                           const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] BLOCKED: No wallet connected');
+                           console.log('[SUBMIT] BLOCKED: No wallet connected');
                            alert('Please connect your wallet');
                            return;
                        }
@@ -832,7 +830,7 @@
                                return;
                            }
                            
-                           const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] Validation passed, proceeding with message signing');
+                           console.log('[SUBMIT] Validation passed, proceeding with message signing');
                            
                            // Step 1: Create message to sign
                            this.signingStatus = 'signing';
@@ -841,7 +839,7 @@
                            this.solscanUrl = '';
                            
                            const message = `Record vaccination for pet ${this.selectedPetId}: ${this.vaccinationForm.vaccineName} on ${this.vaccinationForm.vaccinationDate}`;
-                           const log = window.createLogger('concept/petvax'); log.info('[PHANTOM] Message to sign', { message });
+                           console.log('[PHANTOM] Message to sign:', message);
                            
                            // Step 2: Request message signature from Phantom
                            if (!window.solana) {
@@ -852,32 +850,32 @@
                            
                            // Ensure wallet is connected
                            if (!window.solana.isConnected) {
-                               const log = window.createLogger('concept/petvax'); log.info('[PHANTOM] Wallet not connected, attempting to reconnect...');
+                               console.log('[PHANTOM] Wallet not connected, attempting to reconnect...');
                                try {
                                    await window.solana.connect();
-                                   const log = window.createLogger('concept/petvax'); log.info('[PHANTOM] Reconnected to wallet');
+                                   console.log('[PHANTOM] Reconnected to wallet');
                                } catch (err) {
-                                   const log = window.createLogger('concept/petvax'); log.error('[PHANTOM] Failed to reconnect', { err: err.message });
+                                   console.error('[PHANTOM] Failed to reconnect:', err);
                                    alert('Phantom wallet is not connected. Please connect your wallet and try again.');
                                    this.signingStatus = '';
                                    return;
                                }
                            }
                            
-                           const log = window.createLogger('concept/petvax'); log.info('[PHANTOM] Requesting message signature...');
+                           console.log('[PHANTOM] Requesting message signature...');
                            const encodedMessage = new TextEncoder().encode(message);
                            const { signature } = await window.solana.signMessage(encodedMessage);
                            const signatureHex = Array.from(new Uint8Array(signature))
                                .map(b => ('00' + b.toString(16)).slice(-2))
                                .join('');
                            
-                            this.transactionSignature = signatureHex;
-                            this.signingStatus = 'signed';
-                            const log = window.createLogger('concept/petvax'); log.info('[PHANTOM] Message signed', { sig: signatureHex.substring(0, 20) + '...' });
-                            
+                           this.transactionSignature = signatureHex;
+                           this.signingStatus = 'signed';
+                           console.log('[PHANTOM] Message signed:', signatureHex.substring(0, 20) + '...');
+                           
                            // Step 3: Send signed message + vaccination data to backend
                            this.signingStatus = 'submitted';
-                           const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] Sending to backend to create SPL token...');
+                           console.log('[SUBMIT] Sending to backend to create SPL token...');
                            
                            const recordResponse = await fetch('/api/v1/petvax/record-with-spl', {
                                method: 'POST',
@@ -897,7 +895,7 @@
                            
                            if (recordResponse.ok) {
                                const result = await recordResponse.json();
-                               const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] Vaccination recorded with SPL token', { result });
+                               console.log('[SUBMIT] Vaccination recorded with SPL token:', result);
                                
                                this.transactionHash = result.onChain.transactionSignature;
                                this.solscanUrl = result.metadata.solscanUrl;
@@ -920,7 +918,7 @@
                                this.signingStatus = 'confirmed';
                            } else {
                                const error = await recordResponse.json();
-                               const log = window.createLogger('concept/petvax'); log.info('[SUBMIT] Error from backend', { error });
+                               console.log('[SUBMIT] Error from backend:', error);
                                alert('Failed to record vaccination: ' + error.error);
                            }
                            
@@ -929,8 +927,8 @@
                            this.transactionHash = '';
                            
                        } catch (error) {
-                           const log = window.createLogger('concept/petvax'); log.error('[SUBMIT] Error recording vaccination', { error: error.message });
-                           const log = window.createLogger('concept/petvax'); log.error('[SUBMIT] Error stack', { stack: error.stack });
+                           console.error('[SUBMIT] Error recording vaccination:', error);
+                           console.error('[SUBMIT] Error stack:', error.stack);
                            this.signingStatus = '';
                            
                            if (error.message && error.message.includes('User rejected')) {
@@ -950,15 +948,15 @@
                               this.showDocumentation = true;
                           }
                       } catch (error) {
-                          const log = window.createLogger('concept/petvax'); log.error('Error loading documentation', { error: error.message });
+                          console.error('Error loading documentation:', error);
                           alert('Failed to load documentation');
                       }
                    },
 
                    openRecordNewShotModal(vaccination) {
-                       const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Opening modal for vaccination', { id: vaccination.id });
-                       const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Full vaccination object', { vaccination });
-                       const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] mint_address value', { mint: vaccination.mint_address });
+                       console.log('[NEW-SHOT] Opening modal for vaccination:', vaccination.id);
+                       console.log('[NEW-SHOT] Full vaccination object:', JSON.stringify(vaccination, null, 2));
+                       console.log('[NEW-SHOT] mint_address value:', vaccination.mint_address);
                        this.currentVaccinationForShot = vaccination;
                        this.newShotForm = {
                            mustRenew: false,
@@ -968,13 +966,13 @@
                            vaccineUrl: '',
                            clinicUrl: ''
                        };
-                       const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] newShotForm after init', { form: this.newShotForm });
+                       console.log('[NEW-SHOT] newShotForm after init:', this.newShotForm);
                        this.newShotStatus = '';
                        this.showRecordNewShotModal = true;
                    },
 
                    openVaccinationDetailsModal(vaccination) {
-                       const log = window.createLogger('concept/petvax'); log.info('[DETAILS] Opening details modal for vaccination', { id: vaccination.id });
+                       console.log('[DETAILS] Opening details modal for vaccination:', vaccination.id);
                        this.selectedVaccinationForDetails = JSON.parse(JSON.stringify(vaccination));
                        this.showVaccinationDetailsModal = true;
                    },
@@ -992,7 +990,7 @@
                    },
 
                    async submitRecordNewShot() {
-                       const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Submitting new shot form');
+                       console.log('[NEW-SHOT] Submitting new shot form');
 
                        if (!this.currentVaccinationForShot || !this.currentVaccinationForShot.mint_address) {
                            alert('No vaccination token found');
@@ -1013,7 +1011,7 @@
                            // Step 1: Create message to sign
                            this.newShotStatus = 'signing';
                            const message = `Hello, I am the pet named ${this.selectedPet.name}, this is my noseprint!`;
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Message to sign', { message });
+                           console.log('[NEW-SHOT] Message to sign:', message);
 
                            // Step 2: Request message signature from Phantom
                            if (!window.solana) {
@@ -1033,20 +1031,19 @@
                                }
                            }
 
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Requesting message signature...');
+                           console.log('[NEW-SHOT] Requesting message signature...');
                            const encodedMessage = new TextEncoder().encode(message);
                            const { signature } = await window.solana.signMessage(encodedMessage);
                            const petSignature = Array.from(new Uint8Array(signature))
                                .map(b => ('00' + b.toString(16)).slice(-2))
-                                .join('');
+                               .join('');
 
-                            this.newShotStatus = 'signed';
-                            const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Message signed', { sig: petSignature.substring(0, 20) + '...' });
-
+                           this.newShotStatus = 'signed';
+                           console.log('[NEW-SHOT] Message signed:', petSignature.substring(0, 20) + '...');
 
                            // Step 3: Send to backend for transaction preparation
                            this.newShotStatus = 'submitting';
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Sending to backend...');
+                           console.log('[NEW-SHOT] Sending to backend...');
 
                            const prepareResponse = await fetch('/api/v1/petvax/prepare', {
                                method: 'POST',
@@ -1076,14 +1073,14 @@
                            }
 
                            const txData = await prepareResponse.json();
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Transaction prepared', { txData });
+                           console.log('[NEW-SHOT] Transaction prepared:', txData);
 
                            // Step 4: Sign and send transaction with Phantom
                            const transaction = solanaWeb3.Transaction.from(Uint8Array.fromBase64(txData.transaction));
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Requesting transaction signature...');
+                           console.log('[NEW-SHOT] Requesting transaction signature...');
 
                            const { signature: txSignature } = await window.solana.signAndSendTransaction(transaction);
-                           const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Transaction sent', { txSignature });
+                           console.log('[NEW-SHOT] Transaction sent:', txSignature);
 
                             // Step 5: Record transaction on backend
                             // Create memo data structure to store in notes
@@ -1130,7 +1127,7 @@
 
                            if (recordResponse.ok) {
                                const result = await recordResponse.json();
-                               const log = window.createLogger('concept/petvax'); log.info('[NEW-SHOT] Shot recorded', { result });
+                               console.log('[NEW-SHOT] Shot recorded:', result);
 
                                this.newShotStatus = 'confirmed';
                                alert('✓ New shot recorded and signed on-chain!');
@@ -1145,7 +1142,7 @@
                                throw new Error(error.error || 'Failed to record shot');
                            }
                        } catch (error) {
-                           const log = window.createLogger('concept/petvax'); log.error('[NEW-SHOT] Error', { error: error.message });
+                           console.error('[NEW-SHOT] Error:', error);
                            this.newShotStatus = '';
 
                            if (error.message.includes('User rejected')) {
@@ -1158,16 +1155,16 @@
              };
          }
          
-          // Global listener to catch form submissions
-          document.addEventListener('submit', (e) => {
-              const log = window.createLogger('concept/petvax'); log.info('[GLOBAL] Form submit event caught', { tagName: e.target.tagName });
-              log.info('[GLOBAL] Form has @submit', { attr: e.target.getAttribute('@submit') });
+         // Global listener to catch form submissions
+         document.addEventListener('submit', (e) => {
+             console.log('[GLOBAL] Form submit event caught:', e.target.tagName);
+             console.log('[GLOBAL] Form has @submit?', e.target.getAttribute('@submit'));
          }, true);
          
          // Global listener to catch button clicks
          document.addEventListener('click', (e) => {
              if (e.target.type === 'submit') {
-                 const log = window.createLogger('concept/petvax'); log.info('[GLOBAL] Submit button clicked');
+                 console.log('[GLOBAL] Submit button clicked');
              }
          }, true);
      </script>
