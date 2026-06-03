@@ -7,6 +7,8 @@
     <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
     <link href="/assets/base.min.css" rel="stylesheet">
     <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Client-side logger -->
+    <script src="/assets/logger.js"></script>
     <!-- Markdown parser -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- Solana Web3.js -->
@@ -107,10 +109,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
-                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
+                </button>
             </div>
         </header>
 
@@ -557,6 +559,7 @@
 
     <script>
         function petDiet() {
+            const log = window.createLogger('concept/petdiet');
             return {
                 userAddress: '',
                 selectedPetId: '',
@@ -609,7 +612,7 @@
                         this.showWalletModal = false;
                         this.loadPets();
                     } catch (error) {
-                        console.error('Error connecting Phantom:', error);
+                        log.error('Error connecting Phantom', { error: error.message });
                         alert('Failed to connect Phantom wallet');
                     }
                 },
@@ -685,7 +688,7 @@
                             (pet.authorizedVets && this.isVetAuthorized(pet))
                         );
                     } catch (error) {
-                        console.error('Error loading pets:', error);
+                        log.error('Error loading pets', { error: error.message });
                     }
                 },
 
@@ -719,7 +722,7 @@
                             await this.loadNutritionPlans();
                         }
                     } catch (error) {
-                        console.error('Error loading pet:', error);
+                        log.error('Error loading pet', { error: error.message });
                     }
                 },
 
@@ -732,7 +735,7 @@
                             this.nutritionPlans = await response.json();
                         }
                     } catch (error) {
-                        console.error('Error loading nutrition plans:', error);
+                        log.error('Error loading nutrition plans', { error: error.message });
                         this.nutritionPlans = [];
                     }
                 },
@@ -875,7 +878,7 @@
                             alert('Failed to create nutrition plan: ' + error.error);
                         }
                     } catch (error) {
-                        console.error('Error submitting nutrition plan:', error);
+                        log.error('Error submitting nutrition plan', { error: error.message });
                         alert('Error: ' + error.message);
                     } finally {
                         this.formSubmitInProgress = false;
@@ -973,7 +976,7 @@
                             this.feedingErrorMessage = 'Failed to log feeding: ' + error.error;
                         }
                     } catch (error) {
-                        console.error('Error submitting feeding action:', error);
+                        log.error('Error submitting feeding action', { error: error.message });
                         this.feedingErrorMessage = 'Error: ' + error.message;
                     } finally {
                         this.feedingSubmitInProgress = false;
@@ -996,7 +999,7 @@
                             this.feedingHistory = await response.json();
                         }
                     } catch (error) {
-                        console.error('Error loading feeding history:', error);
+                        log.error('Error loading feeding history', { error: error.message });
                         this.feedingHistory = [];
                     }
                 },
@@ -1010,7 +1013,7 @@
                             this.showDocumentation = true;
                         }
                     } catch (error) {
-                        console.error('Error loading documentation:', error);
+                        log.error('Error loading documentation', { error: error.message });
                         alert('Failed to load documentation');
                     }
                 },

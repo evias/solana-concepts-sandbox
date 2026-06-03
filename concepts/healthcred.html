@@ -11,6 +11,8 @@
     <!-- Solana Web3.js library for transaction handling -->
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.95.0/lib/index.iife.js"></script>
     <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Client-side logger -->
+    <script src="/assets/logger.js"></script>
     <style>
         input[type="file"] {
             cursor: pointer;
@@ -79,10 +81,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
-                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
+                </button>
             </div>
         </header>
 
@@ -631,6 +633,7 @@
 
     <script>
         function healthCred() {
+            const log = window.createLogger('concept/healthcred');
             return {
                 userAddress: null,
                 showWalletModal: false,
@@ -757,6 +760,7 @@
                 },
 
                 async loadCredentials(offset = 0) {
+                    const log = window.createLogger('concept/healthcred');
                     this.loading = true;
                     this.displayedCredentialsCount = 10; // Reset displayed count when loading
                     try {
@@ -771,35 +775,38 @@
                             this.loadCredentialCertifications(cred.id);
                         }
                     } catch (err) {
-                        console.error('Error loading credentials:', err);
+                        log.error('Error loading credentials', { err });
                     } finally {
                         this.loading = false;
                     }
                 },
 
                 async loadCredentialBadges(credentialId) {
+                    const log = window.createLogger('concept/healthcred');
                     try {
                         const res = await fetch(`/api/v1/healthcred/badges/${credentialId}`);
                         const data = await res.json();
                         this.credentialBadges[credentialId] = data.badges || [];
                     } catch (err) {
-                        console.error('Error loading badges for credential:', credentialId, err);
+                        log.error('Error loading badges for credential', { credentialId, err });
                         this.credentialBadges[credentialId] = [];
                     }
                 },
 
                 async loadCredentialCertifications(credentialId) {
+                    const log = window.createLogger('concept/healthcred');
                     try {
                         const res = await fetch(`/api/v1/healthcred/certifications/${credentialId}`);
                         const data = await res.json();
                         this.credentialCertifications[credentialId] = data.certifications || [];
                     } catch (err) {
-                        console.error('Error loading certifications for credential:', credentialId, err);
+                        log.error('Error loading certifications for credential', { credentialId, err });
                         this.credentialCertifications[credentialId] = [];
                     }
                 },
 
                 async loadDocumentation() {
+                    const log = window.createLogger('concept/healthcred');
                     try {
                         // Wait for marked to be available
                         let attempts = 0;
@@ -825,7 +832,7 @@
                             this.documentationContent = '<p>Error: Markdown parser not available</p>';
                         }
                     } catch (err) {
-                        console.error('Error loading documentation:', err);
+                        log.error('Error loading documentation', { err: err.message });
                         this.documentationContent = '<p>Error loading documentation: ' + err.message + '</p>';
                     }
                 },
@@ -835,6 +842,7 @@
                 },
 
                 async submitRegistration() {
+                    const log = window.createLogger('concept/healthcred');
                     this.registerError = '';
                     this.registerProgress = '';
                     
@@ -846,10 +854,10 @@
                     this.registering = true;
                     try {
                         this.registerProgress = '⏳ Validating credential data...';
-                        console.log('[HealthCred] Starting registration for wallet:', this.userAddress);
-                        console.log('[HealthCred] Full name:', this.form.fullName);
-                        console.log('[HealthCred] Profession:', this.form.profession);
-                        console.log('[HealthCred] Email:', this.form.email);
+                        log.info('[HealthCred] Starting registration for wallet', { wallet: this.userAddress });
+                        log.info('[HealthCred] Full name', { fullName: this.form.fullName });
+                        log.info('[HealthCred] Profession', { profession: this.form.profession });
+                        log.info('[HealthCred] Email', { email: this.form.email });
 
                         this.registerProgress = '📤 Creating unsigned transaction...';
                         const res = await fetch('/api/v1/healthcred/register', {
@@ -867,15 +875,15 @@
 
                         if (!res.ok) {
                             const error = await res.json();
-                            console.error('[HealthCred] Registration error:', error);
+                            log.error('[HealthCred] Registration error', { error });
                             throw new Error(error.error || 'Registration failed');
                         }
 
                         const result = await res.json();
                         const { registrationId, transaction: base64Tx } = result;
                         
-                        console.log('[HealthCred] Unsigned transaction prepared by backend');
-                        console.log('[HealthCred] Registration ID:', registrationId);
+                        log.info('[HealthCred] Unsigned transaction prepared by backend');
+                        log.info('[HealthCred] Registration ID', { registrationId });
 
                         // Step 2: Sign with Phantom
                         if (!window.solana) {
@@ -892,7 +900,7 @@
                             const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
                             transaction = window.solanaWeb3.Transaction.from(txBuffer);
                         } catch (txErr) {
-                            console.error('[HealthCred] Failed to deserialize registration transaction:', txErr);
+                            log.error('[HealthCred] Failed to deserialize registration transaction', { txErr });
                             throw new Error('Failed to deserialize transaction: ' + txErr.message);
                         }
                         
@@ -900,7 +908,7 @@
                         const signedTxBuffer = signedTx.serialize();
                         const signedBase64 = signedTxBuffer.toString('base64');
                         
-                        console.log('[HealthCred] Registration transaction signed by user');
+                        log.info('[HealthCred] Registration transaction signed by user');
 
                         // Step 3: Submit signed transaction
                         this.registerProgress = '📡 Broadcasting transaction...';
@@ -915,17 +923,17 @@
 
                         if (!submitRes.ok) {
                             const error = await submitRes.json();
-                            console.error('[HealthCred] Submission error:', error);
+                            log.error('[HealthCred] Submission error', { error });
                             throw new Error(error.error || 'Transaction submission failed');
                         }
 
                         this.registerProgress = '✅ Credential registered successfully!';
-                        console.log('[HealthCred] Registration successful!');
+                        log.info('[HealthCred] Registration successful!');
                         
                         const submitResult = await submitRes.json();
-                        console.log('[HealthCred] Credential ID:', submitResult.credential.id);
-                        console.log('[HealthCred] SPL Mint:', submitResult.onChain.mint);
-                        console.log('[HealthCred] Transaction:', submitResult.onChain.transactionSignature);
+                        log.info('[HealthCred] Credential ID', { credentialId: submitResult.credential.id });
+                        log.info('[HealthCred] SPL Mint', { mint: submitResult.onChain.mint });
+                        log.info('[HealthCred] Transaction', { txSignature: submitResult.onChain.transactionSignature });
                         
                         setTimeout(() => {
                             alert('✅ Credential registered successfully!\n\nView it in the "Registered Credentials" section below.');
@@ -934,7 +942,7 @@
                             this.loadCredentials();
                         }, 1500);
                     } catch (err) {
-                        console.error('[HealthCred] Registration failed:', err);
+                        log.error('[HealthCred] Registration failed', { err: err.message });
                         this.registerError = err.message;
                         this.registerProgress = '';
                     } finally {
@@ -947,6 +955,7 @@
                 },
 
                 async submitCertification() {
+                    const log = window.createLogger('concept/healthcred');
                     this.certError = '';
                     
                     if (!this.userAddress) {
@@ -991,7 +1000,7 @@
                         const result = await res.json();
                         const { certificationRegistrationId, transaction: base64Tx } = result;
                         
-                         console.log('[HealthCred] Unsigned certification transaction created');
+                        log.info('[HealthCred] Unsigned certification transaction created');
 
                         // Step 2: Sign with Phantom
                         if (!window.solana) {
@@ -1007,7 +1016,7 @@
                             const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
                             transaction = window.solanaWeb3.Transaction.from(txBuffer);
                         } catch (txErr) {
-                            console.error('[HealthCred] Failed to deserialize cert transaction:', txErr);
+                            log.error('[HealthCred] Failed to deserialize cert transaction', { txErr });
                             throw new Error('Failed to deserialize transaction: ' + txErr.message);
                         }
                         
@@ -1015,7 +1024,7 @@
                         const signedTxBuffer = signedTx.serialize();
                         const signedBase64 = signedTxBuffer.toString('base64');
 
-                        console.log('[HealthCred] Certification transaction signed');
+                        log.info('[HealthCred] Certification transaction signed');
 
                         // Step 3: Submit signed transaction
                         const submitRes = await fetch('/api/v1/healthcred/submit-signed-certification-transaction', {
@@ -1050,6 +1059,7 @@
                 },
 
                 async submitBadge() {
+                    const log = window.createLogger('concept/healthcred');
                     this.badgeError = '';
                     this.sendingBadge = true; // Prevent re-clicks
                     
@@ -1070,7 +1080,7 @@
                     try {
                         // Step 1: Create unsigned transaction
                         this.badgeProgress = '📝 Creating badge transaction...';
-                        console.log('[HealthCred] Step 1: Creating unsigned badge transaction');
+                        log.info('[HealthCred] Step 1: Creating unsigned badge transaction');
                         const res = await fetch('/api/v1/healthcred/badges', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -1090,11 +1100,11 @@
                         const result = await res.json();
                         const { badgeRegistrationId, transaction: base64Tx } = result;
                         
-                        console.log('[HealthCred] Unsigned badge transaction created');
+                        log.info('[HealthCred] Unsigned badge transaction created');
 
                         // Step 2: Sign with Phantom
                         this.badgeProgress = '🔑 Waiting for Phantom signature...';
-                        console.log('[HealthCred] Step 2: Requesting Phantom signature');
+                        log.info('[HealthCred] Step 2: Requesting Phantom signature');
                         
                         if (!window.solana) {
                             throw new Error('Phantom wallet not available');
@@ -1107,26 +1117,26 @@
                         let transaction;
                         try {
                             const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
-                            console.log('[HealthCred] Deserialized transaction buffer, size:', txBuffer.length);
+                            log.info('[HealthCred] Deserialized transaction buffer', { size: txBuffer.length });
                             transaction = window.solanaWeb3.Transaction.from(txBuffer);
-                            console.log('[HealthCred] Transaction object created');
+                            log.info('[HealthCred] Transaction object created');
                         } catch (txErr) {
-                            console.error('[HealthCred] Failed to deserialize transaction:', txErr);
+                            log.error('[HealthCred] Failed to deserialize transaction', { txErr });
                             throw new Error('Failed to deserialize transaction: ' + txErr.message);
                         }
                         
                         try {
-                            console.log('[HealthCred] Calling window.solana.signTransaction()...');
+                            log.info('[HealthCred] Calling window.solana.signTransaction()...');
                             const signedTx = await window.solana.signTransaction(transaction);
-                            console.log('[HealthCred] Phantom signature received');
+                            log.info('[HealthCred] Phantom signature received');
                             const signedTxBuffer = signedTx.serialize();
                             const signedBase64 = signedTxBuffer.toString('base64');
 
-                            console.log('[HealthCred] Badge transaction signed, size:', signedBase64.length);
+                            log.info('[HealthCred] Badge transaction signed', { size: signedBase64.length });
 
                             // Step 3: Submit signed transaction
                             this.badgeProgress = '📡 Broadcasting transaction...';
-                            console.log('[HealthCred] Step 3: Submitting signed transaction');
+                            log.info('[HealthCred] Step 3: Submitting signed transaction');
                             const submitRes = await fetch('/api/v1/healthcred/submit-signed-badge-transaction', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -1145,11 +1155,11 @@
                             this.showBadgeModal = false;
                             this.badgeProgress = '';
                         } catch (signErr) {
-                            console.error('[HealthCred] Phantom signing error:', signErr);
+                            log.error('[HealthCred] Phantom signing error', { signErr });
                             throw new Error('Phantom signing failed: ' + (signErr.message || signErr.toString()));
                         }
                     } catch (err) {
-                        console.error('[HealthCred] Badge error:', err);
+                        log.error('[HealthCred] Badge error', { err: err.message });
                         this.badgeError = err.message || err.toString() || 'Unexpected error';
                         this.badgeProgress = '';
                     } finally {
