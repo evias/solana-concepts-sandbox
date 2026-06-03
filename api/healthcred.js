@@ -12,6 +12,8 @@ const web3 = require('@solana/web3.js');
 const { createMint, getOrCreateAssociatedTokenAccount, mintTo, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress } = require('@solana/spl-token');
 const { payer } = require('./payer');
 const { credentialDb, badgeDb, certificationDb } = require('./database');
+const { createLogger } = require('./logger');
+const log = createLogger('concept/healthcred');
 
 const router = express.Router();
 const connection = new web3.Connection(process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com');
@@ -55,62 +57,62 @@ router.post('/register', async (req, res) => {
   try {
     const { walletAddress, fullName, dateOfBirth, email, profession, didDocumentJson } = req.body;
     
-    console.log('[HealthCred] Received registration request');
-    console.log('[HealthCred] Wallet:', walletAddress);
-    console.log('[HealthCred] Full Name:', fullName);
-    console.log('[HealthCred] Profession:', profession);
-    console.log('[HealthCred] Email:', email);
+    log.info('Received registration request');
+    log.info('Wallet:', { walletAddress });
+    log.info('Full Name:', { fullName });
+    log.info('Profession:', { profession });
+    log.info('Email:', { email });
     
     // Validate required fields
     if (!walletAddress || !fullName || !dateOfBirth || !email || !profession || !didDocumentJson) {
-      console.log('[HealthCred] Validation failed: Missing required fields');
+      log.info('Validation failed: Missing required fields');
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
     // Validate wallet address format
     if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(walletAddress)) {
-      console.log('[HealthCred] Validation failed: Invalid wallet address format');
+      log.info('Validation failed: Invalid wallet address format');
       return res.status(400).json({ error: 'Invalid wallet address format' });
     }
     
     // Validate DID document (no longer checking for duplicate wallet addresses)
     // A wallet can have multiple credentials; uniqueness is on did_document_hash
-    console.log('[HealthCred] Validating DID document...');
+    log.info('Validating DID document...');
     let didDoc;
     try {
       didDoc = JSON.parse(didDocumentJson);
     } catch (err) {
-      console.log('[HealthCred] DID document parsing failed:', err.message);
+      log.info('DID document parsing failed:', { err });
       return res.status(400).json({ error: 'Invalid DID Document JSON' });
     }
     
     if (!didDoc.id || typeof didDoc.id !== 'string') {
-      console.log('[HealthCred] DID document missing valid id field');
+      log.info('DID document missing valid id field');
       return res.status(400).json({ error: 'DID Document must contain valid "id" field' });
     }
     
     if (!Array.isArray(didDoc.authentication)) {
-      console.log('[HealthCred] DID document missing authentication array');
+      log.info('DID document missing authentication array');
       return res.status(400).json({ error: 'DID Document must contain "authentication" array' });
     }
     
-    console.log('[HealthCred] DID ID:', didDoc.id);
-    console.log('[HealthCred] Authentication methods:', didDoc.authentication.length);
+    log.info('DID ID:', { didDoc });
+    log.info('Authentication methods:', { didDoc });
     
      // Calculate SHA2-256 hash of DID document
-     console.log('[HealthCred] Calculating DID document hash...');
+     log.info('Calculating DID document hash...');
      const didDocumentHash = crypto
        .createHash('sha256')
        .update(didDocumentJson)
        .digest('hex');
-     console.log('[HealthCred] DID document hash:', didDocumentHash);
+     log.info('DID document hash:', { didDocumentHash });
      
      // Note: NFT Mint and token account creation will happen after user signs the transaction
      // This avoids TokenAccountNotFoundError during background processing
      const userPublicKey = new web3.PublicKey(walletAddress);
     
     // Create unsigned transaction with user as fee payer (2-step: user signs in Phantom)
-    console.log('[HealthCred] Creating unsigned transaction for user to sign...');
+    log.info('Creating unsigned transaction for user to sign...');
     const transaction = new web3.Transaction();
     
     // Add compute budget instruction (300k for large DID docs)
@@ -126,7 +128,7 @@ router.post('/register', async (req, res) => {
     transaction.add(computeBudgetInstruction);
     
     // Add memo instruction with DID document
-    console.log('[HealthCred] Adding memo instruction with DID document (', didDocumentJson.length, 'bytes)');
+    log.info('Adding memo instruction with DID document (', { didDocumentJson });
     const memoBuffer = Buffer.from(didDocumentJson, 'utf8');
     transaction.add(
       new web3.TransactionInstruction({
@@ -139,24 +141,24 @@ router.post('/register', async (req, res) => {
     // Get recent blockhash
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
-    console.log('[HealthCred] Recent blockhash:', blockhash.blockhash);
+    log.info('Recent blockhash:', { blockhash });
     
     // Set user wallet as fee payer (user pays for transaction)
     transaction.feePayer = userPublicKey;
-    console.log('[HealthCred] Set transaction fee payer to user wallet:', userPublicKey.toBase58());
+    log.info('Set transaction fee payer to user wallet:', { userPublicKey });
     
     // Serialize unsigned transaction for user to sign via Phantom
     let serializedTx;
     try {
-      console.log('[HealthCred] Serializing unsigned transaction for user to sign...');
+      log.info('Serializing unsigned transaction for user to sign...');
       serializedTx = transaction.serialize({
         requireAllSignatures: false,
         verifySignatures: false
       });
-      console.log('[HealthCred] Unsigned transaction serialized, size:', serializedTx.length);
+      log.info('Unsigned transaction serialized, size:', { serializedTx });
     } catch (err) {
-      console.error('[HealthCred] Error serializing transaction:', err.message);
-      console.error('[HealthCred] Error stack:', err.stack);
+      log.error('Error serializing transaction:', { error: err });
+      log.error('Error stack:', { error: err });
       return res.status(500).json({ error: 'Failed to prepare transaction for signing', details: err.message });
     }
     const base64Tx = serializedTx.toString('base64');
@@ -187,11 +189,11 @@ router.post('/register', async (req, res) => {
     // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
     const cleanupTimer = setTimeout(() => {
       delete global.healthCredRegistrations[registrationId];
-      console.log('[HealthCred] Cleaned up expired registration:', registrationId);
+      log.info('Cleaned up expired registration:', { registrationId });
     }, 15 * 60 * 1000);
     cleanupTimer.unref();
     
-    console.log('[HealthCred] Registration prepared, waiting for user signature');
+    log.info('Registration prepared, waiting for user signature');
     
      return res.status(200).json({
        success: true,
@@ -205,7 +207,7 @@ router.post('/register', async (req, res) => {
        }
      });
   } catch (error) {
-    console.error('[HealthCred] Registration preparation error:', error.message);
+    log.error('Registration preparation error:', { error: error });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -224,8 +226,8 @@ router.post('/submit-signed-transaction', async (req, res) => {
   try {
     const { registrationId, signedTransaction } = req.body;
     
-    console.log('[HealthCred] Received signed transaction submission');
-    console.log('[HealthCred] Registration ID:', registrationId);
+    log.info('Received signed transaction submission');
+    log.info('Registration ID:', { registrationId });
     
     if (!registrationId || !signedTransaction) {
       return res.status(400).json({ error: 'Missing registrationId or signedTransaction' });
@@ -233,12 +235,12 @@ router.post('/submit-signed-transaction', async (req, res) => {
     
     // Retrieve registration data
     if (!global.healthCredRegistrations || !global.healthCredRegistrations[registrationId]) {
-      console.log('[HealthCred] Registration not found or expired:', registrationId);
+      log.info('Registration not found or expired:', { registrationId });
       return res.status(404).json({ error: 'Registration not found or expired. Please create a new registration.' });
     }
     
     const regData = global.healthCredRegistrations[registrationId];
-    console.log('[HealthCred] Found registration for wallet:', regData.walletAddress);
+    log.info('Found registration for wallet:', { regData });
     
     // Deserialize and send transaction
     let transactionSignature = '';
@@ -247,30 +249,30 @@ router.post('/submit-signed-transaction', async (req, res) => {
       const txBuffer = Buffer.from(signedTransaction, 'base64');
       const transaction = web3.Transaction.from(txBuffer);
       
-      console.log('[HealthCred] Deserialized signed transaction');
-      console.log('[HealthCred] Sending transaction...');
+      log.info('Deserialized signed transaction');
+      log.info('Sending transaction...');
       
       transactionSignature = await connection.sendRawTransaction(transaction.serialize());
-      console.log('[HealthCred] Transaction sent:', transactionSignature);
+      log.info('Transaction sent:', { transactionSignature });
       
-      console.log('[HealthCred] Confirming transaction...');
+      log.info('Confirming transaction...');
       await connection.confirmTransaction({
         signature: transactionSignature,
         blockhash: regData.blockhash,
         lastValidBlockHeight: regData.lastValidBlockHeight
       });
       transactionHash = transactionSignature;
-      console.log('[HealthCred] Transaction confirmed');
+      log.info('Transaction confirmed');
      } catch (err) {
-       console.error('[HealthCred] Error sending transaction:', err.message);
+       log.error('Error sending transaction:', { error: err });
        return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
      }
      
      // Create NFT mint for this credential
-     console.log('[HealthCred] Creating NFT mint for credential...');
+     log.info('Creating NFT mint for credential...');
      let mintAddress = null;
      try {
-       console.log('[HealthCred] Creating SPL token mint...');
+       log.info('Creating SPL token mint...');
        const mint = await createMint(
          connection,
          payer,
@@ -279,13 +281,13 @@ router.post('/submit-signed-transaction', async (req, res) => {
          0                     // 0 decimals = NFT
         );
         mintAddress = mint.toBase58();
-        console.log('[HealthCred] Token mint created:', mintAddress);
+        log.info('Token mint created:', { mintAddress });
 
         // Wait for RPC to index the mint
         
 
         // Create associated token account for credential owner
-        console.log('[HealthCred] Creating associated token account...');
+        log.info('Creating associated token account...');
        const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
        const associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
          connection,
@@ -293,13 +295,13 @@ router.post('/submit-signed-transaction', async (req, res) => {
          mint,
          credentialOwnerPublicKey
         );
-        console.log('[HealthCred] Token account created:', associatedTokenAccount.address.toBase58());
+        log.info('Token account created:', { associatedTokenAccount });
 
         // Wait for RPC to index the ATA
         
 
         // Mint 1 token to represent this credential
-        console.log('[HealthCred] Minting credential token...');
+        log.info('Minting credential token...');
        const mintSig = await mintTo(
          connection,
          payer,
@@ -308,11 +310,11 @@ router.post('/submit-signed-transaction', async (req, res) => {
          payer,
          1
        );
-       console.log('[HealthCred] Token minted, signature:', mintSig);
+       log.info('Token minted, signature:', { mintSig });
       } catch (mintErr) {
-        console.error('[HealthCred] Error creating NFT mint or minting:', mintErr.message);
-        console.error('[HealthCred] Error stack:', mintErr.stack);
-        console.error('[HealthCred] Full error:', mintErr);
+        log.error('Error creating NFT mint or minting:', { error: mintErr });
+        log.error('Error stack:', { error: mintErr });
+        log.error('Full error:', { error: mintErr });
         // If mint was created but something else failed, still keep the mint address
         // Only set to null if createMint itself failed
         if (!mintAddress) {
@@ -321,7 +323,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
       }
      
      // Create credential record in database
-     console.log('[HealthCred] Creating credential record in database...');
+     log.info('Creating credential record in database...');
      const credentialId = `hc_${uuidv4()}`;
      let credential;
      try {
@@ -342,7 +344,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
          transactionHash
        });
      } catch (dbErr) {
-       console.error('[HealthCred] Database error creating credential:', dbErr.message);
+       log.error('Database error creating credential:', { error: dbErr });
        // Clean up registration data even if creation fails
        delete global.healthCredRegistrations[registrationId];
        return res.status(500).json({ error: 'Failed to save credential', details: dbErr.message });
@@ -351,14 +353,14 @@ router.post('/submit-signed-transaction', async (req, res) => {
      // Clean up registration data
      delete global.healthCredRegistrations[registrationId];
      
-     console.log('[HealthCred] Registration completed!');
-     console.log('[HealthCred] Credential ID:', credentialId);
-     console.log('[HealthCred] SAS ID:', credential.sas_credential_id);
-     if (mintAddress) {
-       console.log('[HealthCred] NFT Mint:', mintAddress);
-       console.log('[HealthCred] Mint URL: https://solscan.io/token/' + mintAddress + '?cluster=devnet');
-     }
-     console.log('[HealthCred] Transaction URL: https://solscan.io/tx/' + transactionHash + '?cluster=devnet');
+     log.info('Registration completed!');
+     log.info('Credential ID:', { credentialId });
+     log.info('SAS ID:', { credential });
+      if (mintAddress) {
+        log.info('NFT Mint:', { mintAddress });
+        log.info('Mint URL: https://solscan.io/token/' + mintAddress + '?cluster=devnet');
+      }
+      log.info('Transaction URL: https://solscan.io/tx/' + transactionHash + '?cluster=devnet');
      
      return res.status(200).json({
        success: true,
@@ -382,7 +384,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
        }
      });
   } catch (error) {
-    console.error('[HealthCred] Signed transaction submission error:', error.message);
+    log.error('Signed transaction submission error:', { error: error });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -429,10 +431,10 @@ router.get('/credentials', (req, res) => {
         hasMore: offset + limit < total
       }
     });
-  } catch (error) {
-    console.error('Error fetching credentials:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+   } catch (error) {
+     log.error('Error fetching credentials', { error });
+     res.status(500).json({ error: 'Internal server error' });
+   }
 });
 
 /**
@@ -467,10 +469,10 @@ router.get('/credentials/:id', (req, res) => {
     };
     
     res.status(200).json(sanitized);
-  } catch (error) {
-    console.error('Error fetching credential:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+   } catch (error) {
+     log.error('Error fetching credential', { error });
+     res.status(500).json({ error: 'Internal server error' });
+   }
 });
 
 /**
@@ -495,10 +497,10 @@ router.get('/did/:didId', (req, res) => {
     // Return DID document with application/did+json mimetype
     res.set('Content-Type', 'application/did+json');
     res.status(200).send(credential.did_document_json);
-  } catch (error) {
-    console.error('Error downloading DID document:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+   } catch (error) {
+     log.error('Error downloading DID document', { error });
+     res.status(500).json({ error: 'Internal server error' });
+   }
 });
 
 /**
@@ -518,7 +520,7 @@ router.post('/badges', async (req, res) => {
   try {
     const { credentialId, issuerWallet, emoji, description } = req.body;
     
-    console.log('[HealthCred] Received badge creation request');
+    log.info('Received badge creation request');
     
     // Validate required fields
     if (!credentialId || !issuerWallet || !emoji || !description) {
@@ -537,20 +539,20 @@ router.post('/badges', async (req, res) => {
     
     // Get credential owner's wallet (recipient of the badge NFT)
     const credentialOwnerWallet = credential.wallet_address;
-    console.log('[HealthCred] Credential owner (badge recipient):', credentialOwnerWallet);
+    log.info('Credential owner (badge recipient):', { credentialOwnerWallet });
     
     // Prevent self-sending badges
     if (issuerWallet === credentialOwnerWallet) {
-      console.log('[HealthCred] Badge self-send prevented: issuer and owner are the same');
+      log.info('Badge self-send prevented: issuer and owner are the same');
       return res.status(400).json({ error: 'You cannot send a badge to yourself' });
     }
     
     // Create issuer public key for transaction fee payer
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
-    console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+    log.info('Issuer public key:', { issuerPublicKey });
     
     // Create unsigned transaction with memo containing badge data
-    console.log('[HealthCred] Creating unsigned transaction for badge...');
+    log.info('Creating unsigned transaction for badge...');
     const badgeData = JSON.stringify({ emoji, description });
     const transaction = new web3.Transaction();
     
@@ -591,12 +593,12 @@ router.post('/badges', async (req, res) => {
         verifySignatures: false
       });
     } catch (err) {
-      console.error('[HealthCred] Error serializing badge transaction:', err.message);
+      log.error('Error serializing badge transaction:', { error: err });
       return res.status(500).json({ error: 'Failed to prepare badge transaction for signing', details: err.message });
     }
     const base64Tx = serializedTx.toString('base64');
     
-    console.log('[HealthCred] Unsigned badge transaction prepared, size:', base64Tx.length, 'bytes');
+    log.info('Unsigned badge transaction prepared, size:', { base64Tx });
     
     // Store temporary badge data (expires in 15 minutes)
     // NOTE: SPL token creation will happen AFTER signing in submit-signed-badge-transaction
@@ -620,7 +622,7 @@ router.post('/badges', async (req, res) => {
     // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
     const badgeCleanupTimer = setTimeout(() => {
       delete global.healthCredBadges[badgeRegistrationId];
-      console.log('[HealthCred] Cleaned up expired badge registration:', badgeRegistrationId);
+      log.info('Cleaned up expired badge registration:', { badgeRegistrationId });
     }, 15 * 60 * 1000);
     badgeCleanupTimer.unref();
     
@@ -637,7 +639,7 @@ router.post('/badges', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[HealthCred] Badge creation error:', error.message);
+    log.error('Badge creation error:', { error: error });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -656,7 +658,7 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
   try {
     const { badgeRegistrationId, signedTransaction } = req.body;
     
-    console.log('[HealthCred] Received signed badge transaction submission');
+    log.info('Received signed badge transaction submission');
     
     if (!badgeRegistrationId || !signedTransaction) {
       return res.status(400).json({ error: 'Missing badgeRegistrationId or signedTransaction' });
@@ -664,12 +666,12 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
     
     // Retrieve badge data
     if (!global.healthCredBadges || !global.healthCredBadges[badgeRegistrationId]) {
-      console.log('[HealthCred] Badge registration not found or expired:', badgeRegistrationId);
+      log.info('Badge registration not found or expired:', { badgeRegistrationId });
       return res.status(404).json({ error: 'Badge registration not found or expired. Please create a new badge.' });
     }
     
      const badgeData = global.healthCredBadges[badgeRegistrationId];
-     console.log('[HealthCred] Found badge registration for credential:', badgeData.credentialId);
+     log.info('Found badge registration for credential:', { badgeData });
      
      // Deserialize and send transaction
      let transactionSignature = '';
@@ -678,37 +680,37 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
        const txBuffer = Buffer.from(signedTransaction, 'base64');
        const transaction = web3.Transaction.from(txBuffer);
        
-       console.log('[HealthCred] Deserialized signed badge transaction');
-       console.log('[HealthCred] Sending badge transaction...');
+       log.info('Deserialized signed badge transaction');
+       log.info('Sending badge transaction...');
        
        transactionSignature = await connection.sendRawTransaction(transaction.serialize());
-       console.log('[HealthCred] Badge transaction sent:', transactionSignature);
+       log.info('Badge transaction sent:', { transactionSignature });
        
-       console.log('[HealthCred] Confirming badge transaction...');
+       log.info('Confirming badge transaction...');
        await connection.confirmTransaction({
          signature: transactionSignature,
          blockhash: badgeData.blockhash,
          lastValidBlockHeight: badgeData.lastValidBlockHeight
        });
        transactionHash = transactionSignature;
-       console.log('[HealthCred] Badge transaction confirmed');
+       log.info('Badge transaction confirmed');
      } catch (err) {
-       console.error('[HealthCred] Error sending badge transaction:', err.message);
+       log.error('Error sending badge transaction:', { error: err });
        return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
      }
      
      // NOW create SPL Token Mint for badge (after transaction is confirmed)
-     console.log('[HealthCred] Creating SPL token mint for badge...');
+     log.info('Creating SPL token mint for badge...');
      let mintAddress;
      try {
        const issuerPublicKey = new web3.PublicKey(badgeData.issuerWallet);
        const credentialOwnerPublicKey = new web3.PublicKey(badgeData.credentialOwnerWallet);
        
-       console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
-       console.log('[HealthCred] Credential owner public key:', credentialOwnerPublicKey.toBase58());
+       log.info('Issuer public key:', { issuerPublicKey });
+       log.info('Credential owner public key:', { credentialOwnerPublicKey });
        
        // Create mint with backend payer as mint authority
-       console.log('[HealthCred] Calling createMint with payer as mint authority...');
+       log.info('Calling createMint with payer as mint authority...');
        const mint = await createMint(
          connection,
          payer,
@@ -717,20 +719,20 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
          0  // 0 decimals = NFT
         );
         mintAddress = mint.toBase58();
-        console.log('[HealthCred] Badge SPL token mint created (NFT):', mintAddress);
+        log.info('Badge SPL token mint created (NFT):', { mintAddress });
         
         // Create associated token account for credential owner
-        console.log('[HealthCred] Creating associated token account for credential owner...');
+        log.info('Creating associated token account for credential owner...');
         const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
           connection,
           payer,
           mint,
           credentialOwnerPublicKey
          );
-         console.log('[HealthCred] Recipient token account:', recipientTokenAccount.address.toBase58());
+         log.info('Recipient token account:', { recipientTokenAccount });
          
          // Mint 1 badge token to credential owner
-         console.log('[HealthCred] Minting 1 badge NFT token to credential owner...');
+         log.info('Minting 1 badge NFT token to credential owner...');
          const badgeMintSig = await mintTo(
            connection,
            payer,
@@ -739,16 +741,16 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
            payer,
            1  // Mint 1 token
          );
-         console.log('[HealthCred] Badge NFT minted to recipient, signature:', badgeMintSig);
+         log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
        } catch (err) {
-         console.error('[HealthCred] Error creating SPL token mint for badge:', err);
-         console.error('[HealthCred] Error message:', err.message);
-         console.error('[HealthCred] Error stack:', err.stack);
+         log.error('Error creating SPL token mint for badge:', { error: err });
+         log.error('Error message:', { error: err });
+         log.error('Error stack:', { error: err });
          return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
        }
      
      // Create badge record in database
-     console.log('[HealthCred] Creating badge record in database...');
+     log.info('Creating badge record in database...');
      const badgeId = `badge_${uuidv4()}`;
      const badge = badgeDb.createBadge({
        id: badgeId,
@@ -764,8 +766,8 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
      // Clean up badge data
      delete global.healthCredBadges[badgeRegistrationId];
      
-     console.log('[HealthCred] Badge creation completed!');
-     console.log('[HealthCred] Solscan URL: https://solscan.io/tx/' + transactionSignature + '?cluster=devnet');
+      log.info('Badge creation completed!');
+      log.info('Solscan URL: https://solscan.io/tx/' + transactionSignature + '?cluster=devnet');
      
      return res.status(200).json({
        success: true,
@@ -782,7 +784,7 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
        }
      });
   } catch (error) {
-    console.error('[HealthCred] Signed badge transaction submission error:', error.message);
+    log.error('Signed badge transaction submission error:', { error: error });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -806,10 +808,10 @@ router.get('/badges/:credentialId', (req, res) => {
       credential_id: credentialId,
       badges: badges || []
     });
-  } catch (error) {
-    console.error('Error fetching badges:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+   } catch (error) {
+     log.error('Error fetching badges', { error });
+     res.status(500).json({ error: 'Internal server error' });
+   }
 });
 
 /**
@@ -832,7 +834,7 @@ router.post('/certifications', async (req, res) => {
   try {
     const { credentialId, issuerWallet, certificationName, filename, fileBuffer, fileSize, fileType } = req.body;
     
-    console.log('[HealthCred] Received certification submission request');
+    log.info('Received certification submission request');
     
     // Validate required fields
     if (!credentialId || !issuerWallet || !certificationName || !filename || !fileBuffer) {
@@ -856,14 +858,14 @@ router.post('/certifications', async (req, res) => {
     }
     
     // Calculate SHA2-256 hash of file
-    console.log('[HealthCred] Calculating file hash...');
+    log.info('Calculating file hash...');
     // Convert file buffer array back to Buffer if needed
     const fileBufferAsBuffer = Buffer.isBuffer(fileBuffer) ? fileBuffer : Buffer.from(fileBuffer);
     const fileHash = crypto
       .createHash('sha256')
       .update(fileBufferAsBuffer)
       .digest('hex');
-    console.log('[HealthCred] File hash:', fileHash);
+    log.info('File hash:', { fileHash });
     
     // Get credential owner's wallet (recipient of the certification)
     const certCredential = credentialDb.getCredentialById(credentialId);
@@ -871,14 +873,14 @@ router.post('/certifications', async (req, res) => {
       return res.status(404).json({ error: 'Credential not found' });
     }
     const credentialOwnerWallet = certCredential.wallet_address;
-    console.log('[HealthCred] Credential owner (certification recipient):', credentialOwnerWallet);
+    log.info('Credential owner (certification recipient):', { credentialOwnerWallet });
     
     // Create issuer public key for transaction fee payer
     const issuerPublicKey = new web3.PublicKey(issuerWallet);
-    console.log('[HealthCred] Issuer public key:', issuerPublicKey.toBase58());
+    log.info('Issuer public key:', { issuerPublicKey });
     
     // Create unsigned transaction with memo containing certification metadata
-    console.log('[HealthCred] Creating unsigned transaction for certification with memo...');
+    log.info('Creating unsigned transaction for certification with memo...');
     const memoText = `${certCredential.full_name} certification ${certificationName}: ${filename} - ${fileHash} (SHA2-256)`;
     const transaction = new web3.Transaction();
     
@@ -919,12 +921,12 @@ router.post('/certifications', async (req, res) => {
         verifySignatures: false
       });
     } catch (err) {
-      console.error('[HealthCred] Error serializing certification transaction:', err.message);
+      log.error('Error serializing certification transaction:', { error: err });
       return res.status(500).json({ error: 'Failed to prepare certification transaction for signing', details: err.message });
     }
     const base64Tx = serializedTx.toString('base64');
     
-    console.log('[HealthCred] Unsigned certification transaction prepared, size:', base64Tx.length, 'bytes');
+    log.info('Unsigned certification transaction prepared, size:', { base64Tx });
     
     // Store temporary certification data (expires in 15 minutes)
     // NOTE: No SPL token creation - only memo-based transaction
@@ -952,7 +954,7 @@ router.post('/certifications', async (req, res) => {
     // Set TTL (15 minutes) - use unref() so it doesn't keep process alive
     const certCleanupTimer = setTimeout(() => {
       delete global.healthCredCertifications[certRegistrationId];
-      console.log('[HealthCred] Cleaned up expired certification registration:', certRegistrationId);
+      log.info('Cleaned up expired certification registration:', { certRegistrationId });
     }, 15 * 60 * 1000);
     certCleanupTimer.unref();
     
@@ -970,7 +972,7 @@ router.post('/certifications', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('[HealthCred] Certification submission error:', error.message);
+    log.error('Certification submission error:', { error: error });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
@@ -993,7 +995,7 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
     
     const { certificationRegistrationId, signedTransaction } = req.body;
     
-    console.log('[HealthCred] Received signed certification transaction submission');
+    log.info('Received signed certification transaction submission');
     
     if (!certificationRegistrationId || !signedTransaction) {
       return res.status(400).json({ error: 'Missing certificationRegistrationId or signedTransaction' });
@@ -1001,12 +1003,12 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
     
     // Retrieve certification data
     if (!global.healthCredCertifications || !global.healthCredCertifications[certificationRegistrationId]) {
-      console.log('[HealthCred] Certification registration not found or expired:', certificationRegistrationId);
+      log.info('Certification registration not found or expired:', { certificationRegistrationId });
       return res.status(404).json({ error: 'Certification registration not found or expired. Please create a new certification.' });
     }
     
      const certData = global.healthCredCertifications[certificationRegistrationId];
-     console.log('[HealthCred] Found certification registration for credential:', certData.credentialId);
+     log.info('Found certification registration for credential:', { certData });
      
      // Deserialize and send transaction
      let transactionSignature = '';
@@ -1015,29 +1017,29 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
        const txBuffer = Buffer.from(signedTransaction, 'base64');
        const transaction = web3.Transaction.from(txBuffer);
        
-       console.log('[HealthCred] Deserialized signed certification transaction');
-       console.log('[HealthCred] Sending certification transaction...');
+       log.info('Deserialized signed certification transaction');
+       log.info('Sending certification transaction...');
        
        transactionSignature = await connection.sendRawTransaction(transaction.serialize());
-       console.log('[HealthCred] Certification transaction sent:', transactionSignature);
+       log.info('Certification transaction sent:', { transactionSignature });
        
-       console.log('[HealthCred] Confirming certification transaction...');
+       log.info('Confirming certification transaction...');
        await connection.confirmTransaction({
          signature: transactionSignature,
          blockhash: certData.blockhash,
          lastValidBlockHeight: certData.lastValidBlockHeight
        });
        transactionHash = transactionSignature;
-       console.log('[HealthCred] Certification transaction confirmed');
+       log.info('Certification transaction confirmed');
      } catch (err) {
-       console.error('[HealthCred] Error sending certification transaction:', err.message);
+       log.error('Error sending certification transaction:', { error: err });
        return res.status(500).json({ error: 'Failed to send transaction', details: err.message });
       }
       
        // Store file to filesystem under uploads/{credentialId}/{filename}
        // SKIP FILE WRITES DURING TESTS to prevent polluting production uploads/
        if (process.env.NODE_ENV !== 'test') {
-         console.log('[HealthCred] Storing certification file to filesystem...');
+         log.info('Storing certification file to filesystem...');
          const config = require('./config');
          let uploadsBasePath = config.uploads.path;
          
@@ -1052,24 +1054,24 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
            // Create wallet directory if it doesn't exist
            if (!fs.existsSync(walletDir)) {
              fs.mkdirSync(walletDir, { recursive: true });
-             console.log('[HealthCred] Created uploads directory:', walletDir);
+             log.info('Created uploads directory:', { walletDir });
            }
            
            // Store file
            const fileBufferAsBuffer = Buffer.isBuffer(certData.fileBuffer) ? certData.fileBuffer : Buffer.from(certData.fileBuffer);
            const filePath = path.join(walletDir, certData.filename);
            fs.writeFileSync(filePath, fileBufferAsBuffer);
-           console.log('[HealthCred] Certification file stored at:', filePath);
+           log.info('Certification file stored at:', { filePath });
          } catch (err) {
-           console.error('[HealthCred] Error storing certification file:', err.message);
+           log.error('Error storing certification file:', { error: err });
            // Don't fail the transaction if file storage fails, but log it
          }
        } else {
-         console.log('[HealthCred] Skipping file storage during tests (NODE_ENV=test)');
+         log.info('Skipping file storage during tests (NODE_ENV=test)');
        }
        
        // Create certification record in database (NO SPL token creation)
-      console.log('[HealthCred] Creating certification record in database...');
+      log.info('Creating certification record in database...');
       const certId = `cert_${uuidv4()}`;
       const certification = certificationDb.createCertification({
         id: certId,
@@ -1087,7 +1089,7 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
       // Clean up certification data
       delete global.healthCredCertifications[certificationRegistrationId];
       
-      console.log('[HealthCred] Certification upload completed!');
+      log.info('Certification upload completed!');
       
       return res.status(200).json({
         success: true,
@@ -1104,7 +1106,7 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
         }
       });
    } catch (error) {
-     console.error('[HealthCred] Signed certification transaction submission error:', error.message);
+     log.error('Signed certification transaction submission error:', { error: error });
      res.status(500).json({ error: 'Internal server error', details: error.message });
    }
 });
@@ -1128,10 +1130,10 @@ router.get('/certifications/:credentialId', (req, res) => {
       credential_id: credentialId,
       certifications: certifications || []
     });
-  } catch (error) {
-    console.error('Error fetching certifications:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+   } catch (error) {
+     log.error('Error fetching certifications', { error });
+     res.status(500).json({ error: 'Internal server error' });
+   }
 });
 
 module.exports = router;

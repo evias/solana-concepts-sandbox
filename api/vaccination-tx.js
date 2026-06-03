@@ -1,6 +1,8 @@
 const web3 = require('@solana/web3.js');
 const splToken = require('@solana/spl-token');
 const { payer } = require('./payer');
+const { createLogger } = require('./logger');
+const log = createLogger('vaccination-tx');
 
 const connection = new web3.Connection(
   'https://api.devnet.solana.com',
@@ -50,16 +52,16 @@ async function createVaccinationTransaction(data) {
       signerKeypair
     } = data;
 
-    console.log('Creating vaccination transaction for pet:', petId);
+    log.info('Creating vaccination transaction for pet:', { value: petId });
     
     // Check if memo program exists on devnet
     const memoProgramInfo = await connection.getAccountInfo(MEMO_PROGRAM_ID);
-    console.log('[MEMO-CHECK] Memo program exists on devnet:', !!memoProgramInfo);
+    log.info('[MEMO-CHECK] Memo program exists on devnet:', { value: !!memoProgramInfo });
     if (memoProgramInfo) {
-      console.log('[MEMO-CHECK] Program executable:', memoProgramInfo.executable);
-      console.log('[MEMO-CHECK] Program owner:', memoProgramInfo.owner.toString());
+      log.info('[MEMO-CHECK] Program executable:', { value: memoProgramInfo.executable });
+      log.info('[MEMO-CHECK] Program owner:', { value: memoProgramInfo.owner.toString() });
     } else {
-      console.warn('[MEMO-CHECK] WARNING: Memo program NOT found on devnet!');
+      log.warn('[MEMO-CHECK] WARNING: Memo program NOT found on devnet!');
     }
 
     // Create a transaction with vaccination data in a memo instruction
@@ -82,9 +84,9 @@ async function createVaccinationTransaction(data) {
       clinicUrl: clinicUrl || null,
       petSignature,
       recordedAt: new Date().toISOString()
-    });
+     });
 
-    console.log("createVaccinationTransaction: memoData = ", memoData);
+     log.debug("createVaccinationTransaction: memoData", { memoData });
 
     // Create memo instruction using the SPL Memo program
     // The memo program just stores data, no accounts needed
@@ -100,12 +102,12 @@ async function createVaccinationTransaction(data) {
     transaction.recentBlockhash = latestBlockhash.blockhash;
     transaction.feePayer = new web3.PublicKey(petOwner); // Owner pays for transaction ("PAYING VACCINE")
 
-    console.log('Transaction created with memo data');
-    console.log('[TX-DEBUG] Fee payer:', transaction.feePayer.toString());
-    console.log('[TX-DEBUG] Recent blockhash:', transaction.recentBlockhash);
-    console.log('[TX-DEBUG] instructions count:', transaction.instructions.length);
-    console.log('[TX-DEBUG] instruction[0].data length:', transaction.instructions[0].data.length);
-    console.log('[TX-DEBUG] instruction[0].data:', transaction.instructions[0].data.toString('utf8').substring(0, 100) + '...');
+    log.info('Transaction created with memo data');
+    log.info('[TX-DEBUG] Fee payer:', { value: transaction.feePayer.toString() });
+    log.info('[TX-DEBUG] Recent blockhash:', { value: transaction.recentBlockhash });
+    log.info('[TX-DEBUG] instructions count:', { value: transaction.instructions.length });
+    log.info('[TX-DEBUG] instruction[0].data length:', { value: transaction.instructions[0].data.length });
+    log.info('[TX-DEBUG] instruction[0].data:', { value: transaction.instructions[0].data.toString('utf8').substring(0, 100) + '...' });
 
     // Note: The actual signing happens in the frontend with Phantom
     // This function prepares the transaction
@@ -121,7 +123,7 @@ async function createVaccinationTransaction(data) {
       vetAddress
     };
   } catch (error) {
-    console.error('Error creating vaccination transaction:', error);
+    log.error('Error creating vaccination transaction:', { error: error });
     throw error;
   }
 }
@@ -138,14 +140,14 @@ async function verifyVaccinationSignature(signature, petId) {
     // Check if transaction exists on-chain
     const tx = await connection.getTransaction(signature);
     if (!tx) {
-      console.log('Transaction not found on-chain:', signature);
+      log.info('Transaction not found on-chain:', { value: signature });
       return false;
     }
 
-    console.log('Transaction verified on-chain:', signature);
+    log.info('Transaction verified on-chain:', { value: signature });
     return true;
   } catch (error) {
-    console.error('Error verifying vaccination signature:', error);
+    log.error('Error verifying vaccination signature:', { error: error });
     return false;
   }
 }
@@ -173,7 +175,7 @@ async function getVaccinationTransactionInfo(signature) {
         try {
           memoData = JSON.parse(memoInstruction.data.toString());
         } catch (e) {
-          console.log('Could not parse memo data');
+          log.info('Could not parse memo data');
         }
       }
     }
@@ -186,7 +188,7 @@ async function getVaccinationTransactionInfo(signature) {
       memoData
     };
   } catch (error) {
-    console.error('Error getting vaccination transaction info:', error);
+    log.error('Error getting vaccination transaction info:', { error: error });
     return null;
   }
 }

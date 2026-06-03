@@ -1,10 +1,12 @@
 const express = require('express');
 const path = require('path');
 const config = require('./api/config');
+const { createLogger } = require('./api/logger');
 
 const app = express();
 const bindHost = config.server.bindHost;
 const bindPort = config.server.bindPort;
+const log = createLogger('http');
 
 // Middleware to parse JSON with increased size limit for file uploads
 app.use(express.json({ limit: '5mb' }));
@@ -13,6 +15,10 @@ app.use(express.json({ limit: '5mb' }));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
+
+// Logs API routes
+const logsApi = require('./api/logs');
+app.use('/api/v1/logs', logsApi);
 
 // PetTracker API routes
 const pettrackerApi = require('./api/pettracker');
@@ -59,5 +65,5 @@ app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')))
 
 
 app.listen(bindPort, bindHost, () => {
-  console.log(`Concept Sandbox listening at http://${bindHost}:${bindPort}`);
+  log.info(`Server listening at http://${bindHost}:${bindPort}`);
 });

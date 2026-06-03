@@ -2,6 +2,8 @@ const express = require('express');
 const web3 = require('@solana/web3.js');
 const { petDb } = require('./database');
 const { createPetTokenMint, createAssociatedTokenAccount, mintPetToken, getTokenInfo } = require('./solana-tokens');
+const { createLogger } = require('./logger');
+const log = createLogger('concept/pettracker');
 
 const router = express.Router();
 
@@ -19,11 +21,11 @@ async function ensureTokenAccountExists(ownerPublicKey) {
       // Create account if it doesn't exist
       const signature = await connection.requestAirdrop(ownerPublicKey, 1000000000); // 1 SOL
       await connection.confirmTransaction(signature);
-      console.log('Created account and airdropped SOL:', ownerPublicKey.toBase58());
+      log.info('Created account and airdropped SOL:', { value: ownerPublicKey.toBase58() });
     }
     return true;
   } catch (error) {
-    console.error('Error ensuring token account exists:', error);
+    log.error('Error ensuring token account exists:', { error: error });
     return false;
   }
 }
@@ -34,7 +36,7 @@ router.get('/list', async (req, res) => {
     const pets = petDb.getAllPets();
     res.json(pets);
   } catch (error) {
-    console.error('Error listing pets:', error);
+    log.error('Error listing pets:', { error: error });
     res.status(500).json({ error: 'Failed to list pets' });
   }
 });
@@ -54,7 +56,7 @@ router.get('/get', async (req, res) => {
     
     res.json(pet);
   } catch (error) {
-    console.error('Error getting pet:', error);
+    log.error('Error getting pet:', { error: error });
     res.status(500).json({ error: 'Failed to get pet' });
   }
 });
@@ -128,7 +130,7 @@ router.post('/edit', express.json(), async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error editing pet:', error);
+    log.error('Error editing pet:', { error: error });
     res.status(500).json({ error: 'Failed to edit pet' });
   }
 });
@@ -176,7 +178,7 @@ router.post('/delete', express.json(), async (req, res) => {
     
     res.json({ success: true, deletedId: id });
   } catch (error) {
-    console.error('Error deleting pet:', error);
+    log.error('Error deleting pet:', { error: error });
     res.status(500).json({ error: 'Failed to delete pet' });
   }
 });
@@ -202,23 +204,23 @@ router.post('/register', express.json(), async (req, res) => {
       return res.status(400).json({ error: 'Invalid Solana address' });
     }
     
-    console.log(`Registering pet ${petData.id} for owner ${ownerAddress}...`);
+    log.info(`Registering pet ${petData.id} for owner ${ownerAddress}...`);
     
     // Ensure the owner's account exists on-chain
     await ensureTokenAccountExists(ownerPublicKey);
     
     // Create an SPL Token mint for the pet
-    console.log('Creating SPL Token mint...');
+    log.info('Creating SPL Token mint...');
     const mintResult = await createPetTokenMint(ownerPublicKey);
     const mintAddress = mintResult.mintAddress;
     
     // Create associated token account for the owner
-    console.log('Creating associated token account...');
+    log.info('Creating associated token account...');
     const tokenAccountResult = await createAssociatedTokenAccount(ownerPublicKey, mintAddress);
     const tokenAccount = tokenAccountResult.tokenAccount;
     
     // Mint 1 token to represent the pet
-    console.log('Minting pet token...');
+    log.info('Minting pet token...');
     await mintPetToken(mintAddress, tokenAccount, ownerPublicKey);
     
     // Store pet in database with on-chain references
@@ -234,7 +236,7 @@ router.post('/register', express.json(), async (req, res) => {
       tokenAccount: tokenAccount
     });
     
-    console.log('Pet registered successfully:', petData.id);
+    log.info('Pet registered successfully:', { value: petData.id });
     
     res.json({ 
       success: true, 
@@ -246,7 +248,7 @@ router.post('/register', express.json(), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error registering pet:', error);
+    log.error('Error registering pet:', { error: error });
     res.status(500).json({ error: `Failed to register pet: ${error.message}` });
   }
 });
@@ -262,7 +264,7 @@ router.get('/token-info', async (req, res) => {
     const tokenInfo = await getTokenInfo(mint);
     res.json(tokenInfo);
   } catch (error) {
-    console.error('Error getting token info:', error);
+    log.error('Error getting token info:', { error: error });
     res.status(500).json({ error: 'Failed to get token info' });
   }
 });
@@ -305,7 +307,7 @@ router.get('/verify-mandate', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error verifying mandate:', error);
+    log.error('Error verifying mandate:', { error: error });
     res.status(500).json({ error: 'Failed to verify mandate' });
   }
 });
@@ -367,13 +369,13 @@ router.post('/authorize-vet', express.json(), async (req, res) => {
 
     // SAS Integration: Ensure credential exists or create
     const sasIntegration = require('./sas-integration');
-    console.log(`[SAS] Ensuring credential for owner ${ownerAddress}...`);
+    log.info(`Ensuring credential for owner ${ownerAddress}...`);
     const sasResult = await sasIntegration.ensureSasCredential(ownerAddress, payer);
-    console.log(`[SAS] Credential ${sasResult.credentialAddress} exists: ${sasResult.exists}`);
+    log.info(`Credential ${sasResult.credentialAddress} exists: ${sasResult.exists}`);
 
     // If credential exists, add the new signer
     if (sasResult.exists) {
-      console.log(`[SAS] Adding signer ${vetAddress} to credential ${sasResult.credentialAddress}...`);
+      log.info(`Adding signer ${vetAddress} to credential ${sasResult.credentialAddress}...`);
       try {
         const addResult = await sasIntegration.addAuthorizedSigner(
           sasResult.credentialAddress,
@@ -383,14 +385,14 @@ router.post('/authorize-vet', express.json(), async (req, res) => {
         );
         sasResult.transactionSignature = addResult.transactionSignature;
         sasResult.authorizedSigners = addResult.authorizedSigners;
-        console.log(`[SAS] Signer added successfully. Tx: ${addResult.transactionSignature}`);
+        log.info(`Signer added successfully. Tx: ${addResult.transactionSignature}`);
       } catch (addError) {
-        console.error('[SAS] Error adding signer:', addError.message);
+        log.error('Error adding signer:', { error: addError.message });
         // If error is "signer already authorized", continue anyway
         if (!addError.message.includes('Signer already authorized')) {
           throw addError;
         }
-        console.log('[SAS] Signer was already added, continuing...');
+        log.info('Signer was already added, continuing...');
         sasResult.authorizedSigners = [...currentVets, vetAddress];
       }
     }
@@ -415,7 +417,7 @@ router.post('/authorize-vet', express.json(), async (req, res) => {
       message: 'Veterinary authorized successfully'
     });
   } catch (error) {
-    console.error('Error authorizing veterinary:', error);
+    log.error('Error authorizing veterinary:', { error: error });
     res.status(500).json({
       error: 'Failed to authorize veterinary',
       details: error.message
