@@ -38,7 +38,10 @@ After registering a pet, you must authorize at least one veterinarian:
 3. Enter the veterinary Solana wallet address (required for all pets)
 4. Click "Authorize Veterinary"
 5. Approve the SAS (Solana Attestation Service) transaction in Phantom
-6. Vet is now authorized to record vaccinations for your pet
+6. The veterinarian is added to your SAS Credential as an authorized signer
+7. Vet is now authorized to record vaccinations for your pet
+
+**Note**: The vet address is added as an authorized signer to your SAS Credential, which enables them to participate in multi-signature scenarios and access vaccination data for your pet.
 
 ## Features
 
@@ -57,10 +60,11 @@ After registering a pet, you must authorize at least one veterinarian:
 
 ### Veterinary Authorization
 - Authorize one or more veterinarians per pet
-- Each vet gets added to an on-chain SAS Credential
-- Vets appear in pet listings with truncated addresses
+- Each vet gets added to your SAS Credential as an authorized signer
+- Vets appear in pet listings with wallet addresses
 - Click "No veterinary authorized" to quickly add one
 - Multiple vets can be authorized for the same pet
+- View authorized veterinaries for each pet
 
 ### On-Chain Proof
 - Each pet gets a unique SPL token mint address
@@ -70,11 +74,12 @@ After registering a pet, you must authorize at least one veterinarian:
 - Verify pet ownership and vet authorization through blockchain
 
 ### Solana Attestation Service Integration
-- Each pet owner gets one SAS Credential
-- Credential stores all authorized veterinarians for all pets
+- Each pet owner gets one SAS Credential per wallet
+- Credential stores all authorized veterinarians for all your pets
 - Credentials are on-chain PDAs (Program Derived Addresses)
 - Credentials updated when new vets are authorized
 - Enables verifiable vaccination records via PetVax
+- Allows future multi-signature scenarios where vets can act on behalf of pet owner
 
 ## Troubleshooting
 
