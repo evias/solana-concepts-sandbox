@@ -6,4 +6,4 @@ sandbox.test.db
 .payer-keypair.json
 .env
 sandbox.log
-docs/openapi.json
+sandbox.log.*

@@ -1,0 +1,1543 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Solana Concepts Sandbox API",
+    "version": "1.0.0",
+    "description": "API documentation for dHealth&lt;&gt;Solana Sandbox concepts",
+    "contact": {
+      "name": "dHealth Team",
+      "url": "https://dhealth.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      },
+      "Pet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "species": {
+            "type": "string"
+          },
+          "breed": {
+            "type": "string"
+          },
+          "age": {
+            "type": "integer"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "mandateAuthority": {
+            "type": "string"
+          },
+          "mintAddress": {
+            "type": "string"
+          }
+        }
+      },
+      "Credential": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "didId": {
+            "type": "string"
+          },
+          "mint": {
+            "type": "string"
+          },
+          "sasCredentialId": {
+            "type": "string"
+          }
+        }
+      },
+      "Signer": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "WalletAuth": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "wallet",
+        "description": "Solana wallet address for authorization"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "PetTracker",
+      "description": "Pet tracking and management"
+    },
+    {
+      "name": "PetVax",
+      "description": "Pet vaccination records"
+    },
+    {
+      "name": "PetDiet",
+      "description": "Pet nutrition and feeding plans"
+    },
+    {
+      "name": "HealthCred",
+      "description": "Health credentials and certifications"
+    },
+    {
+      "name": "CareCircle",
+      "description": "Care coordination and file sharing"
+    },
+    {
+      "name": "Logs",
+      "description": "Client-side logging"
+    }
+  ],
+  "paths": {
+    "/api/v1/pettracker/pets": {
+      "get": {
+        "tags": [
+          "PetTracker"
+        ],
+        "summary": "List all pets",
+        "description": "Returns all pets from the database with their details.",
+        "responses": {
+          "200": {
+            "description": "Pets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "species": {
+                        "type": "string"
+                      },
+                      "breed": {
+                        "type": "string"
+                      },
+                      "age": {
+                        "type": "number"
+                      },
+                      "owner": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PetTracker"
+        ],
+        "summary": "Create or update a pet",
+        "description": "Creates a new pet or updates an existing pet's information. Owner authorization required for updates.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petData",
+                  "ownerAddress"
+                ],
+                "properties": {
+                  "petData": {
+                    "type": "object",
+                    "required": [
+                      "id"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "species": {
+                        "type": "string"
+                      },
+                      "breed": {
+                        "type": "string"
+                      },
+                      "age": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "ownerAddress": {
+                    "type": "string",
+                    "description": "Solana wallet address of pet owner"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pet created or updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "pet": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "species": {
+                          "type": "string"
+                        },
+                        "breed": {
+                          "type": "string"
+                        },
+                        "age": {
+                          "type": "number"
+                        },
+                        "owner": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "mandate": {
+                      "type": "object",
+                      "properties": {
+                        "authority": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Unauthorized - not pet owner"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/pettracker/pets/{id}": {
+      "get": {
+        "tags": [
+          "PetTracker"
+        ],
+        "summary": "Get a specific pet by ID",
+        "description": "Returns pet details including name, species, breed, age and owner information.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pet ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pet retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "species": {
+                      "type": "string"
+                    },
+                    "breed": {
+                      "type": "string"
+                    },
+                    "age": {
+                      "type": "number"
+                    },
+                    "owner": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/petvax/vaccinations": {
+      "get": {
+        "tags": [
+          "PetVax"
+        ],
+        "summary": "Verify vaccination status for a pet",
+        "description": "Returns all vaccinations recorded for a specific pet, including on-chain proof counts.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pet ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vaccination status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pet": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "species": {
+                          "type": "string"
+                        },
+                        "owner": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "vaccinations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "vaccinationCount": {
+                      "type": "number"
+                    },
+                    "onChainProofs": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PetVax"
+        ],
+        "summary": "Record a new vaccination",
+        "description": "Records a new vaccination for a pet with optional transaction signature and hash for on-chain proof.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId",
+                  "vaccineName",
+                  "vaccinationDate",
+                  "vetAddress"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string"
+                  },
+                  "vaccineName": {
+                    "type": "string"
+                  },
+                  "vaccinationDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "vetAddress": {
+                    "type": "string",
+                    "description": "Solana wallet address of veterinarian"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "mustRenew": {
+                    "type": "boolean"
+                  },
+                  "renewalPeriod": {
+                    "type": "string"
+                  },
+                  "customRenewalPeriod": {
+                    "type": "string"
+                  },
+                  "vaccinationToken": {
+                    "type": "string"
+                  },
+                  "vaccineUrl": {
+                    "type": "string"
+                  },
+                  "clinicUrl": {
+                    "type": "string"
+                  },
+                  "petSignature": {
+                    "type": "string"
+                  },
+                  "transactionSignature": {
+                    "type": "string"
+                  },
+                  "transactionHash": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vaccination recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "vaccination": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "petId": {
+                          "type": "string"
+                        },
+                        "vaccineName": {
+                          "type": "string"
+                        },
+                        "vaccinationDate": {
+                          "type": "string"
+                        },
+                        "vetAddress": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "petId": {
+                          "type": "string"
+                        },
+                        "petName": {
+                          "type": "string"
+                        },
+                        "vetAddress": {
+                          "type": "string"
+                        },
+                        "onChainProof": {
+                          "type": "boolean"
+                        },
+                        "transactionHash": {
+                          "type": "string"
+                        },
+                        "solscanUrl": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/petdiet/plans": {
+      "get": {
+        "tags": [
+          "PetDiet"
+        ],
+        "summary": "Get nutrition plans for a pet",
+        "description": "Returns all nutrition plans associated with a specific pet, including ingredients and SPL token information.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "petId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Pet ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nutrition plans retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "petId": {
+                        "type": "string"
+                      },
+                      "planName": {
+                        "type": "string"
+                      },
+                      "startDate": {
+                        "type": "string"
+                      },
+                      "duration": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "PetDiet"
+        ],
+        "summary": "Create a new nutrition plan with SPL token",
+        "description": "Creates a nutrition plan for a pet with daily ingredient information. Creates SPL token mint and records on-chain via memo transaction. Pet owner authorization required.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "petId",
+                  "planName",
+                  "startDate",
+                  "duration",
+                  "durationEndDate",
+                  "ownerAddress"
+                ],
+                "properties": {
+                  "petId": {
+                    "type": "string"
+                  },
+                  "planName": {
+                    "type": "string"
+                  },
+                  "startDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "ingredientsMonday": {
+                    "type": "string"
+                  },
+                  "ingredientsTuesday": {
+                    "type": "string"
+                  },
+                  "ingredientsWednesday": {
+                    "type": "string"
+                  },
+                  "ingredientsThursday": {
+                    "type": "string"
+                  },
+                  "ingredientsFriday": {
+                    "type": "string"
+                  },
+                  "ingredientsSaturday": {
+                    "type": "string"
+                  },
+                  "ingredientsSunday": {
+                    "type": "string"
+                  },
+                  "duration": {
+                    "type": "string"
+                  },
+                  "durationEndDate": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "authorizedNutritioner": {
+                    "type": "string"
+                  },
+                  "ownerAddress": {
+                    "type": "string",
+                    "description": "Pet owner wallet address"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nutrition plan created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "plan": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "petId": {
+                          "type": "string"
+                        },
+                        "planName": {
+                          "type": "string"
+                        },
+                        "startDate": {
+                          "type": "string"
+                        },
+                        "mintAddress": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "onChain": {
+                      "type": "object",
+                      "properties": {
+                        "mint": {
+                          "type": "string"
+                        },
+                        "tokenAccount": {
+                          "type": "string"
+                        },
+                        "tokenTransactionSignature": {
+                          "type": "string"
+                        },
+                        "memoTransactionSignature": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Unauthorized - not pet owner"
+          },
+          "404": {
+            "description": "Pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/petdiet/feeding-actions": {
+      "post": {
+        "tags": [
+          "PetDiet"
+        ],
+        "summary": "Record a feeding action",
+        "description": "Records a feeding action for a nutrition plan with on-chain memo transaction. Creates proof that pet was fed according to plan.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nutritionPlanId",
+                  "petId",
+                  "ingredients",
+                  "userAddress",
+                  "petSignature"
+                ],
+                "properties": {
+                  "nutritionPlanId": {
+                    "type": "string"
+                  },
+                  "petId": {
+                    "type": "string"
+                  },
+                  "ingredients": {
+                    "type": "string"
+                  },
+                  "userAddress": {
+                    "type": "string"
+                  },
+                  "petSignature": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feeding action recorded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "feedingAction": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "nutritionPlanId": {
+                          "type": "string"
+                        },
+                        "petId": {
+                          "type": "string"
+                        },
+                        "ingredients": {
+                          "type": "string"
+                        },
+                        "recordedBy": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "onChain": {
+                      "type": "object",
+                      "properties": {
+                        "transactionSignature": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Nutrition plan or pet not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/register-start": {
+      "post": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Prepare credential registration",
+        "description": "Prepares an unsigned transaction for healthcare worker credential registration. User signs the transaction with their wallet, then submits to /register-verify endpoint.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "walletAddress",
+                  "fullName",
+                  "dateOfBirth",
+                  "email",
+                  "profession",
+                  "didDocumentJson"
+                ],
+                "properties": {
+                  "walletAddress": {
+                    "type": "string",
+                    "description": "Currently connected Solana wallet address"
+                  },
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "dateOfBirth": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Format YYYY-MM-DD"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "profession": {
+                    "type": "string"
+                  },
+                  "didDocumentJson": {
+                    "type": "string",
+                    "description": "JSON stringified DID document"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration prepared - user should sign the transaction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "registrationId": {
+                      "type": "string"
+                    },
+                    "transaction": {
+                      "type": "string",
+                      "description": "Base64 encoded unsigned transaction"
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "walletAddress": {
+                          "type": "string"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "profession": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/register-verify": {
+      "post": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Submit signed registration transaction",
+        "description": "Completes credential registration by submitting a user-signed transaction. Creates NFT mint and stores credential record in database.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "registrationId",
+                  "signedTransaction"
+                ],
+                "properties": {
+                  "registrationId": {
+                    "type": "string",
+                    "description": "From /register-start response"
+                  },
+                  "signedTransaction": {
+                    "type": "string",
+                    "description": "Base64 signed transaction from user's wallet"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Registration completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "wallet_address": {
+                          "type": "string"
+                        },
+                        "full_name": {
+                          "type": "string"
+                        },
+                        "profession": {
+                          "type": "string"
+                        },
+                        "did_id": {
+                          "type": "string"
+                        },
+                        "created_at": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "onChain": {
+                      "type": "object",
+                      "properties": {
+                        "mint": {
+                          "type": "string"
+                        },
+                        "transactionSignature": {
+                          "type": "string"
+                        },
+                        "memoUrl": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "metadata": {
+                      "type": "object",
+                      "properties": {
+                        "solscanUrl": {
+                          "type": "string"
+                        },
+                        "didDocumentHash": {
+                          "type": "string"
+                        },
+                        "sasCredentialId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Registration not found or expired"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/credentials": {
+      "get": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "List credentials owned by wallet",
+        "description": "Returns all credentials where the wallet is the owner. For authorized access to other wallets' credentials, use the files or authorized-signers endpoints directly with the credential ID.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credentials retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "mint": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "didId": {
+                            "type": "string"
+                          },
+                          "sasCredentialId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/files": {
+      "get": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "List files in a credential's uploads folder",
+        "description": "Returns all files uploaded to a credential. Requires wallet to have access (owner or authorized signer).",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          },
+          {
+            "in": "query",
+            "name": "credentialId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Credential UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Files retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Access denied - wallet not authorized for credential"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/upload": {
+      "post": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "Upload a file to credential storage",
+        "description": "Uploads a file to a credential's uploads folder. Requires wallet to have access. Includes file hash validation and size limits (5MB max).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "wallet",
+                  "credentialId",
+                  "filename",
+                  "fileBuffer"
+                ],
+                "properties": {
+                  "wallet": {
+                    "type": "string",
+                    "description": "Solana wallet address"
+                  },
+                  "credentialId": {
+                    "type": "string",
+                    "description": "Credential UUID"
+                  },
+                  "filename": {
+                    "type": "string",
+                    "description": "Name of file to upload"
+                  },
+                  "fileBuffer": {
+                    "type": "string",
+                    "description": "File content as base64 or Buffer"
+                  },
+                  "fileSize": {
+                    "type": "number",
+                    "description": "File size in bytes"
+                  },
+                  "fileType": {
+                    "type": "string",
+                    "description": "MIME type of file"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "file": {
+                      "type": "object",
+                      "properties": {
+                        "credentialId": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        },
+                        "fileSize": {
+                          "type": "number"
+                        },
+                        "fileHash": {
+                          "type": "string"
+                        },
+                        "fileType": {
+                          "type": "string"
+                        },
+                        "uploadedAt": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Access denied - wallet not authorized for credential"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/authorize-caregiver": {
+      "post": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "Add caregiver as authorized signer",
+        "description": "Authorizes a caregiver wallet address to sign transactions for a SAS Credential. Requires wallet to own or have access to the credential.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "wallet",
+                  "credentialId",
+                  "caregiverAddress"
+                ],
+                "properties": {
+                  "wallet": {
+                    "type": "string",
+                    "description": "Wallet address of credential owner/authorizer"
+                  },
+                  "credentialId": {
+                    "type": "string",
+                    "description": "Credential UUID"
+                  },
+                  "caregiverAddress": {
+                    "type": "string",
+                    "description": "Solana wallet address of caregiver to authorize"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Caregiver authorized successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "caregiver": {
+                      "type": "string"
+                    },
+                    "wallet": {
+                      "type": "string"
+                    },
+                    "sasTransaction": {
+                      "type": "object",
+                      "properties": {
+                        "credentialAddress": {
+                          "type": "string"
+                        },
+                        "signature": {
+                          "type": "string"
+                        },
+                        "authorizedSigners": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Access denied - wallet not authorized for credential"
+          },
+          "404": {
+            "description": "Credential not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/authorized-signers": {
+      "get": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "Get authorized signers for a credential",
+        "description": "Returns list of wallet addresses that are authorized to sign with this credential. Requires wallet to have access to the credential.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          },
+          {
+            "in": "query",
+            "name": "credentialId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Credential UUID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized signers retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "signers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "credentialId": {
+                      "type": "string"
+                    },
+                    "credentialName": {
+                      "type": "string"
+                    },
+                    "credentialOwner": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Access denied - wallet not authorized for credential"
+          },
+          "404": {
+            "description": "Credential not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/logs": {
+      "post": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Submit client-side logs to server",
+        "description": "Receives and centralizes logs from client-side applications. Logs are re-emitted through the server's logger with client scope prefixes.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "message",
+                  "scope"
+                ],
+                "properties": {
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "info",
+                      "error",
+                      "warn",
+                      "debug"
+                    ],
+                    "description": "Log level (defaults to 'info')"
+                  },
+                  "message": {
+                    "type": "string",
+                    "description": "Log message"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "description": "Scope/component name for the log"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "meta": {
+                    "type": "object",
+                    "description": "Additional metadata"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Log received successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    }
+  }
+}
