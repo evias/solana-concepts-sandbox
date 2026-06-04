@@ -1,5 +1,6 @@
 node_modules/
 uploads/
+coverage/
 TASKS.md
 sandbox.db
 sandbox.test.db
