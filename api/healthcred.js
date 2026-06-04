@@ -857,33 +857,38 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
            let ataAttempts = 0;
            const maxAttempts = 3;
            
-           while (ataAttempts < maxAttempts) {
-             try {
-               ataAttempts++;
-               log.info(`ATA creation attempt ${ataAttempts}/${maxAttempts}`);
-               recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-                 connection,
-                 payer,
-                 mint,
-                 credentialOwnerPublicKey
-               );
-               log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
-               break; // Success, exit retry loop
-             } catch (ataErr) {
-               log.error(`ATA creation attempt ${ataAttempts} failed:`, { 
-                 error: ataErr?.message || String(ataErr),
-                 name: ataErr?.name,
-                 code: ataErr?.code
-               });
-               
-               if (ataAttempts < maxAttempts && process.env.NODE_ENV !== 'test') {
-                 log.info(`Retrying ATA creation in 2 seconds...`);
-                 await new Promise(resolve => setTimeout(resolve, 2000));
-               } else if (ataAttempts === maxAttempts) {
-                 throw ataErr;
-               }
-             }
-           }
+            while (ataAttempts < maxAttempts) {
+              try {
+                ataAttempts++;
+                log.info(`ATA creation attempt ${ataAttempts}/${maxAttempts}`);
+                
+                // Ensure mint is a proper PublicKey object
+                const mintPublicKey = typeof mint === 'string' ? new web3.PublicKey(mint) : mint;
+                log.info('Mint PublicKey for ATA:', { mintAddress: mintPublicKey.toString() });
+                
+                recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+                  connection,
+                  payer,
+                  mintPublicKey,
+                  credentialOwnerPublicKey
+                );
+                log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
+                break; // Success, exit retry loop
+              } catch (ataErr) {
+                log.error(`ATA creation attempt ${ataAttempts} failed:`, { 
+                  error: ataErr?.message || String(ataErr),
+                  name: ataErr?.name,
+                  code: ataErr?.code
+                });
+                
+                if (ataAttempts < maxAttempts && process.env.NODE_ENV !== 'test') {
+                  log.info(`Retrying ATA creation in 2 seconds...`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                } else if (ataAttempts === maxAttempts) {
+                  throw ataErr;
+                }
+              }
+            }
             
             // Wait for RPC to index the ATA (skip in test mode)
             // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
@@ -891,16 +896,17 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
               await new Promise(resolve => setTimeout(resolve, 2000));
             }
             
-            // Mint 1 badge token to credential owner
-           log.info('Minting 1 badge NFT token to credential owner...');
-           const badgeMintSig = await mintTo(
-             connection,
-             payer,
-             mint,
-             recipientTokenAccount.address,
-             payer,
-             1  // Mint 1 token
-           );
+             // Mint 1 badge token to credential owner
+            log.info('Minting 1 badge NFT token to credential owner...');
+            const mintPublicKeyForMint = typeof mint === 'string' ? new web3.PublicKey(mint) : mint;
+            const badgeMintSig = await mintTo(
+              connection,
+              payer,
+              mintPublicKeyForMint,
+              recipientTokenAccount.address,
+              payer,
+              1  // Mint 1 token
+            );
            log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
         } catch (err) {
           log.error('Error creating SPL token mint for badge:', { 
