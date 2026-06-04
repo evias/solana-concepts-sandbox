@@ -817,40 +817,42 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
          payer.publicKey,  // Freeze authority (backend payer)
          0  // 0 decimals = NFT
          );
-         mintAddress = mint.toBase58();
-         log.info('Badge SPL token mint created (NFT):', { mintAddress });
-         
-         // Wait for RPC to index the mint (skip in test mode)
-         if (process.env.NODE_ENV !== 'test') {
-           await new Promise(resolve => setTimeout(resolve, 1000));
-         }
-         
-         // Create associated token account for credential owner
-        log.info('Creating associated token account for credential owner...');
-        const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-          connection,
-          payer,
-          mint,
-          credentialOwnerPublicKey
-          );
-          log.info('Recipient token account:', { recipientTokenAccount });
+          mintAddress = mint.toBase58();
+          log.info('Badge SPL token mint created (NFT):', { mintAddress });
           
-          // Wait for RPC to index the ATA (skip in test mode)
+          // Wait for RPC to index the mint (skip in test mode)
+          // Use 1.5 seconds for badges to ensure mint is indexed
           if (process.env.NODE_ENV !== 'test') {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 1500));
           }
-          
-          // Mint 1 badge token to credential owner
-         log.info('Minting 1 badge NFT token to credential owner...');
-         const badgeMintSig = await mintTo(
+         
+          // Create associated token account for credential owner
+         log.info('Creating associated token account for credential owner...');
+         const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
            connection,
            payer,
            mint,
-           recipientTokenAccount.address,
-           payer,
-           1  // Mint 1 token
-         );
-         log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
+           credentialOwnerPublicKey
+           );
+           log.info('Recipient token account:', { recipientTokenAccount });
+           
+           // Wait for RPC to index the ATA (skip in test mode)
+           // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
+           if (process.env.NODE_ENV !== 'test') {
+             await new Promise(resolve => setTimeout(resolve, 2000));
+           }
+           
+           // Mint 1 badge token to credential owner
+          log.info('Minting 1 badge NFT token to credential owner...');
+          const badgeMintSig = await mintTo(
+            connection,
+            payer,
+            mint,
+            recipientTokenAccount.address,
+            payer,
+            1  // Mint 1 token
+          );
+          log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
        } catch (err) {
          log.error('Error creating SPL token mint for badge:', { error: err });
          log.error('Error message:', { error: err });
