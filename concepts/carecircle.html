@@ -142,10 +142,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
+                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
-                </button>
             </div>
         </header>
 
@@ -159,6 +159,9 @@
                         class="text-gray-500 hover:text-gray-700 text-2xl">
                         ✕
                     </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                 </div>
                 <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
             </div>
@@ -177,6 +180,9 @@
                         <span x-show="!userAddress">Connect Wallet</span>
                         <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
                     </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     <button 
                         type="button"
                         x-show="userAddress"
@@ -184,6 +190,9 @@
                         class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                         Disconnect
                     </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                 </div>
                 <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage shared files</p>
             </section>
@@ -268,11 +277,17 @@
                     <div class="border-b p-4 flex justify-between items-center">
                         <h2 class="text-xl font-bold">Connect Wallet</h2>
                         <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                     <div class="p-6 space-y-4">
                         <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
                             🌐 Connect Phantom Wallet
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         <div class="relative">
                             <div class="absolute inset-0 flex items-center">
                                 <div class="w-full border-t border-gray-300"></div>
@@ -291,6 +306,9 @@
                             <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
                                 Use This Address
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </div>
                     </div>
                 </div>
@@ -310,6 +328,9 @@
                         <button @click="refreshCredentialsBrowser()" class="text-blue-600 hover:text-blue-700 text-sm">
                             🔄 Refresh
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
 
                     <div x-show="browsing.loading" class="text-center py-8">
@@ -368,6 +389,9 @@
                             <span x-show="showUploadForm">▼</span>
                             <span x-show="!showUploadForm">▶</span>
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                     <form @submit.prevent="submitFileUpload()" class="space-y-4" x-show="showUploadForm" x-collapse>
                         <div>
@@ -422,6 +446,9 @@
                                 <span x-show="!uploading">📤 Upload File</span>
                                 <span x-show="uploading">Uploading...</span>
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </div>
 
                         <div x-show="uploadError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -446,6 +473,9 @@
                             <span x-show="showCaregiverForm">▼</span>
                             <span x-show="!showCaregiverForm">▶</span>
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                     <p class="text-gray-600 mb-4">Add authorized caregivers who can access your shared files and credentials.</p>
                     <form @submit.prevent="submitAuthorizeCaregiverForm" class="space-y-4" x-show="showCaregiverForm" x-collapse>
@@ -485,6 +515,9 @@
                                 <span x-show="!authorizingCaregiver">✓ Authorize Caregiver</span>
                                 <span x-show="authorizingCaregiver">Authorizing...</span>
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </div>
 
                         <div x-show="caregiverError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">

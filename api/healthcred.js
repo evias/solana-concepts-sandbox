@@ -374,14 +374,16 @@ router.post('/submit-signed-transaction', async (req, res) => {
          payer.publicKey,      // Mint authority (backend payer)
          payer.publicKey,      // Freeze authority (backend payer)
          0                     // 0 decimals = NFT
-        );
-        mintAddress = mint.toBase58();
-        log.info('Token mint created:', { mintAddress });
+         );
+         mintAddress = mint.toBase58();
+         log.info('Token mint created:', { mintAddress });
 
-        // Wait for RPC to index the mint
-        
+         // Wait for RPC to index the mint (skip in test mode)
+         if (process.env.NODE_ENV !== 'test') {
+           await new Promise(resolve => setTimeout(resolve, 1000));
+         }
 
-        // Create associated token account for credential owner
+         // Create associated token account for credential owner
         log.info('Creating associated token account...');
        const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
        const associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
@@ -389,13 +391,15 @@ router.post('/submit-signed-transaction', async (req, res) => {
          payer,
          mint,
          credentialOwnerPublicKey
-        );
-        log.info('Token account created:', { associatedTokenAccount });
+         );
+         log.info('Token account created:', { associatedTokenAccount });
 
-        // Wait for RPC to index the ATA
-        
+         // Wait for RPC to index the ATA (skip in test mode)
+         if (process.env.NODE_ENV !== 'test') {
+           await new Promise(resolve => setTimeout(resolve, 1000));
+         }
 
-        // Mint 1 token to represent this credential
+         // Mint 1 token to represent this credential
         log.info('Minting credential token...');
        const mintSig = await mintTo(
          connection,
@@ -812,21 +816,31 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
          payer.publicKey,  // Backend payer is the mint authority
          payer.publicKey,  // Freeze authority (backend payer)
          0  // 0 decimals = NFT
-        );
-        mintAddress = mint.toBase58();
-        log.info('Badge SPL token mint created (NFT):', { mintAddress });
-        
-        // Create associated token account for credential owner
+         );
+         mintAddress = mint.toBase58();
+         log.info('Badge SPL token mint created (NFT):', { mintAddress });
+         
+         // Wait for RPC to index the mint (skip in test mode)
+         if (process.env.NODE_ENV !== 'test') {
+           await new Promise(resolve => setTimeout(resolve, 1000));
+         }
+         
+         // Create associated token account for credential owner
         log.info('Creating associated token account for credential owner...');
         const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
           connection,
           payer,
           mint,
           credentialOwnerPublicKey
-         );
-         log.info('Recipient token account:', { recipientTokenAccount });
-         
-         // Mint 1 badge token to credential owner
+          );
+          log.info('Recipient token account:', { recipientTokenAccount });
+          
+          // Wait for RPC to index the ATA (skip in test mode)
+          if (process.env.NODE_ENV !== 'test') {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          // Mint 1 badge token to credential owner
          log.info('Minting 1 badge NFT token to credential owner...');
          const badgeMintSig = await mintTo(
            connection,

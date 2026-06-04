@@ -54,12 +54,12 @@ const logger = winston.createLogger({
     // Console output
     new winston.transports.Console(),
     
-    // Daily rotated file
+    // File output with size-based rotation (keeps sandbox.log as active file)
     new DailyRotateFile({
-      filename: path.join(logDir, `${logBasename}-%DATE%${logExt}`),
-      datePattern: 'YYYY-MM-DD',
-      maxDays: '30d', // Keep 30 days of logs
-      maxSize: '10m', // Rotate if file exceeds 10MB
+      filename: path.join(logDir, logBasename + logExt),
+      datePattern: '', // No date pattern - keeps same filename
+      maxSize: '1m', // Rotate when file exceeds 1MB
+      maxFiles: '30d', // Keep rotated files for 30 days
       format: customFormat
     })
   ]
