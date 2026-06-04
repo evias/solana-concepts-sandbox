@@ -383,43 +383,55 @@ router.post('/submit-signed-transaction', async (req, res) => {
            await new Promise(resolve => setTimeout(resolve, 1000));
          }
 
-         // Create associated token account for credential owner
-        log.info('Creating associated token account...');
-       const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
-       const associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
-         connection,
-         payer,
-         mint,
-         credentialOwnerPublicKey
-         );
-         log.info('Token account created:', { associatedTokenAccount });
-
-         // Wait for RPC to index the ATA (skip in test mode)
-         if (process.env.NODE_ENV !== 'test') {
-           await new Promise(resolve => setTimeout(resolve, 1000));
-         }
-
-         // Mint 1 token to represent this credential
-        log.info('Minting credential token...');
-       const mintSig = await mintTo(
-         connection,
-         payer,
-         mint,
-         associatedTokenAccount.address,
-         payer,
-         1
-       );
-       log.info('Token minted, signature:', { mintSig });
-      } catch (mintErr) {
-        log.error('Error creating NFT mint or minting:', { error: mintErr });
-        log.error('Error stack:', { error: mintErr });
-        log.error('Full error:', { error: mintErr });
-        // If mint was created but something else failed, still keep the mint address
-        // Only set to null if createMint itself failed
-        if (!mintAddress) {
-          return res.status(500).json({ error: 'Failed to create credential NFT', details: mintErr.message });
+          // Create associated token account for credential owner
+         log.info('Creating associated token account...');
+        const credentialOwnerPublicKey = new web3.PublicKey(regData.walletAddress);
+        let associatedTokenAccount;
+        try {
+          associatedTokenAccount = await getOrCreateAssociatedTokenAccount(
+            connection,
+            payer,
+            mint,
+            credentialOwnerPublicKey
+          );
+          log.info('Token account created:', { address: associatedTokenAccount.address.toString() });
+        } catch (ataErr) {
+          log.error('Failed to create/get associated token account:', {
+            error: ataErr?.message || String(ataErr),
+            name: ataErr?.name,
+            code: ataErr?.code
+          });
+          throw ataErr;
         }
-      }
+
+          // Wait for RPC to index the ATA (skip in test mode)
+          if (process.env.NODE_ENV !== 'test') {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+          // Mint 1 token to represent this credential
+         log.info('Minting credential token...');
+        const mintSig = await mintTo(
+          connection,
+          payer,
+          mint,
+          associatedTokenAccount.address,
+          payer,
+          1
+        );
+        log.info('Token minted, signature:', { mintSig });
+       } catch (mintErr) {
+         log.error('Error creating NFT mint or minting:', { 
+           message: mintErr?.message || String(mintErr),
+           name: mintErr?.name,
+           code: mintErr?.code
+         });
+         // If mint was created but something else failed, still keep the mint address
+         // Only set to null if createMint itself failed
+         if (!mintAddress) {
+           return res.status(500).json({ error: 'Failed to create credential NFT', details: mintErr?.message || String(mintErr) });
+         }
+       }
      
      // Create credential record in database
      log.info('Creating credential record in database...');
@@ -825,40 +837,56 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
           if (process.env.NODE_ENV !== 'test') {
             await new Promise(resolve => setTimeout(resolve, 1500));
           }
-         
-          // Create associated token account for credential owner
-         log.info('Creating associated token account for credential owner...');
-         const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-           connection,
-           payer,
-           mint,
-           credentialOwnerPublicKey
+          
+           // Create associated token account for credential owner
+          log.info('Creating associated token account for credential owner...');
+          let recipientTokenAccount;
+          try {
+            recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+              connection,
+              payer,
+              mint,
+              credentialOwnerPublicKey
+            );
+            log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
+          } catch (ataErr) {
+            log.error('Failed to create/get associated token account:', { 
+              error: ataErr?.message || String(ataErr),
+              name: ataErr?.name,
+              code: ataErr?.code
+            });
+            throw ataErr;
+          }
+            
+            // Wait for RPC to index the ATA (skip in test mode)
+            // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
+            if (process.env.NODE_ENV !== 'test') {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+            
+            // Mint 1 badge token to credential owner
+           log.info('Minting 1 badge NFT token to credential owner...');
+           const badgeMintSig = await mintTo(
+             connection,
+             payer,
+             mint,
+             recipientTokenAccount.address,
+             payer,
+             1  // Mint 1 token
            );
-           log.info('Recipient token account:', { recipientTokenAccount });
-           
-           // Wait for RPC to index the ATA (skip in test mode)
-           // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
-           if (process.env.NODE_ENV !== 'test') {
-             await new Promise(resolve => setTimeout(resolve, 2000));
-           }
-           
-           // Mint 1 badge token to credential owner
-          log.info('Minting 1 badge NFT token to credential owner...');
-          const badgeMintSig = await mintTo(
-            connection,
-            payer,
-            mint,
-            recipientTokenAccount.address,
-            payer,
-            1  // Mint 1 token
-          );
-          log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
-       } catch (err) {
-         log.error('Error creating SPL token mint for badge:', { error: err });
-         log.error('Error message:', { error: err });
-         log.error('Error stack:', { error: err });
-         return res.status(500).json({ error: 'Failed to create SPL token mint', details: err.message });
-       }
+           log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
+        } catch (err) {
+          log.error('Error creating SPL token mint for badge:', { 
+            message: err?.message || String(err),
+            name: err?.name,
+            code: err?.code,
+            fullError: JSON.stringify(err)
+          });
+          return res.status(500).json({ 
+            error: 'Failed to create SPL token mint', 
+            details: err?.message || String(err)
+          });
+        }
      
      // Create badge record in database
      log.info('Creating badge record in database...');

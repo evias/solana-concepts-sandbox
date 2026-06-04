@@ -69,7 +69,8 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       const filePath = path.join(__dirname, '../api/healthcred.js');
       const content = fs.readFileSync(filePath, 'utf8');
       // Find the pattern: createMint -> setTimeout -> getOrCreateAssociatedTokenAccount (flexible timing)
-      const mintPattern = /createMint[\s\S]{1,800}await new Promise\(resolve => setTimeout[\s\S]{1,300}getOrCreateAssociatedTokenAccount/;
+      // Allow up to 1500 chars between each step to account for logging
+      const mintPattern = /createMint[\s\S]{1,1500}await new Promise\(resolve => setTimeout[\s\S]{1,500}getOrCreateAssociatedTokenAccount/;
       expect(mintPattern.test(content)).toBe(true);
     });
 
@@ -78,7 +79,8 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       const filePath = path.join(__dirname, '../api/healthcred.js');
       const content = fs.readFileSync(filePath, 'utf8');
       // Find the pattern: getOrCreateAssociatedTokenAccount -> setTimeout -> mintTo (flexible timing)
-      const ataPattern = /getOrCreateAssociatedTokenAccount[\s\S]{1,800}await new Promise\(resolve => setTimeout[\s\S]{1,300}mintTo/;
+      // Allow up to 1500 chars between each step to account for logging
+      const ataPattern = /getOrCreateAssociatedTokenAccount[\s\S]{1,1500}await new Promise\(resolve => setTimeout[\s\S]{1,500}mintTo/;
       expect(ataPattern.test(content)).toBe(true);
     });
   });
