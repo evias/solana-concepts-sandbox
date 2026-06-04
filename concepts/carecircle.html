@@ -142,10 +142,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
-                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
+                </button>
             </div>
         </header>
 
@@ -159,9 +159,6 @@
                         class="text-gray-500 hover:text-gray-700 text-2xl">
                         ✕
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </div>
                 <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
             </div>
@@ -180,9 +177,6 @@
                         <span x-show="!userAddress">Connect Wallet</span>
                         <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     <button 
                         type="button"
                         x-show="userAddress"
@@ -190,9 +184,6 @@
                         class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                         Disconnect
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </div>
                 <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage shared files</p>
             </section>
@@ -277,17 +268,11 @@
                     <div class="border-b p-4 flex justify-between items-center">
                         <h2 class="text-xl font-bold">Connect Wallet</h2>
                         <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <div class="p-6 space-y-4">
                         <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
                             🌐 Connect Phantom Wallet
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                         <div class="relative">
                             <div class="absolute inset-0 flex items-center">
                                 <div class="w-full border-t border-gray-300"></div>
@@ -306,9 +291,6 @@
                             <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
                                 Use This Address
                             </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                         </div>
                     </div>
                 </div>
@@ -328,9 +310,6 @@
                         <button @click="refreshCredentialsBrowser()" class="text-blue-600 hover:text-blue-700 text-sm">
                             🔄 Refresh
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
 
                     <div x-show="browsing.loading" class="text-center py-8">
@@ -389,9 +368,6 @@
                             <span x-show="showUploadForm">▼</span>
                             <span x-show="!showUploadForm">▶</span>
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <form @submit.prevent="submitFileUpload()" class="space-y-4" x-show="showUploadForm" x-collapse>
                         <div>
@@ -446,9 +422,6 @@
                                 <span x-show="!uploading">📤 Upload File</span>
                                 <span x-show="uploading">Uploading...</span>
                             </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                         </div>
 
                         <div x-show="uploadError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -473,9 +446,6 @@
                             <span x-show="showCaregiverForm">▼</span>
                             <span x-show="!showCaregiverForm">▶</span>
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <p class="text-gray-600 mb-4">Add authorized caregivers who can access your shared files and credentials.</p>
                     <form @submit.prevent="submitAuthorizeCaregiverForm" class="space-y-4" x-show="showCaregiverForm" x-collapse>
@@ -515,9 +485,6 @@
                                 <span x-show="!authorizingCaregiver">✓ Authorize Caregiver</span>
                                 <span x-show="authorizingCaregiver">Authorizing...</span>
                             </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                         </div>
 
                         <div x-show="caregiverError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -653,64 +620,43 @@
                     this.loadingSigners = false;
                 },
 
-                 async loadCredentialsList() {
-                     const log = window.createLogger('concept/carecircle');
-                     this.browsing.loading = true;
-                     this.browsing.error = '';
-                     this.loadingSigners = true;
-                     log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
-                     try {
-                         // Load owned credentials
-                         const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
-                         log.info('[CareCircle Browser] Fetching owned credentials', { url });
-                         const response = await fetch(url);
-                         log.info('[CareCircle Browser] Response status', { status: response.status });
-                         if (!response.ok) {
-                             throw new Error(`Failed to load credentials: ${response.status}`);
-                         }
-                         const data = await response.json();
-                         log.info('[CareCircle Browser] Received owned credentials', { credentials: data.credentials });
-                         
-                         let allCredentials = data.credentials || [];
-                         
-                         // Load authorized credentials (where wallet is a signer, not owner)
-                         try {
-                             const authorizedUrl = `/api/v1/carecircle/authorized-credentials?wallet=${this.userAddress}`;
-                             log.info('[CareCircle Browser] Fetching authorized credentials', { url: authorizedUrl });
-                             const authorizedResponse = await fetch(authorizedUrl);
-                             if (authorizedResponse.ok) {
-                                 const authorizedData = await authorizedResponse.json();
-                                 log.info('[CareCircle Browser] Received authorized credentials', { credentials: authorizedData.credentials });
-                                 // Combine with owned credentials
-                                 allCredentials = [...allCredentials, ...(authorizedData.credentials || [])];
-                             } else {
-                                 log.warn('[CareCircle Browser] Failed to load authorized credentials', { status: authorizedResponse.status });
-                             }
-                         } catch (error) {
-                             log.warn('[CareCircle Browser] Error fetching authorized credentials', { error: error.message });
-                             // Continue with just owned credentials if authorized fetch fails
-                         }
-                         
-                         // Update properties directly for Alpine.js reactivity
-                         this.browsing.credentials = allCredentials;
-                         this.browsing.files = [];
-                         this.browsing.path = [];
-                         this.browsing.error = '';
-                         this.browsing.loading = false;
-                         log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
-                         
-                         // Load authorized signers for each credential
-                         for (const credential of this.browsing.credentials) {
-                             await this.loadAuthorizedSigners(credential);
-                         }
-                         this.loadingSigners = false;
-                     } catch (error) {
-                         log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
-                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
-                         this.browsing.loading = false;
-                         this.loadingSigners = false;
-                     }
-                 },
+                async loadCredentialsList() {
+                    const log = window.createLogger('concept/carecircle');
+                    this.browsing.loading = true;
+                    this.browsing.error = '';
+                    this.loadingSigners = true;
+                    log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
+                    try {
+                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                        log.info('[CareCircle Browser] Fetching', { url });
+                        const response = await fetch(url);
+                        log.info('[CareCircle Browser] Response status', { status: response.status });
+                        if (!response.ok) {
+                            throw new Error(`Failed to load credentials: ${response.status}`);
+                        }
+                        const data = await response.json();
+                        log.info('[CareCircle Browser] Received credentials', { credentials: data.credentials });
+                        
+                        // Update properties directly for Alpine.js reactivity
+                        this.browsing.credentials = data.credentials || [];
+                        this.browsing.files = [];
+                        this.browsing.path = [];
+                        this.browsing.error = '';
+                        this.browsing.loading = false;
+                        log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
+                        
+                        // Load authorized signers for each credential
+                        for (const credential of this.browsing.credentials) {
+                            await this.loadAuthorizedSigners(credential);
+                        }
+                        this.loadingSigners = false;
+                    } catch (error) {
+                        log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
+                        this.browsing.error = 'Failed to load credentials list: ' + error.message;
+                        this.browsing.loading = false;
+                        this.loadingSigners = false;
+                    }
+                },
 
                 getCredentialLabel(cred) {
                     if (!cred) return '';

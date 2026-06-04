@@ -109,10 +109,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
-                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
+                </button>
             </div>
         </header>
 
@@ -126,9 +126,6 @@
                         class="text-gray-500 hover:text-gray-700 text-2xl">
                         ✕
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </div>
                 <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
             </div>
@@ -147,9 +144,6 @@
                         <span x-show="!userAddress">Connect Wallet</span>
                         <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     <button 
                         type="button"
                         x-show="userAddress"
@@ -157,9 +151,6 @@
                         class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                         Disconnect
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </div>
                 <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to record or verify vaccinations</p>
                 <p x-show="userAddress" class="text-sm text-gray-600 mt-2 font-mono break-all" x-text="'Your Account: ' + userAddress"></p>
@@ -224,13 +215,7 @@
                              class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
                              Clear Search
                          </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                          <button @click="loadVaccinationHistory()" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh</button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                      </div>
                      <p x-show="vaccinationSearchQuery && filteredVaccinations.length === 0" class="text-red-600 text-sm">No vaccinations match your search.</p>
                  </div>
@@ -286,18 +271,12 @@
                                               <button @click="openVaccinationDetailsModal(vax)" class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
                                                   📋 View Details
                                               </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                                               <a x-show="vax.transaction_hash" :href="'https://solscan.io/tx/' + vax.transaction_hash + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">
                                                   🔗 Solscan
                                               </a>
                                               <button x-show="getVaccinationType(vax) === 'spl_token_mint' && isFirstVaccinationOfType(vax)" @click="openRecordNewShotModal(vax)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
                                                   📋 New Shot
                                               </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                                           </div>
                                       </td>
                                  </tr>
@@ -354,9 +333,6 @@
                           <span x-show="signingStatus === 'submitted'">Confirming...</span>
                           <span x-show="signingStatus === 'confirmed'">Transaction Confirmed!</span>
                       </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </form>
              </section>
 
@@ -368,9 +344,6 @@
                         <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
                             🎭 Connect Phantom
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <div class="border-t pt-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Or enter address manually:</label>
@@ -378,16 +351,10 @@
                         <button @click="connectManually()" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
                             Connect
                         </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <button @click="showWalletModal = false" class="w-full mt-4 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
                         Cancel
                     </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                 </div>
             </div>
 
@@ -397,9 +364,6 @@
                     <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
                         <h2 class="text-2xl font-bold">Record New Shot</h2>
                         <button @click="showRecordNewShotModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                     </div>
                     <form @submit.prevent="submitRecordNewShot()" class="p-6 space-y-4">
                         <!-- Must Renew Checkbox -->
@@ -464,9 +428,6 @@
                             <button type="button" @click="showRecordNewShotModal = false" class="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
                                 Cancel
                             </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                             <button type="submit" :disabled="!!newShotStatus && newShotStatus.length > 0" :class="(!!newShotStatus && newShotStatus.length > 0) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'" class="bg-green-600 text-white px-4 py-2 rounded-md">
                                 <span x-show="!newShotStatus || newShotStatus.length === 0">Record Shot</span>
                                 <span x-show="newShotStatus === 'signing'">Signing...</span>
@@ -474,9 +435,6 @@
                                 <span x-show="newShotStatus === 'submitting'">Submitting...</span>
                                 <span x-show="newShotStatus === 'confirmed'">Confirmed!</span>
                             </button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                         </div>
                      </form>
                  </div>
@@ -488,9 +446,6 @@
                      <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
                          <h2 class="text-2xl font-bold">Vaccination Details</h2>
                          <button @click="showVaccinationDetailsModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                    📖 API Documentation
-                </a>
                      </div>
                      <div class="p-6 space-y-4" x-show="selectedVaccinationForDetails">
                          <!-- Type -->
