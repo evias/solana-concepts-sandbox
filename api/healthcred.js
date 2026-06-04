@@ -840,15 +840,16 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
          mint,                           // Already a PublicKey from createMint
          credentialOwnerPublicKey
        );
-       log.info('Associated token account created:', { address: recipientTokenAccount.address.toBase58() });
+       const tokenAccountAddress = recipientTokenAccount.address.toBase58();
+       log.info('Associated token account created:', { address: tokenAccountAddress });
        
        // Step 3: Mint 1 token to credential owner
        log.info('Minting 1 badge NFT to credential owner...');
        const badgeMintSig = await mintTo(
          connection,
          payer,
-         mint,
-         recipientTokenAccount.address,
+         new web3.PublicKey(mintAddress),        // Convert string to PublicKey (like PetTracker does)
+         new web3.PublicKey(tokenAccountAddress), // Convert string to PublicKey (like PetTracker does)
          payer,
          1  // Mint 1 token
        );
