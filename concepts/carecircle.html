@@ -653,43 +653,64 @@
                     this.loadingSigners = false;
                 },
 
-                async loadCredentialsList() {
-                    const log = window.createLogger('concept/carecircle');
-                    this.browsing.loading = true;
-                    this.browsing.error = '';
-                    this.loadingSigners = true;
-                    log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
-                    try {
-                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
-                        log.info('[CareCircle Browser] Fetching', { url });
-                        const response = await fetch(url);
-                        log.info('[CareCircle Browser] Response status', { status: response.status });
-                        if (!response.ok) {
-                            throw new Error(`Failed to load credentials: ${response.status}`);
-                        }
-                        const data = await response.json();
-                        log.info('[CareCircle Browser] Received credentials', { credentials: data.credentials });
-                        
-                        // Update properties directly for Alpine.js reactivity
-                        this.browsing.credentials = data.credentials || [];
-                        this.browsing.files = [];
-                        this.browsing.path = [];
-                        this.browsing.error = '';
-                        this.browsing.loading = false;
-                        log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
-                        
-                        // Load authorized signers for each credential
-                        for (const credential of this.browsing.credentials) {
-                            await this.loadAuthorizedSigners(credential);
-                        }
-                        this.loadingSigners = false;
-                    } catch (error) {
-                        log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
-                        this.browsing.error = 'Failed to load credentials list: ' + error.message;
-                        this.browsing.loading = false;
-                        this.loadingSigners = false;
-                    }
-                },
+                 async loadCredentialsList() {
+                     const log = window.createLogger('concept/carecircle');
+                     this.browsing.loading = true;
+                     this.browsing.error = '';
+                     this.loadingSigners = true;
+                     log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
+                     try {
+                         // Load owned credentials
+                         const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                         log.info('[CareCircle Browser] Fetching owned credentials', { url });
+                         const response = await fetch(url);
+                         log.info('[CareCircle Browser] Response status', { status: response.status });
+                         if (!response.ok) {
+                             throw new Error(`Failed to load credentials: ${response.status}`);
+                         }
+                         const data = await response.json();
+                         log.info('[CareCircle Browser] Received owned credentials', { credentials: data.credentials });
+                         
+                         let allCredentials = data.credentials || [];
+                         
+                         // Load authorized credentials (where wallet is a signer, not owner)
+                         try {
+                             const authorizedUrl = `/api/v1/carecircle/authorized-credentials?wallet=${this.userAddress}`;
+                             log.info('[CareCircle Browser] Fetching authorized credentials', { url: authorizedUrl });
+                             const authorizedResponse = await fetch(authorizedUrl);
+                             if (authorizedResponse.ok) {
+                                 const authorizedData = await authorizedResponse.json();
+                                 log.info('[CareCircle Browser] Received authorized credentials', { credentials: authorizedData.credentials });
+                                 // Combine with owned credentials
+                                 allCredentials = [...allCredentials, ...(authorizedData.credentials || [])];
+                             } else {
+                                 log.warn('[CareCircle Browser] Failed to load authorized credentials', { status: authorizedResponse.status });
+                             }
+                         } catch (error) {
+                             log.warn('[CareCircle Browser] Error fetching authorized credentials', { error: error.message });
+                             // Continue with just owned credentials if authorized fetch fails
+                         }
+                         
+                         // Update properties directly for Alpine.js reactivity
+                         this.browsing.credentials = allCredentials;
+                         this.browsing.files = [];
+                         this.browsing.path = [];
+                         this.browsing.error = '';
+                         this.browsing.loading = false;
+                         log.info('[CareCircle Browser] Updated browsing.credentials', { count: this.browsing.credentials.length });
+                         
+                         // Load authorized signers for each credential
+                         for (const credential of this.browsing.credentials) {
+                             await this.loadAuthorizedSigners(credential);
+                         }
+                         this.loadingSigners = false;
+                     } catch (error) {
+                         log.error('[CareCircle Browser] Error loading credentials', { error: error.message });
+                         this.browsing.error = 'Failed to load credentials list: ' + error.message;
+                         this.browsing.loading = false;
+                         this.loadingSigners = false;
+                     }
+                 },
 
                 getCredentialLabel(cred) {
                     if (!cred) return '';

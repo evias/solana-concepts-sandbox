@@ -167,12 +167,115 @@ router.get('/credentials', async (req, res) => {
           sasCredentialId: cred.sas_credential_id
         });
       }
+     }
+
+     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
+   } catch (error) {
+     log.error('Error listing credentials', { error });
+     return res.status(500).json({ error: 'Failed to list credentials' });
+   }
+ });
+
+/**
+ * @swagger
+ * /api/v1/carecircle/authorized-credentials:
+ *   get:
+ *     tags:
+ *       - CareCircle
+ *     summary: List credentials where wallet is an authorized signer
+ *     description: Returns credentials where the wallet is an authorized caregiver/signer, not the owner.
+ *     parameters:
+ *       - in: query
+ *         name: wallet
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Solana wallet address
+ *     responses:
+ *       200:
+ *         description: Authorized credentials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 credentials:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       mint:
+ *                         type: string
+ *                       owner:
+ *                         type: string
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/authorized-credentials', async (req, res) => {
+  try {
+    const wallet = req.query.wallet;
+    if (!wallet) {
+      return res.status(400).json({ error: 'Wallet address required' });
+    }
+
+    const credentials = [];
+
+    // Only check in non-test mode to avoid expensive RPC calls in tests
+    if (process.env.NODE_ENV !== 'test') {
+      try {
+        // Get all credentials
+        const allCredentials = credentialDb.getAllCredentials(1000, 0);
+        
+        // For each credential, check if wallet is an authorized signer (not owner)
+        for (const cred of allCredentials) {
+          // Skip if wallet is the owner (those are returned by /credentials endpoint)
+          if (cred.wallet_address === wallet) {
+            continue;
+          }
+
+          if (!cred.sas_credential_id) {
+            continue;
+          }
+
+          try {
+            // Get the owner's SAS credential address
+            const payer = require('./payer').getPayerKeypair();
+            const sasIntegration = require('./sas-integration');
+            const ownerSasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
+            
+            // Check if wallet is an authorized signer
+            const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
+            if (authorizedSigners && authorizedSigners.includes(wallet)) {
+              credentials.push({
+                id: extractCredentialUuid(cred.id),
+                name: cred.full_name,
+                mint: cred.mint_address,
+                owner: cred.wallet_address,
+                didId: cred.did_id,
+                sasCredentialId: cred.sas_credential_id
+              });
+            }
+          } catch (error) {
+            log.warn('Error checking if wallet is authorized signer', { credentialId: cred.id, wallet, error: error.message });
+            // Continue checking other credentials
+          }
+        }
+      } catch (error) {
+        log.error('Error checking authorized credentials', { error: error.message });
+        // Don't fail the whole request if checking fails
+      }
     }
 
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
   } catch (error) {
-    log.error('Error listing credentials', { error });
-    return res.status(500).json({ error: 'Failed to list credentials' });
+    log.error('Error listing authorized credentials', { error });
+    return res.status(500).json({ error: 'Failed to list authorized credentials' });
   }
 });
 
