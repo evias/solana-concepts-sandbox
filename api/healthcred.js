@@ -829,34 +829,61 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
          payer.publicKey,  // Freeze authority (backend payer)
          0  // 0 decimals = NFT
          );
-          mintAddress = mint.toBase58();
-          log.info('Badge SPL token mint created (NFT):', { mintAddress });
+           mintAddress = mint.toBase58();
+           log.info('Badge SPL token mint created (NFT):', { mintAddress });
+           
+           // Wait for RPC to index the mint (skip in test mode)
+           // Use 1.5 seconds for badges to ensure mint is indexed
+           if (process.env.NODE_ENV !== 'test') {
+             await new Promise(resolve => setTimeout(resolve, 1500));
+             
+             // Verify mint exists on chain before trying to create ATA
+             try {
+               const mintInfo = await connection.getParsedAccountInfo(mint);
+               if (!mintInfo.value) {
+                 log.warn('Mint not found on chain yet, waiting additional time');
+                 await new Promise(resolve => setTimeout(resolve, 1000));
+               } else {
+                 log.info('Mint verified on chain:', { mintAddress });
+               }
+             } catch (verifyErr) {
+               log.warn('Could not verify mint on chain:', { error: verifyErr?.message });
+             }
+           }
           
-          // Wait for RPC to index the mint (skip in test mode)
-          // Use 1.5 seconds for badges to ensure mint is indexed
-          if (process.env.NODE_ENV !== 'test') {
-            await new Promise(resolve => setTimeout(resolve, 1500));
-          }
-          
-           // Create associated token account for credential owner
-          log.info('Creating associated token account for credential owner...');
-          let recipientTokenAccount;
-          try {
-            recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-              connection,
-              payer,
-              mint,
-              credentialOwnerPublicKey
-            );
-            log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
-          } catch (ataErr) {
-            log.error('Failed to create/get associated token account:', { 
-              error: ataErr?.message || String(ataErr),
-              name: ataErr?.name,
-              code: ataErr?.code
-            });
-            throw ataErr;
-          }
+            // Create associated token account for credential owner
+           log.info('Creating associated token account for credential owner...');
+           let recipientTokenAccount;
+           let ataAttempts = 0;
+           const maxAttempts = 3;
+           
+           while (ataAttempts < maxAttempts) {
+             try {
+               ataAttempts++;
+               log.info(`ATA creation attempt ${ataAttempts}/${maxAttempts}`);
+               recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+                 connection,
+                 payer,
+                 mint,
+                 credentialOwnerPublicKey
+               );
+               log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
+               break; // Success, exit retry loop
+             } catch (ataErr) {
+               log.error(`ATA creation attempt ${ataAttempts} failed:`, { 
+                 error: ataErr?.message || String(ataErr),
+                 name: ataErr?.name,
+                 code: ataErr?.code
+               });
+               
+               if (ataAttempts < maxAttempts && process.env.NODE_ENV !== 'test') {
+                 log.info(`Retrying ATA creation in 2 seconds...`);
+                 await new Promise(resolve => setTimeout(resolve, 2000));
+               } else if (ataAttempts === maxAttempts) {
+                 throw ataErr;
+               }
+             }
+           }
             
             // Wait for RPC to index the ATA (skip in test mode)
             // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
