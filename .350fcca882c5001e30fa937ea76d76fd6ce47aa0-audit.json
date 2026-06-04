@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "/srv/workspaces/smarties/solana-concepts-sandbox/.350fcca882c5001e30fa937ea76d76fd6ce47aa0-audit.json",
+    "files": [
+        {
+            "date": 1780569221048,
+            "name": "/srv/workspaces/smarties/solana-concepts-sandbox/sandbox.log.2026-06-04",
+            "hash": "cd2c19d40430ee10984cbe538a2820fbdff79ec2ac2827496f28ed1ff18a55e4"
+        }
+    ],
+    "hashType": "sha256"
+}

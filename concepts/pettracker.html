@@ -107,10 +107,10 @@
                 </a>
                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
                     📚 Documentation
+                </button>
                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
                     📖 API Documentation
                 </a>
-                </button>
             </div>
         </header>
 
@@ -144,7 +144,13 @@
                             class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors">
                             Clear Search
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         <button @click="loadPets" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Refresh List</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                     <p x-show="petSearchQuery && totalFilteredPets === 0" class="text-red-600 text-sm">No pets match your search.</p>
                     <p x-show="petSearchQuery && totalFilteredPets > 0" class="text-gray-600 text-sm" x-text="`Found ${totalFilteredPets} pet(s) matching your search.`"></p>
@@ -200,18 +206,30 @@
                                             class="text-sm text-yellow-600 hover:text-yellow-800 font-semibold hover:underline">
                                             ⚠️ No veterinary authorized
                                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                                     </template>
                                 </div>
                                 <div class="mt-4 flex space-x-2 flex-wrap">
                                     <button @click="loadPet(pet.id)" class="text-indigo-600 hover:text-indigo-800 text-sm">View Details</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                                     <button 
                                         x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
                                         @click="editPet(pet.id)" 
                                         class="text-amber-600 hover:text-amber-800 text-sm font-semibold">Edit</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                                     <button 
                                         x-show="pet.owner === ownerAddress || pet.mandate_authority === ownerAddress" 
                                         @click="deletePet(pet.id)" 
                                         class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                                     <span x-show="pet.owner !== ownerAddress && pet.mandate_authority !== ownerAddress" class="text-gray-400 text-sm italic">
                                         (read-only)
                                     </span>
@@ -228,12 +246,18 @@
                             class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors">
                             Load More
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         <button 
                             @click="collapsePets" 
                             x-show="displayedPetsCount > 12"
                             class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors">
                             Collapse
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                 </div>
             </section>
@@ -275,6 +299,9 @@
                                 <span x-show="!ownerAddress">Connect Wallet</span>
                                 <span x-show="ownerAddress" x-text="'Connected: ' + ownerAddress.substring(0, 6) + '...' + ownerAddress.substring(ownerAddress.length - 4)"></span>
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                             <button 
                                 type="button"
                                 x-show="ownerAddress && !isEditMode"
@@ -282,6 +309,9 @@
                                 class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
                                 Disconnect
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </div>
                         <input x-model="ownerAddress" type="hidden">
                         <p x-show="!ownerAddress && !isEditMode" class="text-sm text-gray-500 mt-2">Please connect your wallet to register a pet</p>
@@ -296,12 +326,18 @@
                             class="bg-indigo-600 text-white px-4 py-2 rounded-md">
                             Register Pet
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         <button 
                             type="submit" 
                             x-show="isEditMode"
                             class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
                             Update Pet
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         <button 
                             type="button"
                             x-show="isEditMode"
@@ -309,6 +345,9 @@
                             class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
                             Cancel Update
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                      </div>
                  </form>
              </section>
@@ -372,6 +411,9 @@
                              <span x-show="!isAuthorizingVet">✓ Authorize Veterinary</span>
                              <span x-show="isAuthorizingVet">Authorizing...</span>
                          </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                      </div>
 
                         <!-- Error/Success Message -->
@@ -385,6 +427,9 @@
                                     class="absolute top-2 right-2 text-xl hover:opacity-70">
                                     ✕
                                 </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                                 <template x-if="vetAuthMessage.isHtml">
                                     <p x-html="vetAuthMessage.text" class="pr-6"></p>
                                 </template>
@@ -421,6 +466,9 @@
                      <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
                          <h2 class="text-2xl font-bold" x-text="selectedPetForDetails?.name + ' - ' + selectedPetForDetails?.species"></h2>
                          <button @click="showPetDetailsModal = false; petDetailsVaccinations = [];" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                      </div>
                      <div class="p-6 space-y-6" x-show="selectedPetForDetails">
                          <!-- Pet Information -->
@@ -573,6 +621,9 @@
                                 <span x-show="wallet.connected" class="text-green-600 text-sm">✓ Installed</span>
                                 <span x-show="!wallet.connected" class="text-gray-400 text-sm">Not found</span>
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </template>
                     </div>
                     <div class="border-t pt-4">
@@ -589,11 +640,17 @@
                                 class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
                                 Connect
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                             <button
                                 @click="showWalletModal = false"
                                 class="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">
                                 Cancel
                             </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                         </div>
                     </div>
                 </div>
@@ -609,6 +666,9 @@
                             class="text-gray-500 hover:text-gray-700 text-2xl">
                             ✕
                         </button>
+                <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+                    📖 API Documentation
+                </a>
                     </div>
                     <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
                 </div>
