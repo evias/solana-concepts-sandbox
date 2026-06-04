@@ -820,106 +820,51 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
        log.info('Issuer public key:', { issuerPublicKey });
        log.info('Credential owner public key:', { credentialOwnerPublicKey });
        
-       // Create mint with backend payer as mint authority
-       log.info('Calling createMint with payer as mint authority...');
+       // Step 1: Create mint with backend payer as mint authority
+       log.info('Creating SPL token mint (NFT)...');
        const mint = await createMint(
          connection,
          payer,
-         payer.publicKey,  // Backend payer is the mint authority
+         payer.publicKey,  // Mint authority (backend payer)
          payer.publicKey,  // Freeze authority (backend payer)
-         0  // 0 decimals = NFT
-         );
-           mintAddress = mint.toBase58();
-           log.info('Badge SPL token mint created (NFT):', { mintAddress });
-           
-           // Wait for RPC to index the mint (skip in test mode)
-           // Use 1.5 seconds for badges to ensure mint is indexed
-           if (process.env.NODE_ENV !== 'test') {
-             await new Promise(resolve => setTimeout(resolve, 1500));
-             
-             // Verify mint exists on chain before trying to create ATA
-             try {
-               const mintInfo = await connection.getParsedAccountInfo(mint);
-               if (!mintInfo.value) {
-                 log.warn('Mint not found on chain yet, waiting additional time');
-                 await new Promise(resolve => setTimeout(resolve, 1000));
-               } else {
-                 log.info('Mint verified on chain:', { mintAddress });
-               }
-             } catch (verifyErr) {
-               log.warn('Could not verify mint on chain:', { error: verifyErr?.message });
-             }
-           }
-          
-            // Create associated token account for credential owner
-           log.info('Creating associated token account for credential owner...');
-           let recipientTokenAccount;
-           let ataAttempts = 0;
-           const maxAttempts = 3;
-           
-            while (ataAttempts < maxAttempts) {
-              try {
-                ataAttempts++;
-                log.info(`ATA creation attempt ${ataAttempts}/${maxAttempts}`);
-                
-                // Ensure mint is a proper PublicKey object
-                const mintPublicKey = typeof mint === 'string' ? new web3.PublicKey(mint) : mint;
-                log.info('Mint PublicKey for ATA:', { mintAddress: mintPublicKey.toString() });
-                
-                recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
-                  connection,
-                  payer,
-                  mintPublicKey,
-                  credentialOwnerPublicKey
-                );
-                log.info('Recipient token account created/retrieved:', { address: recipientTokenAccount.address.toString() });
-                break; // Success, exit retry loop
-              } catch (ataErr) {
-                log.error(`ATA creation attempt ${ataAttempts} failed:`, { 
-                  error: ataErr?.message || String(ataErr),
-                  name: ataErr?.name,
-                  code: ataErr?.code
-                });
-                
-                if (ataAttempts < maxAttempts && process.env.NODE_ENV !== 'test') {
-                  log.info(`Retrying ATA creation in 2 seconds...`);
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                } else if (ataAttempts === maxAttempts) {
-                  throw ataErr;
-                }
-              }
-            }
-            
-            // Wait for RPC to index the ATA (skip in test mode)
-            // Use 2 seconds for badge to ensure ATA is indexed (badges seem to have race conditions)
-            if (process.env.NODE_ENV !== 'test') {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-            
-             // Mint 1 badge token to credential owner
-            log.info('Minting 1 badge NFT token to credential owner...');
-            const mintPublicKeyForMint = typeof mint === 'string' ? new web3.PublicKey(mint) : mint;
-            const badgeMintSig = await mintTo(
-              connection,
-              payer,
-              mintPublicKeyForMint,
-              recipientTokenAccount.address,
-              payer,
-              1  // Mint 1 token
-            );
-           log.info('Badge NFT minted to recipient, signature:', { badgeMintSig });
-        } catch (err) {
-          log.error('Error creating SPL token mint for badge:', { 
-            message: err?.message || String(err),
-            name: err?.name,
-            code: err?.code,
-            fullError: JSON.stringify(err)
-          });
-          return res.status(500).json({ 
-            error: 'Failed to create SPL token mint', 
-            details: err?.message || String(err)
-          });
-        }
+         0                 // 0 decimals = NFT
+       );
+       mintAddress = mint.toBase58();
+       log.info('Badge SPL token mint created:', { mintAddress });
+       
+       // Step 2: Create associated token account for credential owner
+       log.info('Creating associated token account for credential owner...');
+       const recipientTokenAccount = await getOrCreateAssociatedTokenAccount(
+         connection,
+         payer,
+         mint,                           // Already a PublicKey from createMint
+         credentialOwnerPublicKey
+       );
+       log.info('Associated token account created:', { address: recipientTokenAccount.address.toBase58() });
+       
+       // Step 3: Mint 1 token to credential owner
+       log.info('Minting 1 badge NFT to credential owner...');
+       const badgeMintSig = await mintTo(
+         connection,
+         payer,
+         mint,
+         recipientTokenAccount.address,
+         payer,
+         1  // Mint 1 token
+       );
+       log.info('Badge NFT minted successfully:', { signature: badgeMintSig });
+       
+     } catch (err) {
+       log.error('Error creating SPL token mint for badge:', { 
+         message: err?.message || String(err),
+         name: err?.name,
+         code: err?.code
+       });
+       return res.status(500).json({ 
+         error: 'Failed to create SPL token mint', 
+         details: err?.message || String(err)
+       });
+     }
      
      // Create badge record in database
      log.info('Creating badge record in database...');
