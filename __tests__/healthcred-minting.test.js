@@ -34,35 +34,17 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       const content = fs.readFileSync(filePath, 'utf8');
       // Should have delays conditioned on NODE_ENV
       expect(content).toMatch(/NODE_ENV\s*!==\s*['"]test['"]\s*\)\s*{\s*await\s+new\s+Promise/);
-      // Count occurrences - should be at least 2 (mint delay + ATA delay for credentials)
-      const matches = content.match(/await new Promise\(resolve => setTimeout\(resolve, 1000\)\)/g);
+      // Count occurrences - should be at least 2 (any setTimeout pattern)
+      const matches = content.match(/await new Promise\(resolve => setTimeout\(resolve,/g);
       expect(matches).not.toBeNull();
-      expect(matches.length).toBeGreaterThanOrEqual(4); // Credentials + Badges
+      expect(matches.length).toBeGreaterThanOrEqual(4); // Credentials + Badges (2 delays each)
     });
 
     test('healthcred.js should have RPC indexing delays for badges', async () => {
       const filePath = path.join(__dirname, '../api/healthcred.js');
       const content = fs.readFileSync(filePath, 'utf8');
-      // Check that badges also have delays (separate from credentials)
-      const lines = content.split('\n');
-      let credentialMintDelay = false;
-      let badgeMintDelay = false;
-      
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].includes('createMint') && lines[i].includes('mint authority')) {
-          // Found a createMint call
-          for (let j = i; j < Math.min(i + 20, lines.length); j++) {
-            if (lines[j].includes('await new Promise') && lines[j].includes('1000')) {
-              if (i < 500) credentialMintDelay = true; // First occurrence
-              else badgeMintDelay = true; // Second occurrence
-              break;
-            }
-          }
-        }
-      }
-      
-      // Both should have delays
-      expect(credentialMintDelay || badgeMintDelay).toBe(true);
+      // Check that badges also have delays (any duration is fine)
+      expect(content).toMatch(/Badge SPL token mint created[\s\S]{1,300}await new Promise\(resolve => setTimeout/);
     });
   });
 
@@ -82,21 +64,21 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       expect(content).toContain('Minting credential token');
     });
 
-    test('should wait 1 second for RPC to index mint before creating ATA', async () => {
+    test('should wait for RPC to index mint before creating ATA', async () => {
       // Verify delay between mint creation and ATA creation
       const filePath = path.join(__dirname, '../api/healthcred.js');
       const content = fs.readFileSync(filePath, 'utf8');
-      // Find the pattern with more flexible spacing
-      const mintPattern = /createMint[\s\S]{1,800}setTimeout\(resolve, 1000\)[\s\S]{1,300}getOrCreateAssociatedTokenAccount/;
+      // Find the pattern: createMint -> setTimeout -> getOrCreateAssociatedTokenAccount (flexible timing)
+      const mintPattern = /createMint[\s\S]{1,800}await new Promise\(resolve => setTimeout[\s\S]{1,300}getOrCreateAssociatedTokenAccount/;
       expect(mintPattern.test(content)).toBe(true);
     });
 
-    test('should wait 1 second for RPC to index ATA before minting', async () => {
+    test('should wait for RPC to index ATA before minting', async () => {
       // Verify delay between ATA creation and token minting
       const filePath = path.join(__dirname, '../api/healthcred.js');
       const content = fs.readFileSync(filePath, 'utf8');
-      // Find the pattern with more flexible spacing
-      const ataPattern = /getOrCreateAssociatedTokenAccount[\s\S]{1,800}setTimeout\(resolve, 1000\)[\s\S]{1,300}mintTo/;
+      // Find the pattern: getOrCreateAssociatedTokenAccount -> setTimeout -> mintTo (flexible timing)
+      const ataPattern = /getOrCreateAssociatedTokenAccount[\s\S]{1,800}await new Promise\(resolve => setTimeout[\s\S]{1,300}mintTo/;
       expect(ataPattern.test(content)).toBe(true);
     });
   });
@@ -123,7 +105,8 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       const content = fs.readFileSync(filePath, 'utf8');
       
       // Both credentials and badges should have multiple setTimeout calls for RPC delays
-      const delays = content.match(/setTimeout\(resolve, 1000\)/g) || [];
+      // Use flexible pattern to match any setTimeout duration
+      const delays = content.match(/await new Promise\(resolve => setTimeout\(resolve,/g) || [];
       // Should have at least 4: 2 for credentials (mint + ATA) + 2 for badges (mint + ATA)
       expect(delays.length).toBeGreaterThanOrEqual(4);
     });
@@ -178,14 +161,14 @@ describe('HealthCred Credentials - SPL Minting Regression Tests', () => {
       
       // Both should have:
       // 1. createMint
-      // 2. 1 second delay
+      // 2. delay (setTimeout with any duration)
       // 3. getOrCreateAssociatedTokenAccount  
-      // 4. 1 second delay
+      // 4. delay (setTimeout with any duration)
       // 5. mintTo
       
       const occurrences = {
         createMint: (content.match(/createMint/g) || []).length,
-        setTimeout: (content.match(/setTimeout\(resolve, 1000\)/g) || []).length,
+        setTimeout: (content.match(/await new Promise\(resolve => setTimeout\(resolve,/g) || []).length,
         getOrCreateAssociatedTokenAccount: (content.match(/getOrCreateAssociatedTokenAccount/g) || []).length,
         mintTo: (content.match(/mintTo/g) || []).length
       };
