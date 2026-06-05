@@ -16,7 +16,10 @@ const { createLogger } = require('./logger');
 const log = createLogger('concept/healthcred');
 
 const router = express.Router();
-const connection = new web3.Connection(process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com');
+const connection = new web3.Connection(
+  process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com',
+  'confirmed'
+);
 const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
 
@@ -411,11 +414,12 @@ router.post('/submit-signed-transaction', async (req, res) => {
 
           // Mint 1 token to represent this credential
          log.info('Minting credential token...');
+        const tokenAccountAddress = associatedTokenAccount.address.toBase58();
         const mintSig = await mintTo(
           connection,
           payer,
-          mint,
-          associatedTokenAccount.address,
+          new web3.PublicKey(mintAddress),        // Convert string to PublicKey
+          new web3.PublicKey(tokenAccountAddress), // Convert string to PublicKey
           payer,
           1
         );
