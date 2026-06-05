@@ -37,7 +37,28 @@ const customFormat = winston.format.combine(
     
     // Only add meta if there's useful info
     if (Object.keys(meta).length > 0 && Object.keys(meta).some(k => k !== 'stack')) {
-      log += ` ${JSON.stringify(meta)}`;
+      try {
+        // Custom replacer to handle BigInt and circular references
+        const seen = new WeakSet();
+        const jsonStr = JSON.stringify(meta, (key, value) => {
+          // Handle BigInt
+          if (typeof value === 'bigint') {
+            return value.toString() + 'n';
+          }
+          // Handle circular references
+          if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+              return '[Circular]';
+            }
+            seen.add(value);
+          }
+          return value;
+        });
+        log += ` ${jsonStr}`;
+      } catch (err) {
+        // Fallback if JSON.stringify still fails
+        log += ` [Error serializing metadata: ${err.message}]`;
+      }
     }
     
     // Add stack trace for errors
