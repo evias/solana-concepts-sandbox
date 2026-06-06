@@ -75,7 +75,7 @@ async function hasCredentialAccess(wallet, credentialId) {
         // Get the actual SAS credential address by deriving it for the credential owner
         const payer = require('./payer').getPayerKeypair();
         const sasIntegration = require('./sas-integration');
-        const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
+        const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer, credential.sas_credential_id);
         
         const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
          if (authorizedSigners && authorizedSigners.includes(wallet)) {
