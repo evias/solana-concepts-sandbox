@@ -273,7 +273,17 @@ router.get('/authorized-credentials', async (req, res) => {
           const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
           
           if (authorizedSigners && authorizedSigners.length > 0) {
-            const isAuthorized = authorizedSigners.includes(wallet);
+            log.info('Checking authorization', { 
+              checkingWallet: wallet, 
+              walletType: typeof wallet,
+              authorizedSigners: authorizedSigners,
+              signerTypes: authorizedSigners.map(s => typeof s),
+              signerStrings: authorizedSigners.map(s => s?.toString?.() || String(s))
+            });
+            const isAuthorized = authorizedSigners.some(signer => {
+              const signerStr = signer?.toString?.() || String(signer);
+              return signerStr === wallet;
+            });
             if (isAuthorized) {
               credentials.push({
                 id: extractCredentialUuid(cred.id),
