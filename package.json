@@ -1,6 +1,6 @@
 {
   "name": "solana-concepts-sandbox",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Solana Concepts - SPL Token Mints, Credentials, Attestations (SAS), Transactions",
   "main": "server.js",
   "scripts": {
