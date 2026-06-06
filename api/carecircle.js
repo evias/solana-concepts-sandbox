@@ -267,7 +267,7 @@ router.get('/authorized-credentials', async (req, res) => {
           // Get the owner's SAS credential address
           const payer = require('./payer').getPayerKeypair();
           const sasIntegration = require('./sas-integration');
-          const ownerSasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
+          const ownerSasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer, cred.sas_credential_id);
           
           // Check if wallet is an authorized signer
           const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
