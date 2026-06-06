@@ -75,7 +75,7 @@ async function hasCredentialAccess(wallet, credentialId) {
         // Get the actual SAS credential address by deriving it for the credential owner
         const payer = require('./payer').getPayerKeypair();
         const sasIntegration = require('./sas-integration');
-        const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer);
+        const ownerSasResult = await sasIntegration.ensureSasCredential(credential.wallet_address, payer, credential.sas_credential_id);
         
         const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
          if (authorizedSigners && authorizedSigners.includes(wallet)) {
@@ -182,8 +182,8 @@ router.get('/credentials', async (req, res) => {
  *   get:
  *     tags:
  *       - CareCircle
- *     summary: List credentials where wallet is an authorized signer
- *     description: Returns credentials where the wallet is an authorized caregiver/signer, not the owner.
+ *     summary: List all credentials accessible by wallet (owned and authorized)
+ *     description: Returns credentials where the wallet is either the owner or an authorized caregiver/signer.
  *     parameters:
  *       - in: query
  *         name: wallet
@@ -193,7 +193,7 @@ router.get('/credentials', async (req, res) => {
  *         description: Solana wallet address
  *     responses:
  *       200:
- *         description: Authorized credentials retrieved successfully
+ *         description: Credentials retrieved successfully
  *         content:
  *           application/json:
  *             schema:
@@ -212,6 +212,12 @@ router.get('/credentials', async (req, res) => {
  *                         type: string
  *                       owner:
  *                         type: string
+ *                       isOwner:
+ *                         type: boolean
+ *                         description: True if wallet is the credential owner, false if authorized signer
+ *                       authorizedBy:
+ *                         type: string
+ *                         description: Owner address (only present when isOwner is false)
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
@@ -226,52 +232,81 @@ router.get('/authorized-credentials', async (req, res) => {
 
     const credentials = [];
 
-    // Only check in non-test mode to avoid expensive RPC calls in tests
-    if (process.env.NODE_ENV !== 'test') {
-      try {
-        // Get all credentials
-        const allCredentials = credentialDb.getAllCredentials(1000, 0);
-        
-        // For each credential, check if wallet is an authorized signer (not owner)
-        for (const cred of allCredentials) {
-          // Skip if wallet is the owner (those are returned by /credentials endpoint)
-          if (cred.wallet_address === wallet) {
-            continue;
-          }
+    // Get all credentials from database
+    let allCredentials = credentialDb.getAllCredentials(1000, 0);
+    
+    // Deduplicate by (owner + sas_credential_id) to avoid checking same credential multiple times
+    const seenCredentials = new Set();
+    allCredentials = allCredentials.filter(cred => {
+      const key = `${cred.wallet_address}|${cred.sas_credential_id}`;
+      if (seenCredentials.has(key)) {
+        return false;
+      }
+      seenCredentials.add(key);
+      return true;
+    });
+    
+    for (const cred of allCredentials) {
+      // 1. Include if wallet IS the owner
+      if (cred.wallet_address === wallet) {
+        credentials.push({
+          id: extractCredentialUuid(cred.id),
+          name: cred.full_name,
+          mint: cred.mint_address,
+          owner: cred.wallet_address,
+          didId: cred.did_id,
+          sasCredentialId: cred.sas_credential_id,
+          isOwner: true
+        });
+        continue;
+      }
 
-          if (!cred.sas_credential_id) {
-            continue;
-          }
-
-          try {
-            // Get the owner's SAS credential address
-            const payer = require('./payer').getPayerKeypair();
-            const sasIntegration = require('./sas-integration');
-            const ownerSasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer);
-            
-            // Check if wallet is an authorized signer
-            const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
-            if (authorizedSigners && authorizedSigners.includes(wallet)) {
+      // 2. Check if wallet is an authorized signer (only in non-test mode to avoid expensive RPC calls)
+      if (process.env.NODE_ENV !== 'test' && cred.sas_credential_id) {
+        try {
+          // Get the owner's SAS credential address
+          const payer = require('./payer').getPayerKeypair();
+          const sasIntegration = require('./sas-integration');
+          const ownerSasResult = await sasIntegration.ensureSasCredential(cred.wallet_address, payer, cred.sas_credential_id);
+          
+          // Check if wallet is an authorized signer
+          const authorizedSigners = await getAuthorizedSigners(ownerSasResult.credentialAddress);
+          
+          if (authorizedSigners && authorizedSigners.length > 0) {
+            log.info('Checking authorization', { 
+              checkingWallet: wallet, 
+              walletType: typeof wallet,
+              authorizedSigners: authorizedSigners,
+              signerTypes: authorizedSigners.map(s => typeof s),
+              signerStrings: authorizedSigners.map(s => s?.toString?.() || String(s))
+            });
+            const isAuthorized = authorizedSigners.some(signer => {
+              const signerStr = signer?.toString?.() || String(signer);
+              return signerStr === wallet;
+            });
+            if (isAuthorized) {
               credentials.push({
                 id: extractCredentialUuid(cred.id),
                 name: cred.full_name,
                 mint: cred.mint_address,
                 owner: cred.wallet_address,
                 didId: cred.did_id,
-                sasCredentialId: cred.sas_credential_id
+                sasCredentialId: cred.sas_credential_id,
+                isOwner: false,
+                authorizedBy: cred.wallet_address
               });
+            } else {
+              log.info('Wallet authorization check', { checkingWallet: wallet, owner: cred.wallet_address, authorizedSigners: authorizedSigners, found: false });
             }
-          } catch (error) {
-            log.warn('Error checking if wallet is authorized signer', { credentialId: cred.id, wallet, error: error.message });
-            // Continue checking other credentials
           }
+        } catch (error) {
+          log.warn('Error checking if wallet is authorized signer', { credentialId: cred.id, wallet, error: error.message });
+          // Continue checking other credentials
         }
-      } catch (error) {
-        log.error('Error checking authorized credentials', { error: error.message });
-        // Don't fail the whole request if checking fails
       }
     }
 
+    log.info('Authorized credentials endpoint result', { wallet, ownedCount: credentials.filter(c => c.isOwner).length, authorizedCount: credentials.filter(c => !c.isOwner).length, totalReturned: credentials.length });
     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
   } catch (error) {
     log.error('Error listing authorized credentials', { error });

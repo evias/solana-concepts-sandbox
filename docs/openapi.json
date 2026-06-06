@@ -1133,6 +1133,74 @@
         }
       }
     },
+    "/api/v1/carecircle/authorized-credentials": {
+      "get": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "List all credentials accessible by wallet (owned and authorized)",
+        "description": "Returns credentials where the wallet is either the owner or an authorized caregiver/signer.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credentials retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "mint": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "isOwner": {
+                            "type": "boolean",
+                            "description": "True if wallet is the credential owner, false if authorized signer"
+                          },
+                          "authorizedBy": {
+                            "type": "string",
+                            "description": "Owner address (only present when isOwner is false)"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
     "/api/v1/carecircle/files": {
       "get": {
         "tags": [

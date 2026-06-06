@@ -485,4 +485,23 @@ describe('CareCircle API', () => {
       }
     });
   });
+
+  describe('Authorized Credentials Endpoint', () => {
+    it('should return 400 without wallet parameter', async () => {
+      const res = await request(app)
+        .get('/api/v1/carecircle/authorized-credentials');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Wallet address required');
+    });
+
+    it('should return empty list for wallet with no credentials', async () => {
+      const res = await request(app)
+        .get('/api/v1/carecircle/authorized-credentials')
+        .query({ wallet: 'NonExistentWallet123456789012345678901234' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.credentials).toEqual([]);
+    });
+  });
 });

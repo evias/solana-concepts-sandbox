@@ -189,7 +189,8 @@ async function addAuthorizedSigner(credentialAddress, ownerAddress, newSignerAdd
       throw new Error('Credential does not exist');
     }
 
-    // Check if signer already in list (handle both test and production data structures)
+    // Check if signer already in list
+    // Handle both real sas-lib format (credential.data.authorizedSigners) and test mocks (credential.authorizedSigners)
     const currentSigners = credential.data?.authorizedSigners || credential.authorizedSigners || [];
     if (currentSigners.includes(newSignerAddress)) {
       throw new Error('Signer already authorized for this credential');
@@ -267,7 +268,8 @@ async function getAuthorizedSigners(credentialAddress) {
       return [];
     }
     
-    // Extract signers from the credential data structure (handle both test and production formats)
+    // Extract signers from the credential data structure
+    // Handle both real sas-lib format (credential.data.authorizedSigners) and test mocks (credential.authorizedSigners)
     const signers = credential.data?.authorizedSigners || credential.authorizedSigners || [];
     log.info(`Found ${signers.length} authorized signers:`, { value: signers });
     return signers;
