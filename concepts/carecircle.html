@@ -627,7 +627,7 @@
                     this.loadingSigners = true;
                     log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
                     try {
-                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                        const url = `/api/v1/carecircle/authorized-credentials?wallet=${this.userAddress}`;
                         log.info('[CareCircle Browser] Fetching', { url });
                         const response = await fetch(url);
                         log.info('[CareCircle Browser] Response status', { status: response.status });
@@ -772,12 +772,12 @@
 
                 async loadCredentialsOnly() {
                     const log = window.createLogger('concept/carecircle');
-                    // Load only credentials without loading authorized signers
-                    try {
-                        this.browsing.loading = true;
-                        this.browsing.error = '';
-                        log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
-                        const url = `/api/v1/carecircle/credentials?wallet=${this.userAddress}`;
+                     // Load only credentials without loading authorized signers
+                     try {
+                         this.browsing.loading = true;
+                         this.browsing.error = '';
+                         log.info('[CareCircle Browser] Loading credentials for wallet', { wallet: this.userAddress });
+                         const url = `/api/v1/carecircle/authorized-credentials?wallet=${this.userAddress}`;
                         log.info('[CareCircle Browser] Fetching', { url });
                         const response = await fetch(url);
                         log.info('[CareCircle Browser] Response status', { status: response.status });
