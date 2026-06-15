@@ -412,8 +412,52 @@ function hcpConsole() {
     agentId: '',
 
     async init() {
-       this.initStepper();
-       this.initSharing();
+      // Setup speech recognition for Dictate button
+      const micBtn = document.getElementById('micBtn');
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let rec = null, listening = false;
+      
+      if (SR) {
+        rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.onresult = (e) => {
+          const t = Array.from(e.results).slice(e.resultIndex).map(r => r[0].transcript).join(' ');
+          const box = document.getElementById('diagnosis');
+          box.value = (box.value ? box.value.trim() + ' ' : '') + t.trim();
+        };
+        rec.onend = () => {
+          listening = false;
+          micBtn.classList.remove('listening');
+          micBtn.innerHTML = '&#127908; Dictate';
+        };
+      }
+      
+      micBtn.addEventListener('click', () => {
+        if (!rec) {
+          alert('Dictation is not supported in this browser. Please type instead.');
+          return;
+        }
+        if (listening) {
+          rec.stop();
+          return;
+        }
+        const langMap = {
+          German: 'de-CH',
+          English: 'en-US',
+          French: 'fr-CH',
+          Italian: 'it-CH',
+          Spanish: 'es-ES'
+        };
+        rec.lang = langMap[document.getElementById('lang').value] || 'en-US';
+        rec.start();
+        listening = true;
+        micBtn.classList.add('listening');
+        micBtn.innerHTML = '&#9632; Stop';
+      });
+
+      this.initStepper();
+      this.initSharing();
     },
 
     async connectPhantom() {
