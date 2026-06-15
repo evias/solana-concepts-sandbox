@@ -61,6 +61,10 @@ app.use('/api/v1/healthcred', healthcredApi);
 const carecircleApi = require('./api/carecircle');
 app.use('/api/v1/carecircle', carecircleApi);
 
+// HCPConsole API routes
+const hcpconsoleApi = require('./api/hcpconsole');
+app.use('/api/v1/hcpconsole', hcpconsoleApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
@@ -76,6 +80,9 @@ app.get('/healthcred', (req, res) => {
 });
 app.get('/carecircle', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/carecircle.html'));
+});
+app.get('/hcpconsole', (req, res) => {
+  res.sendFile(path.join(__dirname, 'concepts/hcpconsole.html'));
 });
 
 // Serve assets
