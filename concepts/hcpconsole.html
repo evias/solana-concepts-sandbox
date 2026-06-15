@@ -45,7 +45,7 @@
   .step.active{color:var(--ink);font-weight:600}
   .step.active .dot{border-color:var(--teal);background:var(--teal);color:#fff}
   .step.done .dot{border-color:var(--teal);color:var(--teal)}
-  .step-link{width:54px;height:2px;background-image:radial-gradient(circle,var(--line) 2px,transparent 2.5px);background-size:9px 4px;background-repeat:repeat-x;background-position:center}
+   .step-link{width:54px;height:2px;background-image:radial-gradient(circle,var(--line) 2px,transparent 2.5px);background-size:9px 4px;background-repeat:repeat-x;background-position:center;margin-top:10px}
 
   /* ---------- layout ---------- */
   main{max-width:880px;margin:0 auto;padding:28px 18px 60px}
@@ -144,6 +144,9 @@
 <body x-data="hcpConsole()" @load="init()" x-init="init()">
 
   <header>
+    <a href="/" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:16px;flex:none">
+      <span style="font-weight:600;color:rgba(255,255,255,.7);font-size:0.9rem">← Back</span>
+    </a>
     <svg width="44" height="34" viewBox="0 0 44 34" aria-hidden="true">
       <g fill="#fff"><circle cx="22" cy="17" r="5"/><circle cx="8" cy="17" r="2.4"/><circle cx="36" cy="17" r="2.4"/><circle cx="15" cy="7" r="2"/><circle cx="29" cy="7" r="2"/><circle cx="15" cy="27" r="2"/><circle cx="29" cy="27" r="2"/><circle cx="2.5" cy="10" r="1.4"/><circle cx="41.5" cy="10" r="1.4"/><circle cx="2.5" cy="24" r="1.4"/><circle cx="41.5" cy="24" r="1.4"/></g>
       <g stroke="#fff" stroke-width="1" opacity=".55"><line x1="22" y1="17" x2="8" y2="17"/><line x1="22" y1="17" x2="36" y2="17"/><line x1="22" y1="17" x2="15" y2="7"/><line x1="22" y1="17" x2="29" y2="7"/><line x1="22" y1="17" x2="15" y2="27"/><line x1="22" y1="17" x2="29" y2="27"/></g>
@@ -167,25 +170,25 @@
     <section class="container mx-auto px-4 py-8">
       <div class="panel">
         <!-- Wallet Connection -->
-        <h2>Connect Account</h2>
-        <div class="flex gap-2 items-center flex-wrap">
-            <button 
-                type="button"
-                @click="showWalletModal = true"
-                :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-                class="text-white px-4 py-2 rounded-md transition-colors">
-                <span x-show="!userAddress">Connect Wallet</span>
-                <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
-            </button>
-            <button 
-                type="button"
-                x-show="userAddress"
-                @click="disconnectWallet"
-                class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                Disconnect
-            </button>
-        </div>
-        <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage previous forms</p>
+         <h2>Connect Account</h2>
+         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+             <button 
+                 type="button"
+                 @click="showWalletModal = true"
+                 :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                 style="color:white;padding:10px 16px;border-radius:6px;border:none;transition:colors;cursor:pointer;font-weight:500;font-size:0.95rem">
+                 <span x-show="!userAddress">Connect Wallet</span>
+                 <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+             </button>
+             <button 
+                 type="button"
+                 x-show="userAddress"
+                 @click="disconnectWallet"
+                 style="background-color:#dc2626;color:white;padding:10px 16px;border-radius:6px;border:none;cursor:pointer;font-weight:500;font-size:0.95rem">
+                 Disconnect
+             </button>
+         </div>
+         <p x-show="!userAddress" style="font-size:0.875rem;color:#6b7280;margin-top:8px">Connect your wallet to access and manage previous forms</p>
       </div>
     </section>
 
@@ -195,8 +198,19 @@
       <h2>Describe the patient journey</h2>
       <p class="sub">Type or dictate during the consultation. This takes about one minute.</p>
 
-      <label for="caseRef">Case reference <span class="hint">(initials or internal number, never a full name)</span></label>
-      <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20">
+       <label for="caseRef">Case reference <span class="hint">(initials or internal number, never a full name)</span></label>
+       <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20">
+
+       <label for="credential">Associated credential <span class="hint">(select the credential to attest)</span></label>
+       <select id="credential" @change="selectedCredential = $el.value">
+         <option value="">Select a credential...</option>
+         <template x-for="cred in credentials" :key="cred.id">
+           <option :value="cred.id" x-text="cred.name"></option>
+         </template>
+       </select>
+       <div x-show="userAddress && credentials.length === 0" style="background:#FBF4DF;border:1px solid #EAD9A8;color:#8A6D1F;border-radius:10px;padding:12px 15px;font-size:0.875rem;margin-top:12px">
+         You don't have any credentials yet. <a href="/healthcred" style="color:#8A6D1F;font-weight:600;text-decoration:underline">Create your first credential in HealthCred</a>.
+       </div>
 
       <label for="diagnosis">Health problem or diagnosis, and today's instructions</label>
       <div class="dictate-wrap">
@@ -204,24 +218,24 @@
         <button class="mic-btn" id="micBtn" type="button" title="Dictate">&#127908; Dictate</button>
       </div>
 
-      <label>Purpose of the agent <span class="hint">(select all that apply)</span></label>
-      <div class="chips" id="purposeChips">
-        <button class="chip selected" type="button">Explain the condition</button>
-        <button class="chip selected" type="button">Support medication adherence</button>
-        <button class="chip" type="button">Daily or weekly check-ins</button>
-        <button class="chip selected" type="button">Recognise warning signs</button>
-        <button class="chip" type="button">Prepare for the next visit</button>
-        <button class="chip" type="button">Explain lab results and prescriptions</button>
-        <button class="chip" type="button">Nutrition and lifestyle guidance</button>
-      </div>
+       <label>Purpose of the agent <span class="hint">(select all that apply)</span></label>
+       <div class="chips" id="purposeChips">
+         <button class="chip selected" type="button" @click="$el.classList.toggle('selected')">Explain the condition</button>
+         <button class="chip selected" type="button" @click="$el.classList.toggle('selected')">Support medication adherence</button>
+         <button class="chip" type="button" @click="$el.classList.toggle('selected')">Daily or weekly check-ins</button>
+         <button class="chip selected" type="button" @click="$el.classList.toggle('selected')">Recognise warning signs</button>
+         <button class="chip" type="button" @click="$el.classList.toggle('selected')">Prepare for the next visit</button>
+         <button class="chip" type="button" @click="$el.classList.toggle('selected')">Explain lab results and prescriptions</button>
+         <button class="chip" type="button" @click="$el.classList.toggle('selected')">Nutrition and lifestyle guidance</button>
+       </div>
 
       <div class="field-row">
         <div>
-          <label>Agent type</label>
-          <div class="toggle" id="agentToggle">
-            <button class="selected" type="button">Personal Health Agent</button>
-            <button type="button">Care Partner</button>
-          </div>
+           <label>Agent type</label>
+           <div class="toggle" id="agentToggle">
+             <button class="selected" type="button" @click="$el.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));$el.classList.add('selected')">Personal Health Agent</button>
+             <button type="button" @click="$el.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));$el.classList.add('selected')">Care Partner</button>
+           </div>
         </div>
         <div>
           <label for="lang">Language</label>
@@ -249,10 +263,10 @@
 
       <div class="notice">Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.</div>
 
-      <div class="actions">
-        <span></span>
-        <button class="btn btn-primary" id="toStep2">Generate system prompt &rarr;</button>
-      </div>
+       <div class="actions">
+         <span></span>
+         <button class="btn btn-primary" id="toStep2" :disabled="!userAddress">Generate system prompt &rarr;</button>
+       </div>
     </div>
   </section>
 
@@ -271,10 +285,10 @@
 
       <textarea id="promptBox" spellcheck="false"></textarea>
 
-      <div class="actions">
-        <button class="btn btn-ghost" onclick="this.goTogoToScreen(1)">&larr; Back</button>
-        <button class="btn btn-primary" id="toStep3">Looks right, create the QR code &rarr;</button>
-      </div>
+       <div class="actions">
+         <button class="btn btn-ghost" @click="goToScreen(2)" :disabled="!userAddress">← Back</button>
+         <button class="btn btn-primary" id="toStep3" :disabled="!userAddress">Looks right, create the QR code &rarr;</button>
+       </div>
     </div>
   </section>
 
@@ -301,10 +315,10 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn btn-ghost" onclick="this.goToScreen(2)">&larr; Back</button>
-        <button class="btn btn-primary" id="toStep4" disabled>Share with the patient &rarr;</button>
-      </div>
+       <div class="actions">
+         <button class="btn btn-ghost" @click="goToScreen(3)" :disabled="!userAddress">← Back</button>
+         <button class="btn btn-primary" id="toStep4" :disabled="!userAddress || !promptHash">Share with the patient &rarr;</button>
+       </div>
     </div>
   </section>
 
@@ -325,10 +339,10 @@
 
       <div class="notice green" style="margin-top:24px"><b>Summary:</b> <span id="summaryLine"></span></div>
 
-      <div class="actions">
-        <button class="btn btn-ghost" onclick="this.goToScreen(3)">&larr; Back</button>
-        <button class="btn btn-primary" onclick="this.resetAll()">Create another agent</button>
-      </div>
+       <div class="actions">
+         <button class="btn btn-ghost" @click="resetAll()">← Back</button>
+         <button class="btn btn-primary" @click="resetAll()">Create another agent</button>
+       </div>
     </div>
   </section>
 
@@ -385,45 +399,21 @@
 
   <script>
 function hcpConsole() {
-  const log = window.createLogger('concept/carecircle');
+  const log = window.createLogger('concept/hcpconsole');
   return {
     userAddress: '',
     manualAddress: '',
     showWalletModal: false,
+    credentials: [],
+    selectedCredential: '',
 
     promptHash: '',
     agentUrl: '',
     agentId: '',
 
     async init() {
-      document.querySelectorAll('#purposeChips .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('selected')));
-      document.querySelectorAll('#agentToggle button').forEach(b=>b.addEventListener('click',()=>{
-        document.querySelectorAll('#agentToggle button').forEach(x=>x.classList.remove('selected'));
-        b.classList.add('selected');
-      }));
-
-      const micBtn=document.getElementById('micBtn');
-      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-      let rec=null,listening=false;
-      if(SR){
-        rec=new SR();rec.continuous=true;rec.interimResults=false;
-        rec.onresult=e=>{
-          const t=Array.from(e.results).slice(e.resultIndex).map(r=>r[0].transcript).join(' ');
-          const box=document.getElementById('diagnosis');
-          box.value=(box.value?box.value.trim()+' ':'')+t.trim();
-        };
-        rec.onend=()=>{listening=false;micBtn.classList.remove('listening');micBtn.innerHTML='&#127908; Dictate';};
-      }
-      micBtn.addEventListener('click',()=>{
-        if(!rec){alert('Dictation is not supported in this browser. Please type instead.');return;}
-        if(listening){rec.stop();return;}
-        const langMap={German:'de-CH',English:'en-US',French:'fr-CH',Italian:'it-CH',Spanish:'es-ES'};
-        rec.lang=langMap[document.getElementById('lang').value]||'en-US';
-        rec.start();listening=true;micBtn.classList.add('listening');micBtn.innerHTML='&#9632; Stop';
-      });
-
-      this.initStepper();
-      this.initSharing();
+       this.initStepper();
+       this.initSharing();
     },
 
     async connectPhantom() {
@@ -437,6 +427,7 @@ function hcpConsole() {
         const response = await window.solana.connect();
         this.userAddress = response.publicKey.toString();
         this.showWalletModal = false;
+        await this.loadCredentials();
       } catch (error) {
         log.error('Error connecting Phantom', { error: error.message });
         alert('Failed to connect Phantom wallet');
@@ -458,10 +449,27 @@ function hcpConsole() {
       this.userAddress = this.manualAddress;
       this.manualAddress = '';
       this.showWalletModal = false;
+      this.loadCredentials();
     },
 
     disconnectWallet() {
       this.userAddress = '';
+      this.credentials = [];
+      this.selectedCredential = '';
+    },
+
+    async loadCredentials() {
+      try {
+        if (!this.userAddress) return;
+        const response = await fetch(`/api/v1/carecircle/authorized-credentials?wallet=${this.userAddress}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.credentials = data.credentials || [];
+          log.info('Loaded credentials', { count: this.credentials.length });
+        }
+      } catch (error) {
+        log.error('Error loading credentials', { error: error.message });
+      }
     },
 
     goToScreen(n){
@@ -548,6 +556,10 @@ ${purposes.map(p=>'- '+p).join('\n')}
       if(!document.getElementById('diagnosis').value.trim()){
         alert('Please describe the health problem or diagnosis first, by typing or dictating.');return;
       }
+      if(!this.selectedCredential) {
+        alert('Please select a credential first.');
+        return;
+      }
       document.getElementById('promptBox').value=this.buildPrompt();
       this.goToScreen(2);
     },
@@ -563,26 +575,29 @@ ${purposes.map(p=>'- '+p).join('\n')}
 
       const prompt=document.getElementById('promptBox').value;
       const hashBz=await this.sha256(prompt);
-      this.promptHash = this.bz_to_hex(hashBz);
+      this.promptHash = this.bytes_to_hex(hashBz);
 
       await this.blockingWait(600);
       this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
       document.getElementById('agentId').textContent=this.promptHash;
       document.getElementById('log1').classList.add('on');
 
-      /// XXX wait is for visual feedback
       await this.blockingWait(700);
       document.getElementById('promptHash').textContent=this.promptHash;
       document.getElementById('log2').classList.add('on');
 
-      /// XXX Solana SAS
+      /// Create SAS Schema and Attestation
       await this.blockingWait(900);
-      document.getElementById('attPda').textContent='Attestation PDA: '+rand(B58,44);
-      document.getElementById('log3').classList.add('on');
+      try {
+        await this.createSasSchemaAndAttestation();
+        document.getElementById('log3').classList.add('on');
+      } catch (error) {
+        log.error('Error creating SAS schema/attestation', { error: error.message });
+        document.getElementById('attPda').textContent='Error: '+error.message;
+        document.getElementById('log3').classList.add('on');
+      }
 
-      /// XXX Solana Tx Signature
       await this.blockingWait(1100);
-      document.getElementById('txSig').textContent='Signature: '+rand(B58,88).slice(0,64)+'\u2026';
       document.getElementById('log4').classList.add('on');
 
       /* render QR */
@@ -605,11 +620,43 @@ ${purposes.map(p=>'- '+p).join('\n')}
         `${agentType}, ${lang}, ${period} of sponsored access, attested on Solana. The journey starts at the first scan.`;
     },
 
+    async createSasSchemaAndAttestation() {
+      const credentialId = this.selectedCredential;
+      const promptHash = this.promptHash;
+      
+      try {
+        const response = await fetch('/api/v1/hcpconsole/create-attestation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet: this.userAddress,
+            credentialId: credentialId,
+            promptHash: promptHash
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create attestation');
+        }
+
+        const data = await response.json();
+        document.getElementById('attPda').textContent='Attestation PDA: '+data.attPda;
+        document.getElementById('txSig').textContent='Signature: '+data.txSig;
+        log.info('Attestation created', { attPda: data.attPda, txSig: data.txSig });
+      } catch (error) {
+        log.error('Error in createSasSchemaAndAttestation', { error: error.message });
+        throw error;
+      }
+    },
+
     resetAll(){
       document.getElementById('diagnosis').value='';
       document.getElementById('caseRef').value='';
       document.getElementById('escalation').value='';
       document.getElementById('followup').value='';
+      this.selectedCredential = '';
+      this.disconnectWallet();
       this.goToScreen(1);
     },
 
