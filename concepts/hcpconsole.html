@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dHealth Intelligence | HCP Console</title>
+  <script src="/assets/qrcodejs.min.js" defer></script>
+  <script src="/assets/alpinejs.min.js" defer></script>
+  <script src="/assets/logger.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+  :root{
+    --ink:#16352C;          /* dHealth forest green */
+    --ink-deep:#0F2620;
+    --teal:#2E7D6B;         /* action green */
+    --teal-soft:#E7F1EE;
+    --mist:#F4F6F5;         /* panel gray */
+    --line:#D9E2DF;
+    --text:#22312D;
+    --muted:#5F6F6A;
+    --warn:#8A6D1F;
+    --warn-bg:#FBF4DF;
+    --white:#FFFFFF;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Source Sans 3',system-ui,sans-serif;color:var(--text);background:var(--mist);font-size:16px;line-height:1.55}
+  h1,h2,h3,.brand{font-family:'Poppins',sans-serif}
+
+  /* ---------- header ---------- */
+  header{background:var(--ink);color:var(--white);padding:18px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header svg{flex:none}
+  .brand{font-size:1.15rem;font-weight:600;letter-spacing:.2px}
+  .brand small{display:block;font-family:'Source Sans 3',sans-serif;font-weight:400;font-size:.8rem;opacity:.75;letter-spacing:.3px}
+  .console-tag{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:6px 16px;font-size:.85rem;letter-spacing:.4px}
+
+  /* ---------- stepper ---------- */
+  .stepper{display:flex;justify-content:center;gap:0;background:var(--white);border-bottom:1px solid var(--line);padding:18px 12px;flex-wrap:wrap}
+  .step{display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--muted);font-size:.92rem}
+  .step .dot{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;background:var(--white)}
+  .step.active{color:var(--ink);font-weight:600}
+  .step.active .dot{border-color:var(--teal);background:var(--teal);color:#fff}
+  .step.done .dot{border-color:var(--teal);color:var(--teal)}
+  .step-link{width:54px;height:2px;background-image:radial-gradient(circle,var(--line) 2px,transparent 2.5px);background-size:9px 4px;background-repeat:repeat-x;background-position:center}
+
+  /* ---------- layout ---------- */
+  main{max-width:880px;margin:0 auto;padding:28px 18px 60px}
+  .panel{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:28px;margin-bottom:20px}
+  .panel h2{font-size:1.25rem;color:var(--ink);margin-bottom:4px}
+  .panel .sub{color:var(--muted);margin-bottom:22px;font-size:.95rem}
+  .screen{display:none}
+  .screen.visible{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ---------- form ---------- */
+  label{display:block;font-weight:600;color:var(--ink);margin:18px 0 6px;font-size:.95rem}
+  label:first-of-type{margin-top:0}
+  .hint{font-weight:400;color:var(--muted);font-size:.85rem}
+  input[type=text],input[type=date],select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:inherit;color:var(--text);background:var(--white)}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--teal);outline-offset:1px;border-color:var(--teal)}
+  textarea{min-height:120px;resize:vertical}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.field-row{grid-template-columns:1fr}}
+
+  .dictate-wrap{position:relative}
+  .mic-btn{position:absolute;right:10px;bottom:10px;border:1px solid var(--line);background:var(--mist);border-radius:99px;padding:7px 14px;font:inherit;font-size:.85rem;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--ink)}
+  .mic-btn.listening{background:#FDECEC;border-color:#E2A1A1;color:#9B3535}
+  .mic-btn:hover{background:var(--teal-soft)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:99px;padding:8px 16px;cursor:pointer;background:var(--white);font:inherit;font-size:.9rem;color:var(--text)}
+  .chip.selected{background:var(--ink);border-color:var(--ink);color:#fff}
+  .toggle{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;width:fit-content}
+  .toggle button{border:none;background:var(--white);padding:10px 20px;font:inherit;cursor:pointer;color:var(--muted)}
+  .toggle button.selected{background:var(--teal);color:#fff;font-weight:600}
+
+  .notice{background:var(--warn-bg);border:1px solid #EAD9A8;color:var(--warn);border-radius:10px;padding:12px 15px;font-size:.88rem;margin-top:20px}
+  .notice.green{background:var(--teal-soft);border-color:#BFD9D1;color:var(--ink)}
+
+  /* ---------- buttons ---------- */
+  .actions{display:flex;justify-content:space-between;gap:12px;margin-top:26px;flex-wrap:wrap}
+  .btn{font:inherit;font-weight:600;border-radius:10px;padding:12px 24px;cursor:pointer;border:1px solid transparent}
+  .btn-primary{background:var(--teal);color:#fff}
+  .btn-primary:hover{background:#256555}
+  .btn-ghost{background:var(--white);border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{background:var(--mist)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- prompt review ---------- */
+  .guardrails{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px}
+  .guardrail{background:var(--teal-soft);border:1px solid #C8DDD6;border-radius:10px;padding:10px 13px;font-size:.86rem;color:var(--ink);display:flex;gap:8px;align-items:flex-start}
+  .guardrail .check{color:var(--teal);font-weight:700}
+  #promptBox{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85rem;min-height:300px;background:#FBFDFC}
+
+  /* ---------- attestation ---------- */
+  .gen-grid{display:grid;grid-template-columns:280px 1fr;gap:28px;align-items:start}
+  @media(max-width:700px){.gen-grid{grid-template-columns:1fr}}
+  .qr-card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:20px;text-align:center}
+  .qr-card #qrcode{display:flex;justify-content:center;min-height:216px;align-items:center}
+  .qr-card #qrcode img,.qr-card #qrcode canvas{border-radius:6px}
+  .qr-caption{font-size:.82rem;color:var(--muted);margin-top:12px}
+  .badge{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border-radius:99px;padding:6px 14px;font-size:.8rem;margin-top:12px}
+  .badge .pulse{width:8px;height:8px;border-radius:50%;background:#5BD6B5}
+
+  .chain-log{list-style:none}
+  .chain-log li{display:flex;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:.92rem;align-items:flex-start;opacity:.35;transition:opacity .3s}
+  .chain-log li.on{opacity:1}
+  .chain-log li:last-child{border-bottom:none}
+  .chain-log .st{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.7rem}
+  .chain-log li.on .st{border-color:var(--teal);background:var(--teal);color:#fff}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--muted);word-break:break-all}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- share ---------- */
+  .share-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:8px}
+  .share-btn{border:1px solid var(--line);background:var(--white);border-radius:12px;padding:18px 14px;cursor:pointer;font:inherit;text-align:center}
+  .share-btn:hover{border-color:var(--teal);background:var(--teal-soft)}
+  .share-btn .ic{font-size:1.5rem;display:block;margin-bottom:6px}
+  .share-btn strong{display:block;color:var(--ink)}
+  .share-btn span{font-size:.8rem;color:var(--muted)}
+  .copied{color:var(--teal);font-weight:600;font-size:.85rem;margin-top:10px;min-height:1.2em}
+
+  /* ---------- print handout ---------- */
+  #handout{display:none}
+  @media print{
+    body *{visibility:hidden}
+    #handout,#handout *{visibility:visible}
+    #handout{display:block;position:absolute;left:0;top:0;width:100%;padding:40px;font-family:'Source Sans 3',sans-serif}
+  }
+  #handout h1{color:var(--ink);font-size:1.4rem;margin-bottom:6px}
+  #handout .h-qr{margin:24px 0}
+  #handout ol{margin:14px 0 0 20px}
+  #handout ol li{margin-bottom:6px}
+
+  footer{background:var(--ink-deep);color:rgba(255,255,255,.75);padding:22px 28px;font-size:.85rem;text-align:center}
+  footer b{color:#fff}
+  </style>
+</head>
+<body x-data="hcpConsole()" @load="init()" x-init="init()">
+
+  <header>
+    <svg width="44" height="34" viewBox="0 0 44 34" aria-hidden="true">
+      <g fill="#fff"><circle cx="22" cy="17" r="5"/><circle cx="8" cy="17" r="2.4"/><circle cx="36" cy="17" r="2.4"/><circle cx="15" cy="7" r="2"/><circle cx="29" cy="7" r="2"/><circle cx="15" cy="27" r="2"/><circle cx="29" cy="27" r="2"/><circle cx="2.5" cy="10" r="1.4"/><circle cx="41.5" cy="10" r="1.4"/><circle cx="2.5" cy="24" r="1.4"/><circle cx="41.5" cy="24" r="1.4"/></g>
+      <g stroke="#fff" stroke-width="1" opacity=".55"><line x1="22" y1="17" x2="8" y2="17"/><line x1="22" y1="17" x2="36" y2="17"/><line x1="22" y1="17" x2="15" y2="7"/><line x1="22" y1="17" x2="29" y2="7"/><line x1="22" y1="17" x2="15" y2="27"/><line x1="22" y1="17" x2="29" y2="27"/></g>
+    </svg>
+    <div class="brand">dHealth Intelligence<small>Personal Health Agents: learn, simplify, prepare for care</small></div>
+    <div class="console-tag">HCP Console</div>
+  </header>
+
+  <nav class="stepper" aria-label="Progress">
+    <div class="step active" id="s1"><div class="dot">1</div>Describe</div>
+    <div class="step-link"></div>
+    <div class="step" id="s2"><div class="dot">2</div>Review prompt</div>
+    <div class="step-link"></div>
+    <div class="step" id="s3"><div class="dot">3</div>Generate and attest</div>
+    <div class="step-link"></div>
+    <div class="step" id="s4"><div class="dot">4</div>Share</div>
+  </nav>
+
+  <main>
+
+    <div class="space-y-8">
+      <!-- Wallet Connection -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+          <div class="flex gap-2 items-center flex-wrap">
+              <button 
+                  type="button"
+                  @click="showWalletModal = true"
+                  :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                  class="text-white px-4 py-2 rounded-md transition-colors">
+                  <span x-show="!userAddress">Connect Wallet</span>
+                  <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+              </button>
+              <button 
+                  type="button"
+                  x-show="userAddress"
+                  @click="disconnectWallet"
+                  class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                  Disconnect
+              </button>
+          </div>
+          <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to access and manage previous forms</p>
+      </section>
+    </div>
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="screen visible" id="screen1">
+    <div class="panel">
+      <h2>Describe the patient journey</h2>
+      <p class="sub">Type or dictate during the consultation. This takes about one minute.</p>
+
+      <label for="caseRef">Case reference <span class="hint">(initials or internal number, never a full name)</span></label>
+      <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20">
+
+      <label for="diagnosis">Health problem or diagnosis, and today's instructions</label>
+      <div class="dictate-wrap">
+        <textarea id="diagnosis" placeholder="e.g. Newly diagnosed asthma. Started on a daily inhaled corticosteroid and a relief inhaler. Watch for night symptoms and increased use of the relief inhaler. Follow up in three weeks."></textarea>
+        <button class="mic-btn" id="micBtn" type="button" title="Dictate">&#127908; Dictate</button>
+      </div>
+
+      <label>Purpose of the agent <span class="hint">(select all that apply)</span></label>
+      <div class="chips" id="purposeChips">
+        <button class="chip selected" type="button">Explain the condition</button>
+        <button class="chip selected" type="button">Support medication adherence</button>
+        <button class="chip" type="button">Daily or weekly check-ins</button>
+        <button class="chip selected" type="button">Recognise warning signs</button>
+        <button class="chip" type="button">Prepare for the next visit</button>
+        <button class="chip" type="button">Explain lab results and prescriptions</button>
+        <button class="chip" type="button">Nutrition and lifestyle guidance</button>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label>Agent type</label>
+          <div class="toggle" id="agentToggle">
+            <button class="selected" type="button">Personal Health Agent</button>
+            <button type="button">Care Partner</button>
+          </div>
+        </div>
+        <div>
+          <label for="lang">Language</label>
+          <select id="lang">
+            <option>German</option><option selected>English</option><option>French</option><option>Italian</option><option>Spanish</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div>
+          <label for="period">Support period</label>
+          <select id="period">
+            <option>7 days</option><option selected>30 days</option><option>90 days</option><option>180 days</option><option>365 days</option>
+          </select>
+        </div>
+        <div>
+          <label for="followup">Next consultation <span class="hint">(optional)</span></label>
+          <input type="date" id="followup">
+        </div>
+      </div>
+
+      <label for="escalation">Escalation contact for urgent concerns</label>
+      <input type="text" id="escalation" placeholder="e.g. Praxis Dr. Weber, 044 123 45 67, or 144 in an emergency">
+
+      <div class="notice">Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.</div>
+
+      <div class="actions">
+        <span></span>
+        <button class="btn btn-primary" id="toStep2">Generate system prompt &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="screen" id="screen2">
+    <div class="panel">
+      <h2>Review the system prompt</h2>
+      <p class="sub">This is the instruction set the QR code will carry. Edit freely. The guardrails below are always included and cannot be removed.</p>
+
+      <div class="guardrails">
+        <div class="guardrail"><span class="check">&#10003;</span>Educates and prepares. Never diagnoses or treats.</div>
+        <div class="guardrail"><span class="check">&#10003;</span>Escalates to your contact or 144 when symptoms worsen.</div>
+        <div class="guardrail"><span class="check">&#10003;</span>Shows the medical disclaimer. Low risk under the EU AI Act.</div>
+        <div class="guardrail"><span class="check">&#10003;</span>No data leaves the patient without explicit consent.</div>
+      </div>
+
+      <textarea id="promptBox" spellcheck="false"></textarea>
+
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="this.goTogoToScreen(1)">&larr; Back</button>
+        <button class="btn btn-primary" id="toStep3">Looks right, create the QR code &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="screen" id="screen3">
+    <div class="panel">
+      <h2>Generate and register on chain</h2>
+      <p class="sub">The QR code carries the agent link and the fingerprint of your prompt. Registration on Solana makes it verifiable and tamper proof at every scan.</p>
+
+      <div class="gen-grid">
+        <div class="qr-card">
+          <div id="qrcode"><span class="spinner"></span></div>
+          <div class="qr-caption" id="qrCaption">Preparing code&hellip;</div>
+          <div class="badge" id="chainBadge" style="display:none"><span class="pulse"></span>Blockchain secured</div>
+        </div>
+        <div>
+          <ul class="chain-log">
+            <li id="log1"><span class="st">1</span><div><strong>Agent created</strong><br><span class="mono" id="agentId"></span></div></li>
+            <li id="log2"><span class="st">2</span><div><strong>Prompt fingerprint computed</strong> (SHA-256)<br><span class="mono" id="promptHash"></span></div></li>
+            <li id="log3"><span class="st">3</span><div><strong>Attestation submitted</strong> to the Solana Attestation Service<br><span class="mono" id="attPda"></span></div></li>
+            <li id="log4"><span class="st">4</span><div><strong>Confirmed on Solana</strong><br><span class="mono" id="txSig"></span></div></li>
+          </ul>
+          <div class="notice green" id="verifyNote" style="display:none">At every scan the agent checks this attestation before it starts. A copied or altered code will not open a journey.</div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="this.goToScreen(2)">&larr; Back</button>
+        <button class="btn btn-primary" id="toStep4" disabled>Share with the patient &rarr;</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 4 ================= -->
+  <section class="screen" id="screen4">
+    <div class="panel">
+      <h2>Share the QR code</h2>
+      <p class="sub">The patient scans the code and starts straight away. No registration, no login, free for the sponsored period.</p>
+
+      <div class="share-grid">
+        <button class="share-btn" onclick="window.print()"><span class="ic">&#128424;</span><strong>Print handout</strong><span>A5 sheet with the code and short instructions</span></button>
+        <button class="share-btn" id="emailBtn"><span class="ic">&#9993;</span><strong>Email</strong><span>Opens your mail client with the link</span></button>
+        <button class="share-btn" id="msgBtn"><span class="ic">&#128172;</span><strong>Messenger</strong><span>Share via WhatsApp or Signal</span></button>
+        <button class="share-btn" id="copyBtn"><span class="ic">&#128279;</span><strong>Copy link</strong><span>Paste it anywhere</span></button>
+        <button class="share-btn" id="pngBtn"><span class="ic">&#11015;</span><strong>Download QR</strong><span>PNG for your own templates</span></button>
+      </div>
+      <div class="copied" id="copyMsg"></div>
+
+      <div class="notice green" style="margin-top:24px"><b>Summary:</b> <span id="summaryLine"></span></div>
+
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="this.goToScreen(3)">&larr; Back</button>
+        <button class="btn btn-primary" onclick="this.resetAll()">Create another agent</button>
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- printable handout -->
+  <div id="handout">
+    <h1>Your Personal Health Agent</h1>
+    <p>Your care team has prepared an AI companion for the time between consultations. It explains your condition, supports your treatment plan, and tells you when to call your care team.</p>
+    <div class="h-qr" id="handoutQr"></div>
+    <ol>
+      <li>Open the camera on your phone.</li>
+      <li>Point it at the code and tap the link.</li>
+      <li>Start the conversation. No registration, no login, free of charge.</li>
+    </ol>
+    <p style="margin-top:18px;font-size:.85rem;color:#555">This service does not provide medical advice. Please consult a licensed healthcare professional. The code is blockchain secured and verified at every scan. ai.dhealth.com</p>
+  </div>
+
+  <footer>Workflow: consultation &rarr; describe or dictate &rarr; tailored system prompt &rarr; QR code &rarr; <b>attestation on Solana</b> &rarr; share by print, email, or messenger. &nbsp;|&nbsp; dHealth Intelligence &middot; ai.dhealth.com</footer>
+
+  <script>
+function hcpConsole() {
+  const log = window.createLogger('concept/carecircle');
+  return {
+    userAddress: '',
+    manualAddress: '',
+    showWalletModal: false,
+
+    promptHash: '',
+    agentUrl: '',
+    agentId: '',
+
+    async init() {
+      document.querySelectorAll('#purposeChips .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('selected')));
+      document.querySelectorAll('#agentToggle button').forEach(b=>b.addEventListener('click',()=>{
+        document.querySelectorAll('#agentToggle button').forEach(x=>x.classList.remove('selected'));
+        b.classList.add('selected');
+      }));
+
+      const micBtn=document.getElementById('micBtn');
+      const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+      let rec=null,listening=false;
+      if(SR){
+        rec=new SR();rec.continuous=true;rec.interimResults=false;
+        rec.onresult=e=>{
+          const t=Array.from(e.results).slice(e.resultIndex).map(r=>r[0].transcript).join(' ');
+          const box=document.getElementById('diagnosis');
+          box.value=(box.value?box.value.trim()+' ':'')+t.trim();
+        };
+        rec.onend=()=>{listening=false;micBtn.classList.remove('listening');micBtn.innerHTML='&#127908; Dictate';};
+      }
+      micBtn.addEventListener('click',()=>{
+        if(!rec){alert('Dictation is not supported in this browser. Please type instead.');return;}
+        if(listening){rec.stop();return;}
+        const langMap={German:'de-CH',English:'en-US',French:'fr-CH',Italian:'it-CH',Spanish:'es-ES'};
+        rec.lang=langMap[document.getElementById('lang').value]||'en-US';
+        rec.start();listening=true;micBtn.classList.add('listening');micBtn.innerHTML='&#9632; Stop';
+      });
+
+      this.initStepper();
+      this.initSharing();
+    },
+
+    async connectPhantom() {
+      const log = window.createLogger('concept/hcpconsole');
+      try {
+        if (!window.solana) {
+          alert('Phantom wallet not installed. Please install it from https://phantom.app');
+          return;
+        }
+
+        const response = await window.solana.connect();
+        this.userAddress = response.publicKey.toString();
+        this.showWalletModal = false;
+      } catch (error) {
+        log.error('Error connecting Phantom', { error: error.message });
+        alert('Failed to connect Phantom wallet');
+      }
+    },
+
+    connectManually() {
+      if (!this.manualAddress.trim()) {
+        alert('Please enter a valid address');
+        return;
+      }
+      
+      const addressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      if (!addressRegex.test(this.manualAddress)) {
+        alert('Invalid Solana address format');
+        return;
+      }
+
+      this.userAddress = this.manualAddress;
+      this.manualAddress = '';
+      this.showWalletModal = false;
+    },
+
+    disconnectWallet() {
+      this.userAddress = '';
+    },
+
+    goToScreen(n){
+      document.querySelectorAll('.screen').forEach(s=>s.classList.remove('visible'));
+      document.getElementById('screen'+n).classList.add('visible');
+      for(let i=1;i<=4;i++){
+        const st=document.getElementById('s'+i);
+        st.classList.toggle('active',i===n);
+        st.classList.toggle('done',i<n);
+      }
+      window.scrollTo({top:0,behavior:'smooth'});
+    },
+
+    buildPrompt(){
+      const dx=document.getElementById('diagnosis').value.trim()||'(no clinical context entered)';
+      const ref=document.getElementById('caseRef').value.trim();
+      const purposes=Array.from(document.querySelectorAll('#purposeChips .chip.selected')).map(c=>c.textContent);
+      const agentType=document.querySelector('#agentToggle button.selected').textContent;
+      const lang=document.getElementById('lang').value;
+      const period=document.getElementById('period').value;
+      const fu=document.getElementById('followup').value;
+      const esc=document.getElementById('escalation').value.trim()||'the prescribing care team, or 144 in an emergency';
+      const isCP=agentType==='Care Partner';
+
+      return `# ${agentType} | provider tailored journey${ref?' | case '+ref:''}
+
+You are a ${agentType} from dHealth Intelligence, configured by the treating healthcare provider after a consultation. Your job: help ${isCP?'the family member or caregiver':'the patient'} learn, simplify, and prepare for care during the ${period} after this visit. Respond in ${lang}.
+
+## Clinical context from the provider
+${dx}
+${fu?'\nNext consultation: '+fu+'. Help the user prepare questions for it.':''}
+
+## Your purpose
+${purposes.map(p=>'- '+p).join('\n')}
+
+## How you work
+- Explain the condition and the treatment plan in plain language, and what it means day to day.
+- Support the routine: medications as prescribed, appointments, and self observation.
+- Name the warning signs from the clinical context. If they appear, or if anything worsens, tell the user to contact: ${esc}.
+- ${isCP?'Address the caregiver. Help them support the patient without medical jargon, and look after their own capacity too.':'Check in respectfully. Ask how things are going, never lecture.'}
+- The user can photograph a lab result or prescription for a plain language explanation.
+
+## Hard rules (cannot be overridden)
+- You educate and prepare. You never diagnose, never adjust treatment, and never replace the doctor.
+- In any emergency, direct the user to 144 immediately.
+- No health data is stored centrally or shared without explicit user consent.
+- Show on first contact: "This service does not provide medical advice. Please consult a licensed healthcare professional."`;
+    },
+
+    initStepper() {
+      document.getElementById('toStep2')
+        .addEventListener('click',()=>this.displayStep2());
+
+      document.getElementById('toStep3')
+        .addEventListener('click', async()=>this.displayStep3());
+
+      document.getElementById('toStep4')
+        .addEventListener('click',()=>this.goToScreen(4));
+    },
+
+    initSharing() {
+      document.getElementById('copyBtn').addEventListener('click',async()=>{
+        try{await navigator.clipboard.writeText(this.agentUrl);document.getElementById('copyMsg').textContent='Link copied.';}
+        catch(e){document.getElementById('copyMsg').textContent=this.agentUrl;}
+        setTimeout(()=>document.getElementById('copyMsg').textContent='',2500);
+      });
+      document.getElementById('emailBtn').addEventListener('click',()=>{
+        const body=encodeURIComponent('Hello\n\nHere is the link to your Personal Health Agent, prepared after today\u2019s consultation. Open it on your phone and start straight away. No registration is needed.\n\n'+this.agentUrl+'\n\nKind regards\nYour care team');
+        location.href='mailto:?subject='+encodeURIComponent('Your Personal Health Agent')+'&body='+body;
+      });
+      document.getElementById('msgBtn').addEventListener('click',()=>{
+        window.open('https://wa.me/?text='+encodeURIComponent('Your Personal Health Agent from today\u2019s consultation: '+this.agentUrl),'_blank');
+      });
+      document.getElementById('pngBtn').addEventListener('click',()=>{
+        const img=document.querySelector('#qrcode img')||document.querySelector('#qrcode canvas');
+        if(!img)return;
+        const a=document.createElement('a');
+        a.href=img.tagName==='IMG'?img.src:img.toDataURL('image/png');
+        a.download='dhealth_agent_'+this.promptHash+'.png';a.click();
+      });
+    },
+
+    async displayStep2() {
+      if(!document.getElementById('diagnosis').value.trim()){
+        alert('Please describe the health problem or diagnosis first, by typing or dictating.');return;
+      }
+      document.getElementById('promptBox').value=this.buildPrompt();
+      this.goToScreen(2);
+    },
+
+    async displayStep3() {
+      this.goToScreen(3);
+      document.getElementById('toStep4').disabled=true;
+      ['log1','log2','log3','log4'].forEach(id=>document.getElementById(id).classList.remove('on'));
+      document.getElementById('chainBadge').style.display='none';
+      document.getElementById('verifyNote').style.display='none';
+      document.getElementById('qrcode').innerHTML='<span class="spinner"></span>';
+      document.getElementById('qrCaption').textContent='Preparing code\u2026';
+
+      const prompt=document.getElementById('promptBox').value;
+      const hashBz=await this.sha256(prompt);
+      this.promptHash = this.bz_to_hex(hashBz);
+
+      await this.blockingWait(600);
+      this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
+      document.getElementById('agentId').textContent=this.promptHash;
+      document.getElementById('log1').classList.add('on');
+
+      /// XXX wait is for visual feedback
+      await this.blockingWait(700);
+      document.getElementById('promptHash').textContent=this.promptHash;
+      document.getElementById('log2').classList.add('on');
+
+      /// XXX Solana SAS
+      await this.blockingWait(900);
+      document.getElementById('attPda').textContent='Attestation PDA: '+rand(B58,44);
+      document.getElementById('log3').classList.add('on');
+
+      /// XXX Solana Tx Signature
+      await this.blockingWait(1100);
+      document.getElementById('txSig').textContent='Signature: '+rand(B58,88).slice(0,64)+'\u2026';
+      document.getElementById('log4').classList.add('on');
+
+      /* render QR */
+      document.getElementById('qrcode').innerHTML='';
+      new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+      document.getElementById('qrCaption').textContent=this.agentUrl;
+      document.getElementById('chainBadge').style.display='inline-flex';
+      document.getElementById('verifyNote').style.display='block';
+      document.getElementById('toStep4').disabled=false;
+
+      /* handout QR */
+      document.getElementById('handoutQr').innerHTML='';
+      new QRCode(document.getElementById('handoutQr'),{text:this.agentUrl,width:170,height:170,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+
+      /* summary */
+      const period=document.getElementById('period').value;
+      const agentType=document.querySelector('#agentToggle button.selected').textContent;
+      const lang=document.getElementById('lang').value;
+      document.getElementById('summaryLine').textContent=
+        `${agentType}, ${lang}, ${period} of sponsored access, attested on Solana. The journey starts at the first scan.`;
+    },
+
+    resetAll(){
+      document.getElementById('diagnosis').value='';
+      document.getElementById('caseRef').value='';
+      document.getElementById('escalation').value='';
+      document.getElementById('followup').value='';
+      this.goToScreen(1);
+    },
+
+    async sha256(str) {
+      return await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+    },
+
+    async sha256hex(str){
+      const buf= await this.sha256(str);
+      return this.bytes_to_hex(buf);
+    },
+
+    async blockingWait(ms) { 
+      return new Promise(r=>setTimeout(r,ms));
+    },
+
+    bytes_to_hex(bz) {
+      return Array.from(new Uint8Array(bz)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  };
+}
+  </script>
+</body>
+</html>
