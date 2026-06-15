@@ -4,7 +4,7 @@
 
 ```bash
 npm start              # Run server on localhost:3000 (requires funded payer wallet)
-npm test               # Run all 700 tests (Jest, ~3 sec)
+npm test               # Run all 708 tests (Jest, ~3 sec)
 npm test:watch        # Watch mode for development
 npm run db:fresh      # CAUTION - Reset DB: init + seed + migrate
 npm run build         # Compile Tailwind CSS to assets/base.min.css
@@ -30,6 +30,7 @@ npm run docs:generate # Generate OpenAPI spec at docs/openapi.json
 - **PetDiet**: Nutrition plans (vet attestations)
 - **CareCircle**: Health credential sharing with authorized signers (SAS-based)
 - **HealthCred**: Health credentials + badge minting
+- **HCP Console**: Personal Health Agent creation with prompt attestation on Solana
 
 ## Test Mode Behavior
 
@@ -39,7 +40,7 @@ Tests run with `NODE_ENV=test` automatically via Jest config. Key differences:
 - File uploads not persisted to disk
 - `hasCredentialAccess()` returns true for all wallets
 
-**700 tests expected to pass**. 
+**708 tests expected to pass** (up from 700 after HCP Console implementation). 
 
 ## Solana & SAS Specifics
 
