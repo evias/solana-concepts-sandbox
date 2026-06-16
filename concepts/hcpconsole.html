@@ -686,7 +686,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
       const promptHash = this.promptHash;
       
       try {
-        // Step 1: Build unsigned transaction
+        // Step 1: Build unsigned transaction (pre-signed by backend payer)
         log.info('Building attestation transaction...');
         const buildResponse = await fetch('/api/v1/hcpconsole/build-attestation-tx', {
           method: 'POST',
@@ -713,7 +713,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
           return;
         }
 
-        // Step 2: Sign with user's wallet
+        // Step 2: Sign with user's wallet (Phantom)
         log.info('Requesting wallet signature...');
         if (!window.solana) {
           throw new Error('Phantom wallet not available');
@@ -732,6 +732,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
           throw new Error('Failed to deserialize transaction: ' + txErr.message);
         }
 
+        // Sign the partially-signed transaction with user's wallet
         const signedTx = await window.solana.signTransaction(transaction);
         log.info('Transaction signed by wallet');
 
