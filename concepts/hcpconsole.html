@@ -615,70 +615,77 @@ ${purposes.map(p=>'- '+p).join('\n')}
     },
 
     async displayStep3() {
-      this.goToScreen(3);
-      document.getElementById('toStep4').disabled=true;
-      ['log1','log2','log3','log4'].forEach(id=>document.getElementById(id).classList.remove('on','error'));
-      document.getElementById('chainBadge').style.display='none';
-      document.getElementById('verifyNote').style.display='none';
-      document.getElementById('qrcode').innerHTML='<span class="spinner"></span>';
-      document.getElementById('qrCaption').textContent='Preparing code\u2026';
-
-      const prompt=document.getElementById('promptBox').value;
-      const hashBz=await this.sha256(prompt);
-      this.promptHash = this.bytes_to_hex(hashBz);
-
-      await this.blockingWait(600);
-      this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
-      document.getElementById('agentId').textContent=this.promptHash;
-      document.getElementById('log1').classList.add('on');
-
-      await this.blockingWait(700);
-      document.getElementById('promptHash').textContent=this.promptHash;
-      document.getElementById('log2').classList.add('on');
-
-      /// Create SAS Schema and Attestation
-      await this.blockingWait(900);
-      let sasError = false;
+      if (this._displayStep3Running) return;
+      this._displayStep3Running = true;
+      
       try {
-        await this.createSasSchemaAndAttestation();
-        document.getElementById('log3').classList.add('on');
-      } catch (error) {
-        log.error('Error creating SAS schema/attestation', { error: error.message });
-        document.getElementById('attPda').textContent='Error: '+error.message;
-        document.getElementById('log3').classList.add('error');
-        sasError = true;
-      }
+        this.goToScreen(3);
+        document.getElementById('toStep4').disabled=true;
+        ['log1','log2','log3','log4'].forEach(id=>document.getElementById(id).classList.remove('on','error'));
+        document.getElementById('chainBadge').style.display='none';
+        document.getElementById('verifyNote').style.display='none';
+        document.getElementById('qrcode').innerHTML='<span class="spinner"></span>';
+        document.getElementById('qrCaption').textContent='Preparing code\u2026';
 
-      // If SAS failed, mark log4 as error too
-      await this.blockingWait(1100);
-      if (sasError) {
-        document.getElementById('log4').classList.add('error');
-      } else {
-        document.getElementById('log4').classList.add('on');
-      }
+        const prompt=document.getElementById('promptBox').value;
+        const hashBz=await this.sha256(prompt);
+        this.promptHash = this.bytes_to_hex(hashBz);
 
-      /* render QR */
-      if (!sasError) {
-        document.getElementById('qrcode').innerHTML='';
-        new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
-        document.getElementById('qrCaption').textContent=this.agentUrl.replace(this.promptHash, this.shortenHash(this.promptHash));
-        document.getElementById('chainBadge').style.display='inline-flex';
-        document.getElementById('verifyNote').style.display='block';
-        document.getElementById('toStep4').disabled=false;
-      }
+        await this.blockingWait(600);
+        this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
+        document.getElementById('agentId').textContent=this.promptHash;
+        document.getElementById('log1').classList.add('on');
 
-      /* handout QR */
-      if (!sasError) {
-        document.getElementById('handoutQr').innerHTML='';
-        new QRCode(document.getElementById('handoutQr'),{text:this.agentUrl,width:170,height:170,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
-      }
+        await this.blockingWait(700);
+        document.getElementById('promptHash').textContent=this.promptHash;
+        document.getElementById('log2').classList.add('on');
 
-      /* summary */
-      const period=document.getElementById('period').value;
-      const agentType=document.querySelector('#agentToggle button.selected').textContent;
-      const lang=document.getElementById('lang').value;
-      document.getElementById('summaryLine').textContent=
-        `${agentType}, ${lang}, ${period} of sponsored access, attested on Solana. The journey starts at the first scan.`;
+        /// Create SAS Schema and Attestation
+        await this.blockingWait(900);
+        let sasError = false;
+        try {
+          await this.createSasSchemaAndAttestation();
+          document.getElementById('log3').classList.add('on');
+        } catch (error) {
+          log.error('Error creating SAS schema/attestation', { error: error.message });
+          document.getElementById('attPda').textContent='Error: '+error.message;
+          document.getElementById('log3').classList.add('error');
+          sasError = true;
+        }
+
+        // If SAS failed, mark log4 as error too
+        await this.blockingWait(1100);
+        if (sasError) {
+          document.getElementById('log4').classList.add('error');
+        } else {
+          document.getElementById('log4').classList.add('on');
+        }
+
+        /* render QR */
+        if (!sasError) {
+          document.getElementById('qrcode').innerHTML='';
+          new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+          document.getElementById('qrCaption').textContent=this.agentUrl.replace(this.promptHash, this.shortenHash(this.promptHash));
+          document.getElementById('chainBadge').style.display='inline-flex';
+          document.getElementById('verifyNote').style.display='block';
+          document.getElementById('toStep4').disabled=false;
+        }
+
+        /* handout QR */
+        if (!sasError) {
+          document.getElementById('handoutQr').innerHTML='';
+          new QRCode(document.getElementById('handoutQr'),{text:this.agentUrl,width:170,height:170,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+        }
+
+        /* summary */
+        const period=document.getElementById('period').value;
+        const agentType=document.querySelector('#agentToggle button.selected').textContent;
+        const lang=document.getElementById('lang').value;
+        document.getElementById('summaryLine').textContent=
+          `${agentType}, ${lang}, ${period} of sponsored access, attested on Solana. The journey starts at the first scan.`;
+      } finally {
+        this._displayStep3Running = false;
+      }
     },
 
     async createSasSchemaAndAttestation() {
