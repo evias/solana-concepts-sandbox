@@ -121,8 +121,8 @@ router.post('/build-attestation-tx', async (req, res) => {
     const schemaWeb3Ix = kitInstructionToWeb3(schemaIx);
 
     // Create Attestation instruction
-    // Use a deterministic nonce based on promptHash for consistent attestation PDAs
-    const nonce = promptHash.substring(0, 44); // Use first 44 chars as base58 nonce
+    // Use payer's public key as nonce (it's a valid Solana address required by deriveAttestationPda)
+    const nonce = payer.publicKey.toString();
     
     // Derive attestation PDA
     const attestationPda = await lib.deriveAttestationPda({
@@ -132,16 +132,22 @@ router.post('/build-attestation-tx', async (req, res) => {
     });
 
     const attestationAddress = attestationPda[0].toString();
-    log.info('Derived attestation PDA', { attestationAddress });
+    log.info('Derived attestation PDA', { attestationAddress, nonce });
 
-    // Encode attestation data (JSON string as bytes)
+    // Encode attestation data as JSON bytes
     const attestationDataObj = {
-      promptHash: promptHash
+      promptHash: promptHash,
+      createdAt: new Date().toISOString()
     };
     const attestationDataStr = JSON.stringify(attestationDataObj);
     const attestationDataBytes = Buffer.from(attestationDataStr, 'utf-8');
 
-    // Set expiry to 90 days from now (in seconds)
+    log.info('Attestation data', { 
+      dataStr: attestationDataStr,
+      dataLength: attestationDataBytes.length 
+    });
+
+    // Set expiry to 90 days from now (in seconds since epoch)
     const expirySeconds = Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60);
 
     const attestationIx = lib.getCreateAttestationInstruction({
