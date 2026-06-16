@@ -6,10 +6,11 @@ const router = express.Router();
 const { credentialDb } = require('./database');
 
 /**
- * POST /api/v1/hcpconsole/create-attestation
- * Creates a SAS Schema and Attestation for an HCP Console prompt
+ * POST /api/v1/hcpconsole/build-attestation-tx
+ * Builds an unsigned transaction for SAS Schema and Attestation creation
+ * The transaction must be signed by the user's connected wallet
  */
-router.post('/create-attestation', async (req, res) => {
+router.post('/build-attestation-tx', async (req, res) => {
   try {
     const { wallet, credentialId, promptHash } = req.body;
 
@@ -19,10 +20,11 @@ router.post('/create-attestation', async (req, res) => {
 
     // Skip SAS operations in test mode
     if (process.env.NODE_ENV === 'test') {
-      log.info('Skipping attestation creation in test mode');
+      log.info('Skipping transaction build in test mode');
       return res.json({
-        attPda: 'test_attestation_pda',
-        txSig: 'test_tx_signature'
+        base64Tx: Buffer.from('test_transaction_data').toString('base64'),
+        attestationPda: 'test_attestation_pda',
+        isTestMode: true
       });
     }
 
@@ -39,7 +41,7 @@ router.post('/create-attestation', async (req, res) => {
       return res.status(404).json({ error: 'Credential not found' });
     }
 
-    // Check access
+    // Check access - wallet must be the credential owner
     const hasAccess = credential.wallet_address === wallet;
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access denied: wallet not authorized for this credential' });
@@ -48,13 +50,11 @@ router.post('/create-attestation', async (req, res) => {
     // Import at function level to avoid breaking other concepts
     const lib = require('sas-lib');
     const web3 = require('@solana/web3.js');
-    const { createSolanaRpc, createKeyPairSignerFromPrivateKeyBytes } = require('@solana/kit');
+    const { createKeyPairSignerFromPrivateKeyBytes } = require('@solana/kit');
     const payer = require('./payer').getPayerKeypair();
     const sasIntegration = require('./sas-integration');
 
-    const rpc = createSolanaRpc('https://api.devnet.solana.com');
-
-    log.info('Creating SAS Schema and Attestation', { 
+    log.info('Building SAS attestation transaction', { 
       credentialId: credential.id,
       owner: credential.wallet_address,
       promptHash: promptHash
@@ -70,7 +70,7 @@ router.post('/create-attestation', async (req, res) => {
     const credentialAddress = sasResult.credentialAddress;
     log.info('Using SAS credential address', { credentialAddress });
 
-    // 1. Derive schema PDA using the schema name
+    // Derive schema PDA using the schema name
     const schemaName = 'Prompt Verification';
     const fieldNames = ['promptHash'];
     const schemaVersion = 0;
@@ -120,7 +120,7 @@ router.post('/create-attestation', async (req, res) => {
 
     const schemaWeb3Ix = kitInstructionToWeb3(schemaIx);
 
-    // 2. Create Attestation instruction
+    // Create Attestation instruction
     const attestationData = {
       promptHash: promptHash
     };
@@ -135,32 +135,84 @@ router.post('/create-attestation', async (req, res) => {
 
     const attestationWeb3Ix = kitInstructionToWeb3(attestationIx);
 
-    // Send both transactions
+    // Build transaction with user as fee payer
     const tx = new web3.Transaction();
     tx.add(schemaWeb3Ix);
     tx.add(attestationWeb3Ix);
 
-    // Serialize and partially sign
+    // Set payer to the user's wallet
+    tx.feePayer = new web3.PublicKey(wallet);
+
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
-    tx.feePayer = payer.publicKey;
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    
-    tx.sign(payer);
 
-    // Send transaction
+    // Serialize transaction to base64 for frontend
     const serialized = tx.serialize({ requireAllSignatures: false });
-    const txSig = await connection.sendRawTransaction(serialized);
+    const base64Tx = serialized.toString('base64');
 
-    log.info('Attestation transaction sent', { txSig: txSig });
+    log.info('Attestation transaction built', { 
+      base64Tx: base64Tx.substring(0, 50) + '...',
+      feePayer: wallet
+    });
 
     return res.json({
-      attPda: schemaAddress,
-      txSig: txSig,
-      credentialId: credential.id
+      base64Tx: base64Tx,
+      attestationPda: schemaAddress,
+      isTestMode: false
     });
   } catch (error) {
-    log.error('Error creating attestation', { error: error.message, stack: error.stack });
-    return res.status(500).json({ error: 'Failed to create attestation: ' + error.message });
+    log.error('Error building attestation transaction', { error: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Failed to build attestation transaction: ' + error.message });
+  }
+});
+
+/**
+ * POST /api/v1/hcpconsole/submit-attestation-tx
+ * Submits a signed attestation transaction to the blockchain
+ */
+router.post('/submit-attestation-tx', async (req, res) => {
+  try {
+    const { base64SignedTx, credentialId } = req.body;
+
+    if (!base64SignedTx || !credentialId) {
+      return res.status(400).json({ error: 'base64SignedTx and credentialId required' });
+    }
+
+    // Skip SAS operations in test mode
+    if (process.env.NODE_ENV === 'test') {
+      log.info('Skipping transaction submission in test mode');
+      return res.json({
+        txSig: 'test_tx_signature',
+        credentialId: credentialId
+      });
+    }
+
+    const web3 = require('@solana/web3.js');
+
+    // Deserialize the signed transaction
+    let signedTx;
+    try {
+      const txBuffer = Buffer.from(base64SignedTx, 'base64');
+      signedTx = web3.Transaction.from(txBuffer);
+    } catch (err) {
+      log.error('Failed to deserialize signed transaction', { error: err.message });
+      return res.status(400).json({ error: 'Failed to deserialize transaction: ' + err.message });
+    }
+
+    // Submit to blockchain
+    const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
+    const serialized = signedTx.serialize();
+    const txSig = await connection.sendRawTransaction(serialized);
+
+    log.info('Attestation transaction submitted', { txSig: txSig, credentialId: credentialId });
+
+    return res.json({
+      txSig: txSig,
+      credentialId: credentialId
+    });
+  } catch (error) {
+    log.error('Error submitting attestation transaction', { error: error.message, stack: error.stack });
+    return res.status(500).json({ error: 'Failed to submit attestation transaction: ' + error.message });
   }
 });
 
