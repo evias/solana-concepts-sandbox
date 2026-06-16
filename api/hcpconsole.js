@@ -67,7 +67,10 @@ router.post('/create-attestation', async (req, res) => {
       credential.sas_credential_id
     );
 
-    // 1. Create Schema instruction (if it doesn't exist)
+    const credentialAddress = sasResult.credentialAddress;
+    log.info('Using SAS credential address', { credentialAddress });
+
+    // 1. Derive schema PDA using the schema name
     const schemaName = 'Prompt Verification';
     const fieldNames = ['promptHash'];
 
@@ -75,11 +78,24 @@ router.post('/create-attestation', async (req, res) => {
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
 
+    // Derive schema PDA
+    const schemaPda = await lib.deriveSchemaAddr({
+      authority: payer.publicKey.toBase58(),
+      name: schemaName
+    });
+
+    const schemaAddress = schemaPda[0].toString();
+    log.info('Derived schema PDA', { schemaAddress });
+
     // Create the schema instruction
     const schemaIx = lib.getCreateSchemaInstruction({
       payer: payerSigner,
       authority: payerSigner,
+      credential: credentialAddress,
+      schema: schemaAddress,
       name: schemaName,
+      description: '',
+      layout: Buffer.from([]),
       fieldNames: fieldNames
     });
 
@@ -110,7 +126,8 @@ router.post('/create-attestation', async (req, res) => {
     const attestationIx = lib.getCreateAttestationInstruction({
       payer: payerSigner,
       authority: payerSigner,
-      schema: 'Prompt Verification', // schema name
+      credential: credentialAddress,
+      schema: schemaAddress,
       data: attestationData
     });
 
@@ -134,11 +151,8 @@ router.post('/create-attestation', async (req, res) => {
 
     log.info('Attestation transaction sent', { txSig: txSig });
 
-    // For now, return mock PDA (in production would derive from schema)
-    const mockAttPda = 'Mock_Attestation_PDA_' + promptHash.substring(0, 8);
-
     return res.json({
-      attPda: mockAttPda,
+      attPda: schemaAddress,
       txSig: txSig,
       credentialId: credential.id
     });

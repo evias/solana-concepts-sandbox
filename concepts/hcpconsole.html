@@ -107,11 +107,13 @@
   .badge .pulse{width:8px;height:8px;border-radius:50%;background:#5BD6B5}
 
   .chain-log{list-style:none}
-  .chain-log li{display:flex;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:.92rem;align-items:flex-start;opacity:.35;transition:opacity .3s}
-  .chain-log li.on{opacity:1}
-  .chain-log li:last-child{border-bottom:none}
-  .chain-log .st{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.7rem}
-  .chain-log li.on .st{border-color:var(--teal);background:var(--teal);color:#fff}
+   .chain-log li{display:flex;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line);font-size:.92rem;align-items:flex-start;opacity:.35;transition:opacity .3s}
+   .chain-log li.on{opacity:1}
+   .chain-log li.error{opacity:1;color:#dc2626}
+   .chain-log li:last-child{border-bottom:none}
+   .chain-log .st{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:.7rem}
+   .chain-log li.on .st{border-color:var(--teal);background:var(--teal);color:#fff}
+   .chain-log li.error .st{border-color:#dc2626;background:#dc2626;color:#fff}
   .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--muted);word-break:break-all}
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -144,8 +146,8 @@
 <body x-data="hcpConsole()" @load="init()" x-init="init()">
 
   <header>
-    <a href="/" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:16px;flex:none">
-      <span style="font-weight:600;color:rgba(255,255,255,.7);font-size:0.9rem">← Back</span>
+    <a href="/" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:6px;flex:none;opacity:0.8;transition:opacity .2s">
+      <span style="font-size:1.2rem">←</span>
     </a>
     <svg width="44" height="34" viewBox="0 0 44 34" aria-hidden="true">
       <g fill="#fff"><circle cx="22" cy="17" r="5"/><circle cx="8" cy="17" r="2.4"/><circle cx="36" cy="17" r="2.4"/><circle cx="15" cy="7" r="2"/><circle cx="29" cy="7" r="2"/><circle cx="15" cy="27" r="2"/><circle cx="29" cy="27" r="2"/><circle cx="2.5" cy="10" r="1.4"/><circle cx="41.5" cy="10" r="1.4"/><circle cx="2.5" cy="24" r="1.4"/><circle cx="41.5" cy="24" r="1.4"/></g>
@@ -189,30 +191,31 @@
              </button>
          </div>
          <p x-show="!userAddress" style="font-size:0.875rem;color:#6b7280;margin-top:8px">Connect your wallet to access and manage previous forms</p>
+         
+         <!-- Associated Credential Selection -->
+         <label for="credential" style="margin-top:18px">Associated credential <span class="hint">(select the credential to attest)</span></label>
+         <select id="credential" @change="selectedCredential = $el.value">
+           <option value="">Select a credential...</option>
+           <template x-for="cred in credentials" :key="cred.id">
+             <option :value="cred.id" x-text="cred.name"></option>
+           </template>
+         </select>
+         <div x-show="userAddress && credentials.length === 0" style="background:#FBF4DF;border:1px solid #EAD9A8;color:#8A6D1F;border-radius:10px;padding:12px 15px;font-size:0.875rem;margin-top:12px">
+           You don't have any credentials yet. <a href="/healthcred" style="color:#8A6D1F;font-weight:600;text-decoration:underline">Create your first credential in HealthCred</a>.
+         </div>
       </div>
     </section>
 
   <!-- ================= STEP 1 ================= -->
-  <section class="screen visible" id="screen1">
-    <div class="panel">
-      <h2>Describe the patient journey</h2>
-      <p class="sub">Type or dictate during the consultation. This takes about one minute.</p>
+   <section class="screen visible" id="screen1">
+     <div class="panel">
+       <h2>Describe the patient journey</h2>
+       <p class="sub">Type or dictate during the consultation. This takes about one minute.</p>
 
-       <label for="caseRef">Case reference <span class="hint">(initials or internal number, never a full name)</span></label>
-       <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20">
+        <label for="caseRef">Case reference <span class="hint">(initials or internal number, never a full name)</span></label>
+        <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20">
 
-       <label for="credential">Associated credential <span class="hint">(select the credential to attest)</span></label>
-       <select id="credential" @change="selectedCredential = $el.value">
-         <option value="">Select a credential...</option>
-         <template x-for="cred in credentials" :key="cred.id">
-           <option :value="cred.id" x-text="cred.name"></option>
-         </template>
-       </select>
-       <div x-show="userAddress && credentials.length === 0" style="background:#FBF4DF;border:1px solid #EAD9A8;color:#8A6D1F;border-radius:10px;padding:12px 15px;font-size:0.875rem;margin-top:12px">
-         You don't have any credentials yet. <a href="/healthcred" style="color:#8A6D1F;font-weight:600;text-decoration:underline">Create your first credential in HealthCred</a>.
-       </div>
-
-      <label for="diagnosis">Health problem or diagnosis, and today's instructions</label>
+        <label for="diagnosis">Health problem or diagnosis, and today's instructions</label>
       <div class="dictate-wrap">
         <textarea id="diagnosis" placeholder="e.g. Newly diagnosed asthma. Started on a daily inhaled corticosteroid and a relief inhaler. Watch for night symptoms and increased use of the relief inhaler. Follow up in three weeks."></textarea>
         <button class="mic-btn" id="micBtn" type="button" title="Dictate">&#127908; Dictate</button>
@@ -261,12 +264,12 @@
       <label for="escalation">Escalation contact for urgent concerns</label>
       <input type="text" id="escalation" placeholder="e.g. Praxis Dr. Weber, 044 123 45 67, or 144 in an emergency">
 
-      <div class="notice">Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.</div>
+       <div class="notice">Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.</div>
 
-       <div class="actions">
-         <span></span>
-         <button class="btn btn-primary" id="toStep2" :disabled="!userAddress">Generate system prompt &rarr;</button>
-       </div>
+        <div class="actions">
+          <span></span>
+          <button class="btn btn-primary" id="toStep2" :disabled="!userAddress || !selectedCredential">Generate system prompt &rarr;</button>
+        </div>
     </div>
   </section>
 
@@ -363,39 +366,36 @@
 
   <footer>Workflow: consultation &rarr; describe or dictate &rarr; tailored system prompt &rarr; QR code &rarr; <b>attestation on Solana</b> &rarr; share by print, email, or messenger. &nbsp;|&nbsp; dHealth Intelligence &middot; ai.dhealth.com</footer>
 
-  <!-- Wallet Modal -->
-  <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
-      <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
-          <div class="border-b p-4 flex justify-between items-center">
-              <h2 class="text-xl font-bold">Connect Wallet</h2>
-              <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-          </div>
-          <div class="p-6 space-y-4">
-              <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
-                  🌐 Connect Phantom Wallet
-              </button>
-              <div class="relative">
-                  <div class="absolute inset-0 flex items-center">
-                      <div class="w-full border-t border-gray-300"></div>
-                  </div>
-                  <div class="relative flex justify-center text-sm">
-                      <span class="px-2 bg-white text-gray-500">or</span>
-                  </div>
-              </div>
-              <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Enter Account Address Manually</label>
-                  <input 
-                      x-model="manualAddress"
-                      type="text" 
-                      placeholder="Solana account address"
-                      class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                  <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
-                      Use This Address
-                  </button>
-              </div>
-          </div>
-      </div>
-  </div>
+   <!-- Wallet Modal -->
+   <div x-show="showWalletModal" style="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center;z-index:50;padding:16px" @click.self="showWalletModal = false">
+       <div style="background:white;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.2);max-width:420px;width:100%">
+           <div style="border-bottom:1px solid #e5e7eb;padding:20px;display:flex;justify-content:space-between;align-items:center">
+               <h2 style="font-size:1.25rem;font-weight:700;color:#111">Connect Wallet</h2>
+               <button @click="showWalletModal = false" style="background:none;border:none;color:#999;font-size:1.5rem;cursor:pointer;padding:4px">✕</button>
+           </div>
+           <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+               <button @click="connectPhantom()" style="width:100%;background:#7c3aed;color:white;padding:12px 16px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:0.95rem;transition:background .2s">
+                   🌐 Connect Phantom Wallet
+               </button>
+               <div style="position:relative;display:flex;align-items:center;gap:12px">
+                   <div style="flex:1;height:1px;background:#e5e7eb"></div>
+                   <span style="color:#999;font-size:0.85rem;flex-shrink:0">or</span>
+                   <div style="flex:1;height:1px;background:#e5e7eb"></div>
+               </div>
+               <div>
+                   <label style="display:block;font-weight:600;color:#374151;margin-bottom:8px;font-size:0.9rem">Enter Account Address Manually</label>
+                   <input 
+                       x-model="manualAddress"
+                       type="text" 
+                       placeholder="Solana account address"
+                       style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.9rem;font-family:inherit;margin-bottom:12px">
+                   <button @click="connectManually()" style="width:100%;background:#666;color:white;padding:10px 16px;border-radius:8px;border:none;font-weight:600;cursor:pointer;font-size:0.9rem;transition:background .2s">
+                       Use This Address
+                   </button>
+               </div>
+           </div>
+       </div>
+   </div>
 
   <script>
 function hcpConsole() {
@@ -611,7 +611,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
     async displayStep3() {
       this.goToScreen(3);
       document.getElementById('toStep4').disabled=true;
-      ['log1','log2','log3','log4'].forEach(id=>document.getElementById(id).classList.remove('on'));
+      ['log1','log2','log3','log4'].forEach(id=>document.getElementById(id).classList.remove('on','error'));
       document.getElementById('chainBadge').style.display='none';
       document.getElementById('verifyNote').style.display='none';
       document.getElementById('qrcode').innerHTML='<span class="spinner"></span>';
@@ -632,29 +632,40 @@ ${purposes.map(p=>'- '+p).join('\n')}
 
       /// Create SAS Schema and Attestation
       await this.blockingWait(900);
+      let sasError = false;
       try {
         await this.createSasSchemaAndAttestation();
         document.getElementById('log3').classList.add('on');
       } catch (error) {
         log.error('Error creating SAS schema/attestation', { error: error.message });
         document.getElementById('attPda').textContent='Error: '+error.message;
-        document.getElementById('log3').classList.add('on');
+        document.getElementById('log3').classList.add('error');
+        sasError = true;
       }
 
+      // If SAS failed, mark log4 as error too
       await this.blockingWait(1100);
-      document.getElementById('log4').classList.add('on');
+      if (sasError) {
+        document.getElementById('log4').classList.add('error');
+      } else {
+        document.getElementById('log4').classList.add('on');
+      }
 
       /* render QR */
-      document.getElementById('qrcode').innerHTML='';
-      new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
-      document.getElementById('qrCaption').textContent=this.agentUrl;
-      document.getElementById('chainBadge').style.display='inline-flex';
-      document.getElementById('verifyNote').style.display='block';
-      document.getElementById('toStep4').disabled=false;
+      if (!sasError) {
+        document.getElementById('qrcode').innerHTML='';
+        new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+        document.getElementById('qrCaption').textContent=this.agentUrl.replace(this.promptHash, this.shortenHash(this.promptHash));
+        document.getElementById('chainBadge').style.display='inline-flex';
+        document.getElementById('verifyNote').style.display='block';
+        document.getElementById('toStep4').disabled=false;
+      }
 
       /* handout QR */
-      document.getElementById('handoutQr').innerHTML='';
-      new QRCode(document.getElementById('handoutQr'),{text:this.agentUrl,width:170,height:170,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+      if (!sasError) {
+        document.getElementById('handoutQr').innerHTML='';
+        new QRCode(document.getElementById('handoutQr'),{text:this.agentUrl,width:170,height:170,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
+      }
 
       /* summary */
       const period=document.getElementById('period').value;
@@ -719,6 +730,11 @@ ${purposes.map(p=>'- '+p).join('\n')}
 
     bytes_to_hex(bz) {
       return Array.from(new Uint8Array(bz)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    },
+
+    shortenHash(hash) {
+      if (!hash || hash.length < 10) return hash;
+      return hash.substring(0, 6) + '...' + hash.substring(hash.length - 4);
     }
   };
 }
