@@ -168,19 +168,30 @@ router.post('/build-attestation-tx', async (req, res) => {
     tx.add(schemaWeb3Ix);
     tx.add(attestationWeb3Ix);
 
-    // Set payer to the user's wallet
+    // Set payer to the user's wallet (they will pay fees)
     tx.feePayer = new web3.PublicKey(wallet);
 
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
+    // Pre-sign with payer (backend) - the instructions require payer signature
+    tx.sign(payer);
+
     // Serialize transaction to base64 for frontend
+    // Use requireAllSignatures: false so user can add their signature
     const serialized = tx.serialize({ requireAllSignatures: false });
     const base64Tx = serialized.toString('base64');
 
     log.info('Attestation transaction built', { 
       base64Tx: base64Tx.substring(0, 50) + '...',
-      feePayer: wallet
+      feePayer: wallet,
+      payerSigned: true
+    });
+
+    return res.json({
+      base64Tx: base64Tx,
+      attestationPda: attestationAddress,
+      isTestMode: false
     });
 
     return res.json({
