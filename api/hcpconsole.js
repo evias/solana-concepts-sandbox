@@ -121,16 +121,38 @@ router.post('/build-attestation-tx', async (req, res) => {
     const schemaWeb3Ix = kitInstructionToWeb3(schemaIx);
 
     // Create Attestation instruction
-    const attestationData = {
+    // Use a deterministic nonce based on promptHash for consistent attestation PDAs
+    const nonce = promptHash.substring(0, 44); // Use first 44 chars as base58 nonce
+    
+    // Derive attestation PDA
+    const attestationPda = await lib.deriveAttestationPda({
+      credential: credentialAddress,
+      schema: schemaAddress,
+      nonce: nonce
+    });
+
+    const attestationAddress = attestationPda[0].toString();
+    log.info('Derived attestation PDA', { attestationAddress });
+
+    // Encode attestation data (JSON string as bytes)
+    const attestationDataObj = {
       promptHash: promptHash
     };
+    const attestationDataStr = JSON.stringify(attestationDataObj);
+    const attestationDataBytes = Buffer.from(attestationDataStr, 'utf-8');
+
+    // Set expiry to 90 days from now (in seconds)
+    const expirySeconds = Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60);
 
     const attestationIx = lib.getCreateAttestationInstruction({
       payer: payerSigner,
       authority: payerSigner,
       credential: credentialAddress,
       schema: schemaAddress,
-      data: attestationData
+      attestation: attestationAddress,
+      nonce: nonce,
+      data: attestationDataBytes,
+      expiry: BigInt(expirySeconds)
     });
 
     const attestationWeb3Ix = kitInstructionToWeb3(attestationIx);
@@ -157,7 +179,7 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     return res.json({
       base64Tx: base64Tx,
-      attestationPda: schemaAddress,
+      attestationPda: attestationAddress,
       isTestMode: false
     });
   } catch (error) {
