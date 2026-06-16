@@ -163,35 +163,35 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     const attestationWeb3Ix = kitInstructionToWeb3(attestationIx);
 
-    // Build transaction with user as fee payer
+    // Build transaction with PAYER as fee payer (payer does all the work, user just initiates)
     const tx = new web3.Transaction();
     tx.add(schemaWeb3Ix);
     tx.add(attestationWeb3Ix);
 
-    // Set user wallet as fee payer (they pay for the transaction)
-    tx.feePayer = new web3.PublicKey(wallet);
+    // Set payer wallet as fee payer (backend pays for the transaction)
+    tx.feePayer = payer.publicKey;
 
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-    // DO NOT sign on backend - only the fee payer (user) needs to sign
-    // Serialize UNSIGNED transaction for user to sign with Phantom
-    const serialized = tx.serialize({ 
-      requireAllSignatures: false,
-      verifySignatures: false 
-    });
+    // Sign with payer on backend (payer is the one executing the instructions)
+    tx.sign(payer);
+
+    // Serialize and send immediately
+    const serialized = tx.serialize();
     const base64Tx = serialized.toString('base64');
 
-    log.info('Attestation transaction built (unsigned)', { 
+    log.info('Attestation transaction built and signed', { 
       base64Tx: base64Tx.substring(0, 50) + '...',
-      feePayer: wallet,
-      userWillSign: true
+      feePayer: payer.publicKey.toString(),
+      signed: true
     });
 
     return res.json({
       base64Tx: base64Tx,
       attestationPda: attestationAddress,
-      isTestMode: false
+      isTestMode: false,
+      alreadySigned: true
     });
   } catch (error) {
     log.error('Error building attestation transaction', { error: error.message, stack: error.stack });
@@ -201,7 +201,7 @@ router.post('/build-attestation-tx', async (req, res) => {
 
 /**
  * POST /api/v1/hcpconsole/submit-attestation-tx
- * Submits a signed attestation transaction to the blockchain
+ * Submits the pre-signed attestation transaction to the blockchain
  */
 router.post('/submit-attestation-tx', async (req, res) => {
   try {
@@ -220,13 +220,32 @@ router.post('/submit-attestation-tx', async (req, res) => {
       });
     }
 
-    // In development, return mock success to avoid account lookup failures
-    // Real SAS operations will work in production when accounts exist
-    log.info('Development mode: returning mock transaction signature');
-    return res.json({
-      txSig: 'dev_mock_' + credentialId.substring(0, 8) + '_' + Math.random().toString(36).substring(7),
-      credentialId: credentialId
-    });
+    // Deserialize the transaction (already signed by backend)
+    let transaction;
+    try {
+      const txBuffer = Buffer.from(base64SignedTx, 'base64');
+      transaction = web3.Transaction.from(txBuffer);
+      log.info('Deserialized signed attestation transaction');
+    } catch (err) {
+      log.error('Failed to deserialize transaction', { error: err.message });
+      return res.status(400).json({ error: 'Failed to deserialize transaction: ' + err.message });
+    }
+
+    // Send the transaction to blockchain
+    try {
+      const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
+      const txSig = await connection.sendRawTransaction(transaction.serialize());
+      
+      log.info('Attestation transaction submitted', { txSig: txSig, credentialId: credentialId });
+
+      return res.json({
+        txSig: txSig,
+        credentialId: credentialId
+      });
+    } catch (sendErr) {
+      log.error('Failed to send transaction', { error: sendErr.message });
+      return res.status(500).json({ error: 'Failed to send transaction: ' + sendErr.message });
+    }
   } catch (error) {
     log.error('Error submitting attestation transaction', { error: error.message, stack: error.stack });
     return res.status(500).json({ error: 'Failed to submit attestation transaction: ' + error.message });
