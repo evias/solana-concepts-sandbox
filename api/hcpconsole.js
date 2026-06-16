@@ -226,7 +226,22 @@ router.post('/submit-attestation-tx', async (req, res) => {
     let signedTx;
     try {
       const txBuffer = Buffer.from(base64SignedTx, 'base64');
+      log.info('Received signed transaction', { 
+        base64Length: base64SignedTx.length,
+        bufferLength: txBuffer.length 
+      });
       signedTx = web3.Transaction.from(txBuffer);
+      log.info('Deserialized transaction', {
+        signatures: signedTx.signatures.length,
+        feePayer: signedTx.feePayer?.toBase58(),
+        instructions: signedTx.instructions.length
+      });
+      signedTx.signatures.forEach((sig, i) => {
+        log.info(`Signature ${i}:`, {
+          publicKey: sig.publicKey?.toBase58(),
+          hasSignature: !!sig.signature
+        });
+      });
     } catch (err) {
       log.error('Failed to deserialize signed transaction', { error: err.message });
       return res.status(400).json({ error: 'Failed to deserialize transaction: ' + err.message });
@@ -235,6 +250,10 @@ router.post('/submit-attestation-tx', async (req, res) => {
     // Submit to blockchain
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     const serialized = signedTx.serialize();
+    log.info('Submitting transaction', { 
+      serializedLength: serialized.length,
+      signatures: signedTx.signatures.length
+    });
     const txSig = await connection.sendRawTransaction(serialized);
 
     log.info('Attestation transaction submitted', { txSig: txSig, credentialId: credentialId });
