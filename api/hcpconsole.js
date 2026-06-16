@@ -163,7 +163,7 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     const attestationWeb3Ix = kitInstructionToWeb3(attestationIx);
 
-    // Build transaction with backend payer as signer (credential authority) and user as fee payer
+    // Build transaction with user as fee payer
     const tx = new web3.Transaction();
     tx.add(schemaWeb3Ix);
     tx.add(attestationWeb3Ix);
@@ -174,21 +174,17 @@ router.post('/build-attestation-tx', async (req, res) => {
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-    // Pre-sign with backend payer (required: they're the credential authority)
-    tx.sign(payer);
-
-    // Serialize with requireAllSignatures: false and verifySignatures: false
-    // This allows user to add their signature on the frontend
+    // DO NOT sign on backend - only the fee payer (user) needs to sign
+    // Serialize UNSIGNED transaction for user to sign with Phantom
     const serialized = tx.serialize({ 
       requireAllSignatures: false,
       verifySignatures: false 
     });
     const base64Tx = serialized.toString('base64');
 
-    log.info('Attestation transaction built (pre-signed by backend)', { 
+    log.info('Attestation transaction built (unsigned)', { 
       base64Tx: base64Tx.substring(0, 50) + '...',
       feePayer: wallet,
-      payerSigned: true,
       userWillSign: true
     });
 
