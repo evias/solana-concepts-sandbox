@@ -730,14 +730,19 @@ ${purposes.map(p=>'- '+p).join('\n')}
           throw new Error('Solana Web3 library not available - please refresh the page');
         }
 
-        let transaction;
-        try {
-          const txBuffer = new Uint8Array(Uint8Array.fromBase64(buildData.base64Tx));
-          transaction = window.solanaWeb3.Transaction.from(txBuffer);
-        } catch (txErr) {
-          log.error('Failed to deserialize attestation transaction', { error: txErr.message });
-          throw new Error('Failed to deserialize transaction: ' + txErr.message);
-        }
+         let transaction;
+         try {
+           // Decode base64 to Uint8Array using atob
+           const binaryString = atob(buildData.base64Tx);
+           const bytes = new Uint8Array(binaryString.length);
+           for (let i = 0; i < binaryString.length; i++) {
+             bytes[i] = binaryString.charCodeAt(i);
+           }
+           transaction = window.solanaWeb3.Transaction.from(bytes);
+         } catch (txErr) {
+           log.error('Failed to deserialize attestation transaction', { error: txErr.message });
+           throw new Error('Failed to deserialize transaction: ' + txErr.message);
+         }
 
         // Sign the transaction with user's wallet
         const signedTx = await window.solana.signTransaction(transaction);
