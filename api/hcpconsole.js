@@ -72,11 +72,12 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     // Derive schema PDA using the schema name
     const schemaName = 'Prompt Verification';
-     const fieldNames = ['promptHash'];
+    const fieldNames = ['promptHash'];
     const schemaVersion = 0;
 
-    // The connected wallet is the authority (they own the SAS credential)
-    const userAddress = wallet;
+    const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
+      new Uint8Array(payer.secretKey.slice(0, 32))
+    );
 
     // Derive schema PDA
     const schemaPda = await lib.deriveSchemaPda({
@@ -89,10 +90,9 @@ router.post('/build-attestation-tx', async (req, res) => {
     log.info('Derived schema PDA', { schemaAddress });
 
     // Create the schema instruction
-    // User (connected wallet) is the authority, backend payer pays fees
     const schemaIx = lib.getCreateSchemaInstruction({
-      payer: userAddress,
-      authority: userAddress,
+      payer: payerSigner,
+      authority: payerSigner,
       credential: credentialAddress,
       schema: schemaAddress,
       name: schemaName,
@@ -150,11 +150,9 @@ router.post('/build-attestation-tx', async (req, res) => {
     // Set expiry to 90 days from now (in seconds since epoch)
     const expirySeconds = Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60);
 
-    // Create attestation instruction
-    // User (connected wallet) is the authority, backend payer pays fees
     const attestationIx = lib.getCreateAttestationInstruction({
-      payer: userAddress,
-      authority: userAddress,
+      payer: payerSigner,
+      authority: payerSigner,
       credential: credentialAddress,
       schema: schemaAddress,
       attestation: attestationAddress,
@@ -165,31 +163,29 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     const attestationWeb3Ix = kitInstructionToWeb3(attestationIx);
 
-    // Build UNSIGNED transaction with user as signer and fee payer
-    const userPublicKey = new web3.PublicKey(userAddress);
+    // Build transaction with user as fee payer
     const tx = new web3.Transaction();
     tx.add(schemaWeb3Ix);
     tx.add(attestationWeb3Ix);
 
-    // Set user wallet as fee payer (they pay for the transaction and sign it)
-    tx.feePayer = userPublicKey;
+    // Set payer to the user's wallet (they will pay fees)
+    tx.feePayer = new web3.PublicKey(wallet);
 
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
 
-    // DO NOT sign on backend - let user sign with Phantom
-    // Serialize UNSIGNED transaction for user to sign
-    const serialized = tx.serialize({ 
-      requireAllSignatures: false,
-      verifySignatures: false 
-    });
+    // Pre-sign with payer (backend) - the instructions require payer signature
+    tx.sign(payer);
+
+    // Serialize transaction to base64 for frontend
+    // Use requireAllSignatures: false so user can add their signature
+    const serialized = tx.serialize({ requireAllSignatures: false });
     const base64Tx = serialized.toString('base64');
 
-    log.info('Attestation transaction built (unsigned)', { 
+    log.info('Attestation transaction built', { 
       base64Tx: base64Tx.substring(0, 50) + '...',
-      feePayer: userAddress,
-      signer: userAddress,
-      userSigns: true
+      feePayer: wallet,
+      payerSigned: true
     });
 
     return res.json({
