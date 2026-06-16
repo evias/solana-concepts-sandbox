@@ -73,15 +73,17 @@ router.post('/create-attestation', async (req, res) => {
     // 1. Derive schema PDA using the schema name
     const schemaName = 'Prompt Verification';
     const fieldNames = ['promptHash'];
+    const schemaVersion = 0;
 
     const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
 
     // Derive schema PDA
-    const schemaPda = await lib.deriveSchemaAddr({
-      authority: payer.publicKey.toBase58(),
-      name: schemaName
+    const schemaPda = await lib.deriveSchemaPda({
+      credential: credentialAddress,
+      name: schemaName,
+      version: schemaVersion
     });
 
     const schemaAddress = schemaPda[0].toString();
