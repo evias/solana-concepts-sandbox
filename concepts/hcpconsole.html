@@ -743,31 +743,19 @@ ${purposes.map(p=>'- '+p).join('\n')}
         const signedTx = await window.solana.signTransaction(transaction);
         log.info('Transaction signed by wallet');
 
-        // Step 3: Submit signed transaction
-        log.info('Submitting signed transaction...');
-        const signedTxBuffer = signedTx.serialize();
-        // Convert Uint8Array to base64 safely
-        let base64SignedTx;
-        if (typeof signedTxBuffer === 'string') {
-          base64SignedTx = btoa(signedTxBuffer);
-        } else {
-          // For Uint8Array, convert safely in chunks to avoid stack overflow
-          const bytes = new Uint8Array(signedTxBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          base64SignedTx = btoa(binary);
-        }
-        
-        const submitResponse = await fetch('/api/v1/hcpconsole/submit-attestation-tx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            base64SignedTx: base64SignedTx,
-            credentialId: credentialId
-          })
-        });
+         // Step 3: Submit signed transaction
+         log.info('Submitting signed transaction...');
+         const signedTxBuffer = signedTx.serialize();
+         const base64SignedTx = signedTxBuffer.toString('base64');
+         
+         const submitResponse = await fetch('/api/v1/hcpconsole/submit-attestation-tx', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             base64SignedTx: base64SignedTx,
+             credentialId: credentialId
+           })
+         });
 
         if (!submitResponse.ok) {
           const error = await submitResponse.json();
