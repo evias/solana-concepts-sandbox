@@ -9,6 +9,12 @@
   <script src="/assets/alpinejs.min.js" defer></script>
   <script src="/assets/logger.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+  <script>
+    // Make Solana web3.js available as window.solanaWeb3 after IIFE loads
+    if (typeof solanaWeb3 !== 'undefined') {
+      window.solanaWeb3 = solanaWeb3;
+    }
+  </script>
   <link href="/assets/base.min.css" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -680,7 +686,9 @@ ${purposes.map(p=>'- '+p).join('\n')}
       const promptHash = this.promptHash;
       
       try {
-        const response = await fetch('/api/v1/hcpconsole/create-attestation', {
+        // Step 1: Build unsigned transaction
+        log.info('Building attestation transaction...');
+        const buildResponse = await fetch('/api/v1/hcpconsole/build-attestation-tx', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -690,15 +698,66 @@ ${purposes.map(p=>'- '+p).join('\n')}
           })
         });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to create attestation');
+        if (!buildResponse.ok) {
+          const error = await buildResponse.json();
+          throw new Error(error.error || 'Failed to build attestation transaction');
         }
 
-        const data = await response.json();
-        document.getElementById('attPda').textContent='Attestation PDA: '+data.attPda;
-        document.getElementById('txSig').textContent='Signature: '+data.txSig;
-        log.info('Attestation created', { attPda: data.attPda, txSig: data.txSig });
+        const buildData = await buildResponse.json();
+        
+        // Test mode: skip wallet signing
+        if (buildData.isTestMode) {
+          document.getElementById('attPda').textContent='Attestation PDA: '+buildData.attestationPda;
+          document.getElementById('txSig').textContent='Signature: '+buildData.txSig;
+          log.info('Attestation created (test mode)', { attPda: buildData.attestationPda, txSig: buildData.txSig });
+          return;
+        }
+
+        // Step 2: Sign with user's wallet
+        log.info('Requesting wallet signature...');
+        if (!window.solana) {
+          throw new Error('Phantom wallet not available');
+        }
+
+        if (!window.solanaWeb3) {
+          throw new Error('Solana Web3 library not available - please refresh the page');
+        }
+
+        let transaction;
+        try {
+          const txBuffer = new Uint8Array(Uint8Array.fromBase64(buildData.base64Tx));
+          transaction = window.solanaWeb3.Transaction.from(txBuffer);
+        } catch (txErr) {
+          log.error('Failed to deserialize attestation transaction', { error: txErr.message });
+          throw new Error('Failed to deserialize transaction: ' + txErr.message);
+        }
+
+        const signedTx = await window.solana.signTransaction(transaction);
+        log.info('Transaction signed by wallet');
+
+        // Step 3: Submit signed transaction
+        log.info('Submitting signed transaction...');
+        const signedTxBuffer = signedTx.serialize();
+        const base64SignedTx = btoa(String.fromCharCode.apply(null, signedTxBuffer));
+        
+        const submitResponse = await fetch('/api/v1/hcpconsole/submit-attestation-tx', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base64SignedTx: base64SignedTx,
+            credentialId: credentialId
+          })
+        });
+
+        if (!submitResponse.ok) {
+          const error = await submitResponse.json();
+          throw new Error(error.error || 'Failed to submit attestation transaction');
+        }
+
+        const submitData = await submitResponse.json();
+        document.getElementById('attPda').textContent='Attestation PDA: '+buildData.attestationPda;
+        document.getElementById('txSig').textContent='Signature: '+submitData.txSig;
+        log.info('Attestation created', { attPda: buildData.attestationPda, txSig: submitData.txSig });
       } catch (error) {
         log.error('Error in createSasSchemaAndAttestation', { error: error.message });
         throw error;
