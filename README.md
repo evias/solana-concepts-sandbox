@@ -120,6 +120,7 @@ npm run watch          # Watch and rebuild Tailwind CSS
 - Owner receives 1 token in their associated token account
 - PetTracker/PetVax/PetDiet transactions paid by backend payer wallet
 - HealthCred/CareCircle transactions paid by *connected* wallet (end-user)
+- HCPConsole transactions include SAS Attestations with promptHash in Schema
 
 ### Backend Payer Wallet
 - Created automatically on first run: `.payer-keypair.json`
