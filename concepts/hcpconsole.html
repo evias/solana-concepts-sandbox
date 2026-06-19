@@ -693,9 +693,9 @@ ${purposes.map(p=>'- '+p).join('\n')}
       const promptHash = this.promptHash;
       
       try {
-        // Step 1: Build unsigned transaction (pre-signed by backend payer)
-        log.info('Building attestation transaction...');
-        const buildResponse = await fetch('/api/v1/hcpconsole/build-attestation-tx', {
+        // Single API call: backend creates, signs, and broadcasts directly
+        log.info('Creating attestation with backend...');
+        const response = await fetch('/api/v1/hcpconsole/build-attestation-tx', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -705,69 +705,23 @@ ${purposes.map(p=>'- '+p).join('\n')}
           })
         });
 
-        if (!buildResponse.ok) {
-          const error = await buildResponse.json();
-          throw new Error(error.error || 'Failed to build attestation transaction');
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create attestation');
         }
 
-        const buildData = await buildResponse.json();
+        const data = await response.json();
         
-        // Test mode: skip wallet signing
-        if (buildData.isTestMode) {
-          document.getElementById('attPda').textContent='Attestation PDA: '+buildData.attestationPda;
-          document.getElementById('txSig').textContent='Signature: '+buildData.txSig;
-          log.info('Attestation created (test mode)', { attPda: buildData.attestationPda, txSig: buildData.txSig });
-          return;
-        }
-
-        // Step 2: User signs with wallet (adding fee payer signature to already-signed payer signature)
-        log.info('Requesting wallet signature from user...');
-        if (!window.solana) {
-          throw new Error('Phantom wallet not available');
-        }
-
-        if (!window.solanaWeb3) {
-          throw new Error('Solana Web3 library not available - please refresh the page');
-        }
-
-        let transaction;
-        try {
-          const txBuffer = new Uint8Array(Uint8Array.fromBase64(buildData.base64Tx));
-          transaction = window.solanaWeb3.Transaction.from(txBuffer);
-        } catch (txErr) {
-          log.error('Failed to deserialize attestation transaction', { error: txErr.message });
-          throw new Error('Failed to deserialize transaction: ' + txErr.message);
-        }
-
-        // User signs the transaction (adds their signature as fee payer)
-        const signedTx = await window.solana.signTransaction(transaction);
-        log.info('Transaction signed by user wallet');
-
-        // Step 3: Submit fully signed transaction
-        log.info('Submitting fully signed transaction...');
-        const signedTxBuffer = signedTx.serialize();
-        const base64SignedTx = signedTxBuffer.toString('base64');
-        
-        const submitResponse = await fetch('/api/v1/hcpconsole/submit-attestation-tx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            base64SignedTx: base64SignedTx,
-            credentialId: credentialId
-          })
+        // Display results
+        document.getElementById('attPda').textContent='Attestation PDA: '+data.attestationAddress;
+        document.getElementById('txSig').textContent='Signature: '+data.txSig;
+        log.info('Attestation created successfully', { 
+          attPda: data.attestationAddress, 
+          txSig: data.txSig,
+          isTestMode: data.isTestMode
         });
-
-        if (!submitResponse.ok) {
-          const error = await submitResponse.json();
-          throw new Error(error.error || 'Failed to submit attestation transaction');
-        }
-
-        const submitData = await submitResponse.json();
-        document.getElementById('attPda').textContent='Attestation PDA: '+buildData.attestationPda;
-        document.getElementById('txSig').textContent='Signature: '+submitData.txSig;
-        log.info('Attestation created', { attPda: buildData.attestationPda, txSig: submitData.txSig });
       } catch (error) {
-        log.error('Error in createSasSchemaAndAttestation', { error: error.message });
+        log.error('Error creating attestation', { error: error.message });
         throw error;
       }
     },

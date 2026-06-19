@@ -160,6 +160,53 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
 
     log.info(`Transaction confirmed: ${txSig}`);
 
+    // Also create a default schema for this credential (for attestations)
+    try {
+      log.info(`Creating default schema for credential...`);
+      const schemaName = 'Prompt Verification';
+      const fieldNames = ['promptHash'];
+      const schemaVersion = 0;
+
+      const schemaPda = await lib.deriveSchemaPda({
+        credential: credentialAddress,
+        name: schemaName,
+        version: schemaVersion
+      });
+
+      const schemaAddress = schemaPda[0].toString();
+
+      const schemaIx = lib.getCreateSchemaInstruction({
+        payer: payerSigner,
+        authority: payerSigner,
+        credential: credentialAddress,
+        schema: schemaAddress,
+        name: schemaName,
+        description: '',
+        layout: Buffer.from([]),
+        fieldNames: fieldNames
+      });
+
+      function roleToWeb3Account(address, role) {
+        return {
+          pubkey: new web3.PublicKey(address),
+          isSigner: role >= 2,
+          isWritable: role === 1 || role === 3
+        };
+      }
+
+      const schemaWeb3Ix = new web3.TransactionInstruction({
+        keys: schemaIx.accounts.map(acc => roleToWeb3Account(acc.address, acc.role)),
+        programId: new web3.PublicKey(schemaIx.programAddress),
+        data: Buffer.from(schemaIx.data)
+      });
+
+      await sendTransaction(schemaWeb3Ix, payer);
+      log.info(`Schema created: ${schemaAddress}`);
+    } catch (schemaError) {
+      log.warn(`Failed to create default schema (may already exist): ${schemaError.message}`);
+      // Schema creation failure is not fatal - attestation might work with existing schema
+    }
+
     return {
       credentialAddress,
       exists: false,
@@ -282,5 +329,7 @@ async function getAuthorizedSigners(credentialAddress) {
 module.exports = {
   ensureSasCredential,
   addAuthorizedSigner,
-  getAuthorizedSigners
+  getAuthorizedSigners,
+  kitInstructionToWeb3,
+  sendTransaction
 };
