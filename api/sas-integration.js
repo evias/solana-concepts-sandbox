@@ -160,6 +160,8 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
 
     log.info(`Transaction confirmed: ${txSig}`);
 
+/* NOTE: DISABLED changes by smarties.
+ *
     // Also create a default schema for this credential (for attestations)
     try {
       log.info(`Creating default schema for credential...`);
@@ -206,6 +208,8 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
       log.warn(`Failed to create default schema (may already exist): ${schemaError.message}`);
       // Schema creation failure is not fatal - attestation might work with existing schema
     }
+
+*/
 
     return {
       credentialAddress,
