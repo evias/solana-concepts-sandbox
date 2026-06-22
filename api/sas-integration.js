@@ -44,8 +44,15 @@ async function kitInstructionToWeb3(kitIx) {
     }
   }
 
+  const involvedKeys = [];
+  for (a in dedupl) {
+    let r = dedupl[a];
+
+    involvedKeys.push(roleToWeb3Account(a, r));
+  }
+
   return new web3.TransactionInstruction({
-    keys: dedupl.map((a, r) => roleToWeb3Account(a, r)),
+    keys: involvedKeys,
     programId: new web3.PublicKey(kitIx.programAddress),
     data: Buffer.from(kitIx.data)
   });
