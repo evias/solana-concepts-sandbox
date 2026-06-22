@@ -59,7 +59,8 @@ router.post('/build-attestation-tx', async (req, res) => {
     log.info('Creating attestation', { 
       credentialId: credential.id,
       owner: credential.wallet_address,
-      promptHash: promptHash
+      promptHash: promptHash,
+      feePayer: payer.publicKey.toBase58(),
     });
 
     // Create payer signer first (needed for all operations)
@@ -78,19 +79,19 @@ router.post('/build-attestation-tx', async (req, res) => {
     // Use credentialId to derive a unique credential name
     const sasCredentialName = crypto.createHash('sha256').update(credential.sas_credential_id).digest().toString('hex').substring(0, 32);
     
-    const credentialPda = await lib.deriveCredentialPda({
+    const [credentialPda] = await lib.deriveCredentialPda({
       authority: payer.publicKey.toBase58(),
       name: sasCredentialName
     });
 
-    const credentialAddress = credentialPda[0].toString();
+    const credentialAddress = credentialPda.toString();
     log.info('SAS credential PDA derived', { 
       credentialAddress,
       sasCredentialName
     });
 
     // Verify credential exists on-chain
-    let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialAddress);
+    let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialPda);
     
     if (!credentialAccount || credentialAccount.exists === false) {
       log.info('SAS credential does not exist, creating it...');
@@ -98,34 +99,34 @@ router.post('/build-attestation-tx', async (req, res) => {
       const createCredentialIx = lib.getCreateCredentialInstruction({
         payer: backendSigner,
         authority: backendSigner,
-        credential: credentialAddress,
+        credential: credentialPda,
         name: sasCredentialName,
         signers: []
       });
 
       const credentialWeb3Ix = await sasIntegration.kitInstructionToWeb3(createCredentialIx);
       const credentialSig = await sasIntegration.sendTransaction(credentialWeb3Ix, payer);
-      log.info('SAS credential created successfully', { credentialAddress, txSig: credentialSig });
+      log.info('SAS credential created successfully', { credentialPda, txSig: credentialSig });
     } else {
-      log.info('SAS credential already exists', { credentialAddress });
+      log.info('SAS credential already exists', { credentialPda });
     }
 
     // Step 2: Ensure schema exists for this credential
-    const schemaName = 'Prompt Verification';
+    const schemaName = 'HCP-Prompt-Verification';
     const fieldNames = ['promptHash'];
-    const schemaVersion = 0;
+    const schemaVersion = 1;
 
-    const schemaPda = await lib.deriveSchemaPda({
-      credential: credentialAddress,
+    const [schemaPda] = await lib.deriveSchemaPda({
+      credential: credentialPda,
       name: schemaName,
       version: schemaVersion
     });
 
-    const schemaAddress = schemaPda[0].toString();
+    const schemaAddress = schemaPda.toString();
     log.info('Schema address derived', { schemaAddress });
 
     // Fetch schema to verify it exists
-    let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaAddress);
+    let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
     
     if (!schemaAccount || schemaAccount.exists === false) {
       log.info('Schema does not exist, creating it...', {
@@ -142,7 +143,7 @@ router.post('/build-attestation-tx', async (req, res) => {
         payer: backendSigner,
         authority: backendSigner,
         credential: credentialAddress,
-        schema: schemaAddress,
+        schema: schemaPda,
         layout: layout,
         fieldNames: fieldNames,
         name: schemaName,
@@ -188,13 +189,13 @@ router.post('/build-attestation-tx', async (req, res) => {
     log.info('Nonce derived', { nonce });
 
     // Step 4: Derive attestation PDA
-    const attestationPda = await lib.deriveAttestationPda({
-      credential: credentialAddress,
-      schema: schemaAddress,
+    const [attestationPda] = await lib.deriveAttestationPda({
+      credential: credentialPda,
+      schema: schemaPda,
       nonce: nonce
     });
 
-    const attestationAddress = attestationPda[0].toString();
+    const attestationAddress = attestationPda.toString();
     log.info('Attestation address derived', { attestationAddress });
 
     // Step 5: Prepare attestation data
@@ -213,10 +214,10 @@ router.post('/build-attestation-tx', async (req, res) => {
     const attestationIx = lib.getCreateAttestationInstruction({
       payer: payerSigner,
       authority: ownerSigner,
-      credential: credentialAddress,
-      schema: schemaAddress,
-      attestation: attestationAddress,
-      systemProgram: '11111111111111111111111111111111',
+      credential: credentialPda,
+      schema: schemaPda,
+      attestation: attestationPda,
+      //systemProgram: '11111111111111111111111111111111',
       nonce: nonce,
       data: attestationDataBytes,
       expiry: BigInt(expirySeconds)
