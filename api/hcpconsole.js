@@ -63,12 +63,13 @@ router.post('/build-attestation-tx', async (req, res) => {
     });
 
     // Create payer signer first (needed for all operations)
-    const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
+    const backendSigner = await createKeyPairSignerFromPrivateKeyBytes(
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
+    const ownerAddr = credential.wallet_address;
 
-    // Owner signer is the same as payer in this case (backend controls everything)
-    const ownerSigner = payerSigner;
+    // // Owner signer is the same as payer in this case (backend controls everything)
+    // const ownerSigner = payerSigner;
 
     // Initialize RPC
     const rpc = createSolanaRpc('https://api.devnet.solana.com');
@@ -95,8 +96,8 @@ router.post('/build-attestation-tx', async (req, res) => {
       log.info('SAS credential does not exist, creating it...');
       
       const createCredentialIx = lib.getCreateCredentialInstruction({
-        payer: payerSigner,
-        authority: payerSigner,
+        payer: backendSigner,
+        authority: backendSigner,
         credential: credentialAddress,
         name: sasCredentialName,
         signers: []
@@ -138,15 +139,14 @@ router.post('/build-attestation-tx', async (req, res) => {
       const layout = Buffer.from([32]);
       
       const schemaIx = lib.getCreateSchemaInstruction({
-        payer: payerSigner,
-        authority: ownerSigner,
+        payer: backendSigner,
+        authority: backendSigner,
         credential: credentialAddress,
         schema: schemaAddress,
-        systemProgram: '11111111111111111111111111111111',
-        name: schemaName,
-        description: '',
         layout: layout,
-        fieldNames: fieldNames
+        fieldNames: fieldNames,
+        name: schemaName,
+        description: 'Prompt integrity verification schema',
       });
 
       log.info('Schema instruction built', {
