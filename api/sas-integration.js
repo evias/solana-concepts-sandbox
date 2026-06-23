@@ -36,23 +36,8 @@ function roleToWeb3Account(address, role) {
  * Convert @solana/kit instruction to web3.js instruction
  */
 async function kitInstructionToWeb3(kitIx) {
-  let dedupl = {};
-  for (acc in kitIx.accounts) {
-    let acct = kitIx.accounts[acc];
-    if (!(acct.address in dedupl) || dedupl[acct.address] < acct.role) {
-      dedupl[acct.address] = acct.role;
-    }
-  }
-
-  const involvedKeys = [];
-  for (a in dedupl) {
-    let r = dedupl[a];
-
-    involvedKeys.push(roleToWeb3Account(a, r));
-  }
-
   return new web3.TransactionInstruction({
-    keys: involvedKeys,
+    keys: kitIx.accounts.map(acc => roleToWeb3Account(acc.address, acc.role)),
     programId: new web3.PublicKey(kitIx.programAddress),
     data: Buffer.from(kitIx.data)
   });

@@ -78,7 +78,6 @@ router.post('/build-attestation-tx', async (req, res) => {
     // Step 1: Derive SAS credential PDA directly (no backwards compatibility)
     // Use credentialId to derive a unique credential name
     const sasCredentialName = crypto.createHash('sha256').update(credential.sas_credential_id).digest().toString('hex').substring(0, 32);
-    
     const [credentialPda] = await lib.deriveCredentialPda({
       authority: payer.publicKey.toBase58(),
       name: sasCredentialName
@@ -92,10 +91,8 @@ router.post('/build-attestation-tx', async (req, res) => {
 
     // Verify credential exists on-chain
     let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialPda);
-    
     if (!credentialAccount || credentialAccount.exists === false) {
       log.info('SAS credential does not exist, creating it...');
-      
       const createCredentialIx = lib.getCreateCredentialInstruction({
         payer: backendSigner,
         authority: backendSigner,
@@ -123,11 +120,10 @@ router.post('/build-attestation-tx', async (req, res) => {
     });
 
     const schemaAddress = schemaPda.toString();
-    log.info('Schema address derived', { schemaAddress });
+    log.info('Schema address derived', { schemaPda, schemaAddress });
 
     // Fetch schema to verify it exists
     let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
-    
     if (!schemaAccount || schemaAccount.exists === false) {
       log.info('Schema does not exist, creating it...', {
         credentialAddress,
@@ -135,34 +131,19 @@ router.post('/build-attestation-tx', async (req, res) => {
         schemaName,
         fieldNames
       });
-      
       // promptHash is 32 bytes (SHA256)
       const layout = Buffer.from([32]);
-      
       const schemaIx = lib.getCreateSchemaInstruction({
         payer: backendSigner,
         authority: backendSigner,
-        credential: credentialAddress,
+        credential: credentialPda,
         schema: schemaPda,
         layout: layout,
         fieldNames: fieldNames,
         name: schemaName,
         description: 'Prompt integrity verification schema',
       });
-
-      log.info('Schema instruction built', {
-        programAddress: schemaIx.programAddress,
-        accountCount: schemaIx.accounts.length,
-        accounts: schemaIx.accounts.map((acc, idx) => ({
-          idx,
-          address: acc.address,
-          role: acc.role
-        })),
-        dataLength: schemaIx.data.length
-      });
-
       const schemaWeb3Ix = await sasIntegration.kitInstructionToWeb3(schemaIx);
-      
       log.info('Schema web3 instruction built', {
         programId: schemaWeb3Ix.programId.toString(),
         keyCount: schemaWeb3Ix.keys.length,
@@ -175,8 +156,16 @@ router.post('/build-attestation-tx', async (req, res) => {
         dataLength: schemaWeb3Ix.data.length
       });
 
-      const schemaSig = await sasIntegration.sendTransaction(schemaWeb3Ix, payer);
-      log.info('Schema created successfully', { schemaAddress, txSig: schemaSig });
+      try {
+        const schemaSig = await sasIntegration.sendTransaction(schemaWeb3Ix, payer);
+        log.info('Schema created successfully', { schemaAddress, txSig: schemaSig });
+      } catch (e) {
+        if (e.getLogs !== undefined) {
+          log.error('Error creating schema', e.getLogs());
+        } else  {
+          log.error('Error creating schema (unknown)', e);
+        }
+      }
     } else {
       log.info('Schema already exists', { schemaAddress });
     }
