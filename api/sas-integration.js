@@ -46,14 +46,19 @@ async function kitInstructionToWeb3(kitIx) {
 /**
  * Send transaction using web3.js
  */
-async function sendTransaction(ix, payer) {
+async function sendTransaction(ix, payer, setFeePayer=true) {
   const tx = new web3.Transaction();
   tx.add(ix);
   
   const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
-  tx.feePayer = payer.publicKey;
+  
+  if (setFeePayer === true) {
+    tx.feePayer = payer.publicKey;
+  }
+
   const { blockhash } = await connection.getLatestBlockhash();
   tx.recentBlockhash = blockhash;
+  tx.version = "legacy";
   
   tx.sign(payer);
   
@@ -73,8 +78,9 @@ async function sendTransaction(ix, payer) {
  */
 async function ensureSasCredential(ownerAddress, payer, credentialId) {
   try {
-    // Check if we have a stored old SAS credential address for backward compatibility
     let oldCredentialAddress = null;
+    /** DEPRECATED backwards-compatibility
+    // Check if we have a stored old SAS credential address for backward compatibility
     if (credentialId) {
       const { credentialDb } = require('./database');
       const allCreds = credentialDb.getAllCredentials(1000, 0);
@@ -84,6 +90,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
         log.info(`Found stored old credential address for backward compatibility: ${oldCredentialAddress}`);
       }
     }
+    */
     
     // Use credentialId in the derivation name to ensure each credential gets its own SAS credential
     // Hash the credential ID to fit within the 32-byte seed limit
@@ -103,12 +110,13 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     });
 
     const credentialAddress = credentialPda[0].toString();
-    log.info(`Derived credential PDA: ${credentialAddress}`);
+    log.info(`Derived credential PDA: ${credentialAddress} with name hash: ${credentialName}`);
 
     // Check if credential exists at new address
-    log.info(`Fetching credential from new address...`);
+    log.info(`Fetching credential from new address...`, { credentialAddress });
     let existingCredential = await lib.fetchMaybeCredential(rpc, credentialAddress);
 
+    /** DEPRECATED backwards-compat
     // If not found at new address, check old address for backward compatibility
     if (!existingCredential || existingCredential?.exists === false) {
       if (oldCredentialAddress) {
@@ -127,6 +135,7 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
         }
       }
     }
+    */
 
     if (existingCredential?.exists !== false) {
       // Handle both test and production data structures
@@ -141,75 +150,24 @@ async function ensureSasCredential(ownerAddress, payer, credentialId) {
     }
 
     // Create new credential
-    log.info(`Creating new credential...`);
+    log.info(`Creating new credential...`, { credentialAddress });
     
     const payerSigner = await createKeyPairSignerFromPrivateKeyBytes(
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
 
-     const createCredentialIx = lib.getCreateCredentialInstruction({
-       payer: payerSigner,
-       authority: payerSigner,
-       credential: credentialAddress,
-       name: credentialName,
-       signers: []
-     });
+    const createCredentialIx = lib.getCreateCredentialInstruction({
+      payer: payerSigner,
+      authority: payerSigner,
+      credential: credentialAddress,
+      name: credentialName,
+      signers: [payer.publicKey.toBase58(), ownerAddress]
+    });
 
     const web3Ix = await kitInstructionToWeb3(createCredentialIx);
     const txSig = await sendTransaction(web3Ix, payer);
 
     log.info(`Transaction confirmed: ${txSig}`);
-
-/* NOTE: DISABLED changes by smarties.
- *
-    // Also create a default schema for this credential (for attestations)
-    try {
-      log.info(`Creating default schema for credential...`);
-      const schemaName = 'Prompt Verification';
-      const fieldNames = ['promptHash'];
-      const schemaVersion = 0;
-
-      const schemaPda = await lib.deriveSchemaPda({
-        credential: credentialAddress,
-        name: schemaName,
-        version: schemaVersion
-      });
-
-      const schemaAddress = schemaPda[0].toString();
-
-      const schemaIx = lib.getCreateSchemaInstruction({
-        payer: payerSigner,
-        authority: payerSigner,
-        credential: credentialAddress,
-        schema: schemaAddress,
-        name: schemaName,
-        description: '',
-        layout: Buffer.from([]),
-        fieldNames: fieldNames
-      });
-
-      function roleToWeb3Account(address, role) {
-        return {
-          pubkey: new web3.PublicKey(address),
-          isSigner: role >= 2,
-          isWritable: role === 1 || role === 3
-        };
-      }
-
-      const schemaWeb3Ix = new web3.TransactionInstruction({
-        keys: schemaIx.accounts.map(acc => roleToWeb3Account(acc.address, acc.role)),
-        programId: new web3.PublicKey(schemaIx.programAddress),
-        data: Buffer.from(schemaIx.data)
-      });
-
-      await sendTransaction(schemaWeb3Ix, payer);
-      log.info(`Schema created: ${schemaAddress}`);
-    } catch (schemaError) {
-      log.warn(`Failed to create default schema (may already exist): ${schemaError.message}`);
-      // Schema creation failure is not fatal - attestation might work with existing schema
-    }
-
-*/
 
     return {
       credentialAddress,
