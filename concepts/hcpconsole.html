@@ -713,10 +713,12 @@ ${purposes.map(p=>'- '+p).join('\n')}
         const data = await response.json();
         
         // Display results
-        document.getElementById('attPda').textContent='Attestation PDA: '+data.attestationAddress;
+        document.getElementById('attPda').textContent='Attestation PDA: '+data.attestationPda;
         document.getElementById('txSig').textContent='Signature: '+data.txSig;
         log.info('Attestation created successfully', { 
-          attPda: data.attestationAddress, 
+          credentialPda: data.credentialPda,
+          schemaPda: data.schemaPda,
+          attestationPda: data.attestationPda, 
           txSig: data.txSig,
           isTestMode: data.isTestMode
         });
