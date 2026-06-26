@@ -627,6 +627,19 @@ const credentialDb = {
     }
     return row;
   },
+
+  // Get all credentials with wallet_address and with pagination
+  getCredentialsByWallet(walletAddress, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM credentials WHERE wallet_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(walletAddress, limit, offset);
+    return rows.map(row => {
+      if (row.did_document_json) {
+        row.did_document_json = JSON.parse(row.did_document_json);
+        row.authentication_methods = row.authentication_methods ? JSON.parse(row.authentication_methods) : [];
+      }
+      return row;
+    });
+  },
   
   // Get all credentials with pagination
   getAllCredentials(limit = 10, offset = 0) {
