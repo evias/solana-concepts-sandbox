@@ -18,7 +18,10 @@ router.post('/build-attestation-tx', async (req, res) => {
       return res.status(400).json({ error: 'wallet, credentialId, and promptHash required' });
     }
 
+    const ownerAddress = wallet;
+
     // Skip SAS operations in test mode
+	  // XXX changed return format
     if (process.env.NODE_ENV === 'test') {
       log.info('Skipping attestation creation in test mode');
       return res.json({
@@ -31,12 +34,9 @@ router.post('/build-attestation-tx', async (req, res) => {
     }
 
     // Find the credential
-    const allCredentials = credentialDb.getAllCredentials(1000, 0);
-    const credentialUuid = extractCredentialUuid(credentialId);
-    const credential = allCredentials.find(cred => {
-      const sasUuid = extractCredentialUuid(cred.sas_credential_id);
-      const idUuid = extractCredentialUuid(cred.id);
-      return sasUuid === credentialUuid || idUuid === credentialUuid;
+    const allCredentialsByWallet = credentialDb.getCredentialsByWallet(ownerAddress, 50, 0);
+    const credential = allCredentialsByWallet.find(cred => {
+      return cred.sas_credential_id === credentialId;
     });
 
     if (!credential) {
@@ -56,59 +56,36 @@ router.post('/build-attestation-tx', async (req, res) => {
     const payer = require('./payer').getPayerKeypair();
     const sasIntegration = require('./sas-integration');
 
+    // Initialize RPC connection ("fetchMaybeX").
+    const rpc = createSolanaRpc('https://api.devnet.solana.com');
+    const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+
     log.info('Creating attestation', { 
       credentialId: credential.id,
+      sasCredentialId: credential.sas_credential_id,
       owner: credential.wallet_address,
       promptHash: promptHash,
       feePayer: payer.publicKey.toBase58(),
     });
 
-    // Create payer signer first (needed for all operations)
+    // 1: Create payer signer first (needed for all operations)
     const backendSigner = await createKeyPairSignerFromPrivateKeyBytes(
       new Uint8Array(payer.secretKey.slice(0, 32))
     );
-    const ownerAddr = credential.wallet_address;
 
-    // // Owner signer is the same as payer in this case (backend controls everything)
-    // const ownerSigner = payerSigner;
-
-    // Initialize RPC
-    const rpc = createSolanaRpc('https://api.devnet.solana.com');
-
-    // Step 1: Derive SAS credential PDA directly (no backwards compatibility)
+    // 2: Derive credential PDA 
     // Use credentialId to derive a unique credential name
-    const sasCredentialName = crypto.createHash('sha256').update(credential.sas_credential_id).digest().toString('hex').substring(0, 32);
+    const sasCredentialName = crypto.createHash('sha256').update(
+      credential.sas_credential_id
+    ).digest().toString('hex').substring(0, 32);
+
     const [credentialPda] = await lib.deriveCredentialPda({
       authority: payer.publicKey.toBase58(),
       name: sasCredentialName
     });
+    log.info('Credential PDA derived', { credentialPda, sasCredentialName });
 
-    const credentialAddress = credentialPda.toString();
-    log.info('SAS credential PDA derived', { 
-      credentialAddress,
-      sasCredentialName
-    });
-
-    // Verify credential exists on-chain
-    let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialPda);
-    if (!credentialAccount || credentialAccount.exists === false) {
-      log.info('SAS credential does not exist, creating it...');
-      const createCredentialIx = lib.getCreateCredentialInstruction({
-        payer: backendSigner,
-        authority: backendSigner,
-        credential: credentialPda,
-        name: sasCredentialName,
-        signers: []
-      });
-
-      const credentialWeb3Ix = await sasIntegration.kitInstructionToWeb3(createCredentialIx);
-      const credentialSig = await sasIntegration.sendTransaction(credentialWeb3Ix, payer);
-      log.info('SAS credential created successfully', { credentialPda, txSig: credentialSig });
-    } else {
-      log.info('SAS credential already exists', { credentialPda });
-    }
-
-    // Step 2: Ensure schema exists for this credential
+    // 3: Derive attestation schema PDA
     const schemaName = 'HCP-Prompt-Verification';
     const fieldNames = ['promptHash'];
     const schemaVersion = 1;
@@ -118,21 +95,38 @@ router.post('/build-attestation-tx', async (req, res) => {
       name: schemaName,
       version: schemaVersion
     });
+    log.info('Schema PDA derived', { schemaPda });
 
-    const schemaAddress = schemaPda.toString();
-    log.info('Schema address derived', { schemaPda, schemaAddress });
+    // 4: Derive attestation PDA
+    // Create deterministic nonce from credentialId + promptHash
+    const nonceInput = credentialId + promptHash;
+    const nonceHash = crypto.createHash('sha256').update(nonceInput).digest();
+    const nonceKeypair = web3.Keypair.fromSeed(new Uint8Array(nonceHash.slice(0, 32)));
+    const nonce = nonceKeypair.publicKey.toString();
+    log.info('Nonce derived', { nonce });
 
-    // Fetch schema to verify it exists
+    const [attestationPda] = await lib.deriveAttestationPda({
+      credential: credentialPda,
+      schema: schemaPda,
+      nonce: nonce
+    });
+    log.info('Attestation PDA derived', { attestationPda });
+
+    // 5: Ensure SAS credential exists and get its actual on-chain address
+    log.info(`Ensuring SAS credential for wallet ${wallet} and id ${credential.sas_credential_id}...`);
+    const { credentialAddress, transactionSignature: credentialTxSig } = await sasIntegration.ensureSasCredential(
+      ownerAddress,
+      payer,
+      credential.sas_credential_id
+    );
+    log.info(`SAS credential retrieved with address: ${credentialAddress}`);
+
+    // 6: If SAS schema doesn't exist on-chain, add instruction.
+    let schemaTxSig = null;
     let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
     if (!schemaAccount || schemaAccount.exists === false) {
-      log.info('Schema does not exist, creating it...', {
-        credentialAddress,
-        schemaAddress,
-        schemaName,
-        fieldNames
-      });
       // promptHash is 32 bytes (SHA256)
-      const layout = Buffer.from([32]);
+      const layout = Buffer.from([12]);
       const schemaIx = lib.getCreateSchemaInstruction({
         payer: backendSigner,
         authority: backendSigner,
@@ -143,100 +137,51 @@ router.post('/build-attestation-tx', async (req, res) => {
         name: schemaName,
         description: 'Prompt integrity verification schema',
       });
-      const schemaWeb3Ix = await sasIntegration.kitInstructionToWeb3(schemaIx);
-      log.info('Schema web3 instruction built', {
-        programId: schemaWeb3Ix.programId.toString(),
-        keyCount: schemaWeb3Ix.keys.length,
-        keys: schemaWeb3Ix.keys.map((key, idx) => ({
-          idx,
-          pubkey: key.pubkey.toString(),
-          isSigner: key.isSigner,
-          isWritable: key.isWritable
-        })),
-        dataLength: schemaWeb3Ix.data.length
-      });
 
-      try {
-        const schemaSig = await sasIntegration.sendTransaction(schemaWeb3Ix, payer);
-        log.info('Schema created successfully', { schemaAddress, txSig: schemaSig });
-      } catch (e) {
-        if (e.getLogs !== undefined) {
-          log.error('Error creating schema', e.getLogs());
-        } else  {
-          log.error('Error creating schema (unknown)', e);
-        }
-      }
-    } else {
-      log.info('Schema already exists', { schemaAddress });
+      const schemaWeb3Ix = await sasIntegration.kitInstructionToWeb3(schemaIx);
+      log.info('Created SAS Schema Instruction', { schemaWeb3Ix });
+
+      schemaTxSig = await sasIntegration.sendTransaction(schemaWeb3Ix, payer, false); // false=setFeePayer
+      log.info('Confirmed SAS Schema Tx', { schemaTxSig });
+
+      // ... and fetch the schema
+      schemaAccount = await lib.fetchSchema(rpc, schemaPda);
     }
 
-    // Step 3: Create deterministic nonce from credentialId + promptHash
-    const nonceInput = credentialId + promptHash;
-    const nonceHash = crypto.createHash('sha256').update(nonceInput).digest();
-    const nonceKeypair = web3.Keypair.fromSeed(new Uint8Array(nonceHash.slice(0, 32)));
-    const nonce = nonceKeypair.publicKey.toString();
-    log.info('Nonce derived', { nonce });
-
-    // Step 4: Derive attestation PDA
-    const [attestationPda] = await lib.deriveAttestationPda({
-      credential: credentialPda,
-      schema: schemaPda,
-      nonce: nonce
-    });
-
-    const attestationAddress = attestationPda.toString();
-    log.info('Attestation address derived', { attestationAddress });
-
-    // Step 5: Prepare attestation data
-    const attestationDataObj = {
-      promptHash: promptHash,
-      createdAt: new Date().toISOString()
-    };
-    const attestationDataStr = JSON.stringify(attestationDataObj);
-    const attestationDataBytes = Buffer.from(attestationDataStr, 'utf-8');
-    log.info('Attestation data prepared', { dataLength: attestationDataBytes.length });
-
-    // Step 6: Set expiry
-    const expirySeconds = Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60);
-
-    // Step 7: Create attestation instruction (same pattern as addAuthorizedSigner)
+    // 7: Create the expirable attestation using correct schema (populate). 
+    const expirySeconds = Math.floor(Date.now() / 1000) + (90 * 24 * 60 * 60); // XXX 90 days ("next consultation")
     const attestationIx = lib.getCreateAttestationInstruction({
-      payer: payerSigner,
-      authority: ownerSigner,
+      payer: backendSigner,
+      authority: backendSigner,
       credential: credentialPda,
       schema: schemaPda,
       attestation: attestationPda,
-      //systemProgram: '11111111111111111111111111111111',
       nonce: nonce,
-      data: attestationDataBytes,
+      data: lib.serializeAttestationData(schemaAccount.data, {
+        promptHash: promptHash,
+      }),
       expiry: BigInt(expirySeconds)
     });
 
-    log.info('Attestation instruction created', {
-      accounts: attestationIx.accounts.length,
-      dataLength: attestationIx.data.length
-    });
-
-    // Step 8: Convert and send (same pattern as everywhere else)
     const attestationWeb3Ix = await sasIntegration.kitInstructionToWeb3(attestationIx);
-    const attestationSig = await sasIntegration.sendTransaction(attestationWeb3Ix, payer);
 
-    log.info('Attestation created successfully', { 
-      txSig: attestationSig, 
-      attestationAddress, 
-      credentialAddress,
-      schemaAddress 
-    });
+    const attestationTxSig = await sasIntegration.sendTransaction(attestationWeb3Ix, payer, false); // false=setFeePayer
+    log.info('Confirmed SAS Attestation Tx', { attestationTxSig });
 
-    return res.json({
-      txSig: attestationSig,
-      credentialId: credentialId,
-      attestationAddress: attestationAddress,
-      schemaAddress: schemaAddress,
-      isTestMode: false
+    return res.status(200).json({
+      success:true,
+      txSig: attestationTxSig,
+      credentialPda,
+      schemaPda,
+      attestationPda,
+      isTestMode: false,
     });
   } catch (error) {
-    log.error('Error creating attestation', { error: error.message, stack: error.stack });
+    if ("getLogs" in error && typeof error.getLogs !== undefined) {
+      log.error('Error creating attestation', { error: error, logs: error.getLogs() });
+    } else {
+      log.error('Error creating attestation', { error: error.message, stack: error.stack });
+    }
     return res.status(500).json({ error: 'Failed to create attestation: ' + error.message });
   }
 });
