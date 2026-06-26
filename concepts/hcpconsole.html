@@ -203,7 +203,7 @@
          <select id="credential" @change="selectedCredential = $el.value">
            <option value="">Select a credential...</option>
            <template x-for="cred in credentials" :key="cred.id">
-             <option :value="cred.id" x-text="cred.name"></option>
+             <option :value="cred.sasCredentialId" x-text="cred.name"></option>
            </template>
          </select>
          <div x-show="userAddress && credentials.length === 0" style="background:#FBF4DF;border:1px solid #EAD9A8;color:#8A6D1F;border-radius:10px;padding:12px 15px;font-size:0.875rem;margin-top:12px">
