@@ -41,6 +41,10 @@ try {
 const logsApi = require('./api/logs');
 app.use('/api/v1/logs', logsApi);
 
+// System API routes
+const systemApi = require('./api/system');
+app.use('/api/v1/system', systemApi);
+
 // PetTracker API routes
 const pettrackerApi = require('./api/pettracker');
 app.use('/api/v1/pettracker', pettrackerApi);
@@ -90,7 +94,6 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Serve documentation files
 app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
-
 
 app.listen(bindPort, bindHost, () => {
   log.info(`Server listening at http://${bindHost}:${bindPort}`);

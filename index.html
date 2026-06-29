@@ -125,7 +125,7 @@
         </div>
         <!-- Copyright -->
         <div class="text-center text-gray-600 text-sm border-t pt-6">
-          <p>© 2026 <a href="https://evi.as" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a> All rights reserved.</p>
+          <p><em x-text="appVersion"></em> © 2026 <a href="https://evi.as" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a> All rights reserved.</p>
         </div>
       </div>
     </footer>
@@ -136,6 +136,8 @@
       return {
         searchQuery: '',
         selectedTag: '',
+        appVersion: '@main/dev',
+        loading: false,
         concepts: [
           {
             id: 'pettracker',
@@ -195,7 +197,7 @@
         },
         get filteredConcepts() {
           let results = this.concepts;
-          
+
           if (this.searchQuery) {
             const query = this.searchQuery.toLowerCase();
             results = results.filter(concept => 
@@ -203,19 +205,37 @@
               concept.description.toLowerCase().includes(query)
             );
           }
-          
+
           if (this.selectedTag) {
             results = results.filter(concept => 
               concept.tags.includes(this.selectedTag)
             );
           }
-          
+
           return results;
         },
         clearFilter() {
           this.searchQuery = '';
           this.selectedTag = '';
-        }
+        },
+
+        async init() {
+          this.loadSystemInfo();
+        },
+
+        async loadSystemInfo() {
+            const log = window.createLogger('core/system');
+            this.loading = true;
+            try {
+              const res = await fetch(`/api/v1/system/info`);
+              const data = await res.json();
+              this.appVersion = data.appVersion;
+            } catch (err) {
+              log.error('Error loading system information', { err });
+            } finally {
+              this.loading = false;
+            }
+        },
       };
     }
   </script>
