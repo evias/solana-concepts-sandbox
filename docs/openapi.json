@@ -12,7 +12,15 @@
   "servers": [
     {
       "url": "http://localhost:3000",
+      "description": "Local development server"
+    },
+    {
+      "url": "https://unrevised-framing-silo.ngrok-free.dev",
       "description": "Development server"
+    },
+    {
+      "url": "https://dapps.evi.as",
+      "description": "Production server"
     }
   ],
   "components": {
@@ -98,6 +106,10 @@
   },
   "tags": [
     {
+      "name": "System",
+      "description": "System information"
+    },
+    {
       "name": "PetTracker",
       "description": "Pet tracking and management"
     },
@@ -118,11 +130,50 @@
       "description": "Care coordination and file sharing"
     },
     {
+      "name": "HCPConsole",
+      "description": "Healthcare patient journeys with AI"
+    },
+    {
       "name": "Logs",
       "description": "Client-side logging"
     }
   ],
   "paths": {
+    "/api/v1/system/info": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Retrieve system information",
+        "description": "Retrieves system information including the appVersion.",
+        "responses": {
+          "200": {
+            "description": "System information retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "appVersion": {
+                      "type": "string"
+                    },
+                    "payerAddress": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
     "/api/v1/pettracker/pets": {
       "get": {
         "tags": [
@@ -859,7 +910,7 @@
         }
       }
     },
-    "/api/v1/healthcred/register-start": {
+    "/api/v1/healthcred/register": {
       "post": {
         "tags": [
           "HealthCred"
@@ -957,7 +1008,7 @@
         }
       }
     },
-    "/api/v1/healthcred/register-verify": {
+    "/api/v1/healthcred/submit-signed-transaction": {
       "post": {
         "tags": [
           "HealthCred"
@@ -1060,6 +1111,302 @@
           },
           "404": {
             "description": "Registration not found or expired"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/credentials": {
+      "get": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "List credentials",
+        "description": "Returns all credentials.",
+        "responses": {
+          "200": {
+            "description": "Credentials retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "mint": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "didId": {
+                            "type": "string"
+                          },
+                          "sasCredentialId": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/credentials/:id": {
+      "get": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Retrieve a credential by ID.",
+        "description": "Returns a credential by ID.",
+        "responses": {
+          "200": {
+            "description": "Credential retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "wallet_address": {
+                      "type": "string"
+                    },
+                    "full_name": {
+                      "type": "string"
+                    },
+                    "date_of_birth": {
+                      "type": "string"
+                    },
+                    "profession": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "did_id": {
+                      "type": "string"
+                    },
+                    "did_document_hash": {
+                      "type": "string"
+                    },
+                    "sas_credential_id": {
+                      "type": "string"
+                    },
+                    "mint_address": {
+                      "type": "string"
+                    },
+                    "transaction_signature": {
+                      "type": "string"
+                    },
+                    "transaction_hash": {
+                      "type": "string"
+                    },
+                    "created_at": {
+                      "type": "string"
+                    },
+                    "badges_count": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "description": "Credential not found."
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/did/:id": {
+      "get": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Retrieve a DID document by ID.",
+        "description": "Returns a DID document by ID.",
+        "responses": {
+          "200": {
+            "description": "DID Document retrieved successfully",
+            "content": {
+              "application/did+json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/badges/:credentialId": {
+      "get": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Returns badges for a given credential ID.",
+        "description": "Returns badges for a given credential ID.",
+        "responses": {
+          "200": {
+            "description": "Badges retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credential_id": {
+                      "type": "string"
+                    },
+                    "badges": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "credential_id": {
+                            "type": "string"
+                          },
+                          "issuer_wallet": {
+                            "type": "string"
+                          },
+                          "emoji": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "mint_address": {
+                            "type": "string"
+                          },
+                          "transaction_signature": {
+                            "type": "string"
+                          },
+                          "transaction_hash": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credential not found."
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/healthcred/certifications/:credentialId": {
+      "get": {
+        "tags": [
+          "HealthCred"
+        ],
+        "summary": "Returns certifications for a given credential ID.",
+        "description": "Returns certifications for a given credential ID.",
+        "responses": {
+          "200": {
+            "description": "Certifications retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credential_id": {
+                      "type": "string"
+                    },
+                    "certifications": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "credential_id": {
+                            "type": "string"
+                          },
+                          "issuer_wallet": {
+                            "type": "string"
+                          },
+                          "certification_name": {
+                            "type": "string"
+                          },
+                          "filename": {
+                            "type": "string"
+                          },
+                          "file_hash": {
+                            "type": "string"
+                          },
+                          "file_size": {
+                            "type": "string"
+                          },
+                          "file_type": {
+                            "type": "string"
+                          },
+                          "transaction_signature": {
+                            "type": "string"
+                          },
+                          "transaction_hash": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Credential not found."
           },
           "500": {
             "$ref": "#/components/schemas/Error"
@@ -1526,6 +1873,159 @@
           },
           "404": {
             "description": "Credential not found"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/carecircle/documentation": {
+      "get": {
+        "tags": [
+          "CareCircle"
+        ],
+        "summary": "Returns concept documentation as Markdown.",
+        "description": "Returns concept documentation as Markdown.",
+        "responses": {
+          "200": {
+            "description": "Documentation opened successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Documentation not found."
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/hcpconsole/build-attestation-tx": {
+      "post": {
+        "tags": [
+          "HCPConsole"
+        ],
+        "summary": "Create a patient journey with provider attested AI prompt.",
+        "description": "Creates an AI prompt for a patient journey which is SAS attested by a provider.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "wallet",
+                  "credentialId",
+                  "caseRef",
+                  "promptHash",
+                  "promptText"
+                ],
+                "properties": {
+                  "wallet": {
+                    "type": "string",
+                    "description": "Solana wallet address"
+                  },
+                  "credentialId": {
+                    "type": "string",
+                    "description": "Credential sasCredentialId"
+                  },
+                  "caseRef": {
+                    "type": "string",
+                    "description": "Reference of the case"
+                  },
+                  "promptHash": {
+                    "type": "string",
+                    "description": "SHA256 hash of the AI prompt"
+                  },
+                  "promptText": {
+                    "type": "string",
+                    "description": "AI prompt content"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Prompt attestation created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "file": {
+                      "type": "object",
+                      "properties": {
+                        "txSig": {
+                          "type": "string"
+                        },
+                        "credentialPda": {
+                          "type": "string"
+                        },
+                        "schemaPda": {
+                          "type": "string"
+                        },
+                        "attestationPda": {
+                          "type": "string"
+                        },
+                        "isTestMode": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "403": {
+            "description": "Access denied - wallet not authorized for credential"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/hcpconsole/prompt": {
+      "get": {
+        "tags": [
+          "HCPConsole"
+        ],
+        "summary": "Retrieve hcp_prompts.prompt_cipher in plaintext by case_ref",
+        "description": "Retrieves hcp_prompts.prompt_cipher in plaintext by case_ref.",
+        "responses": {
+          "200": {
+            "description": "Prompt retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prompt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
           },
           "500": {
             "$ref": "#/components/schemas/Error"

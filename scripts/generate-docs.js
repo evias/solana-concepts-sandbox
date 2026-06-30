@@ -18,13 +18,21 @@ const options = {
       description: 'API documentation for dHealth&lt;&gt;Solana Sandbox concepts',
       contact: {
         name: 'dHealth Team',
-        url: 'https://dhealth.io'
+        url: 'https://dhealth.com'
       }
     },
     servers: [
       {
         url: 'http://localhost:3000',
+        description: 'Local development server'
+      },
+      {
+        url: 'https://unrevised-framing-silo.ngrok-free.dev',
         description: 'Development server'
+      },
+      {
+        url: 'https://dapps.evi.as',
+        description: 'Production server'
       }
     ],
     components: {
@@ -80,6 +88,10 @@ const options = {
     },
     tags: [
       {
+        name: 'System',
+        description: 'System information'
+      },
+      {
         name: 'PetTracker',
         description: 'Pet tracking and management'
       },
@@ -100,17 +112,23 @@ const options = {
         description: 'Care coordination and file sharing'
       },
       {
+        name: 'HCPConsole',
+        description: 'Healthcare patient journeys with AI'
+      },
+      {
         name: 'Logs',
         description: 'Client-side logging'
       }
     ]
   },
   apis: [
+    path.join(__dirname, '../api/system.js'),
     path.join(__dirname, '../api/pettracker.js'),
     path.join(__dirname, '../api/petvax.js'),
     path.join(__dirname, '../api/petdiet.js'),
     path.join(__dirname, '../api/healthcred.js'),
     path.join(__dirname, '../api/carecircle.js'),
+    path.join(__dirname, '../api/hcpconsole.js'),
     path.join(__dirname, '../api/logs.js')
   ]
 };
