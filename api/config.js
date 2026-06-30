@@ -17,7 +17,12 @@ module.exports = {
   },
 
   payer: {
-    keypairFile: process.env.SCS_KEYPAIR_FILE || '.payer-keypair.json'
+    keypairFile: process.env.SCS_PAYER_KEYPAIR_FILE || '.payer-keypair.json'
+  },
+
+  cipher: {
+    keypairFile: process.env.SCS_CIPHER_KEYPAIR_FILE || '.cipher-keypair.json',
+    algorithm: 'aes-256-cbc',
   },
 
   logging: {

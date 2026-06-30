@@ -8,6 +8,7 @@ const { createLogger } = require('./api/logger');
 const app = express();
 const bindHost = config.server.bindHost;
 const bindPort = config.server.bindPort;
+const buildType = config.server.buildType || 'development';
 const log = createLogger('http');
 
 // Middleware to parse JSON with increased size limit for file uploads
@@ -96,5 +97,6 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
 
 app.listen(bindPort, bindHost, () => {
+  log.info(`Server started in ${buildType} mode`);
   log.info(`Server listening at http://${bindHost}:${bindPort}`);
 });
