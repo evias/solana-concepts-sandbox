@@ -5,19 +5,11 @@
  */
 
 const express = require('express');
-const { createLogger } = require('./logger');
-const log = createLogger('core/system');
-const config = require('./api/config');
+const config = require('./config');
 const child_process = require('node:child_process');
 
 const router = express.Router();
 
-/**
- * GET /info
- * Retrieve system information
- * 
- * Returns: System information including appVersion.
- */
 /**
  * @swagger
  * /api/v1/system/info:
@@ -43,7 +35,7 @@ const router = express.Router();
  *       500:
  *         $ref: '#/components/schemas/Error'
  */
-router.get('/info', async (req, res) => {
+router.get('/info', (req, res) => {
   const gitHash = child_process.execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
   const gitTag = child_process.execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
   const payerAddr = require('./payer').getPayerKeypair().publicKey.toBase58();
@@ -58,3 +50,5 @@ router.get('/info', async (req, res) => {
     payerAddress: payerAddr,
   });
 });
+
+module.exports = router;

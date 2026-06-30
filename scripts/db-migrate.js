@@ -328,8 +328,8 @@ try {
             }
           }
         },
-    
-        // Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
+
+         // Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
          // Allow multiple credentials per wallet; uniqueness is on did_document_hash
          {
            name: 'Remove UNIQUE constraint on wallet_address in credentials table',
@@ -425,11 +425,49 @@ try {
                 throw error;
               }
             }
-          }
+          },
+
+         // Migration 11: Create hcp_prompts table
+         {
+           name: 'Create hcp_prompts table',
+           up: (db) => {
+             try {
+               // Rebuild credentials table without UNIQUE on wallet_address
+               db.exec(`
+                 CREATE TABLE hcp_prompts (
+                   id TEXT PRIMARY KEY,
+                   wallet_address TEXT NOT NULL,
+                   sas_credential_id TEXT,
+                   case_ref TEXT NOT NULL,
+                   prompt_hash TEXT NOT NULL,
+                   prompt_cipher TEXT NOT NULL,
+                   cipher_iv TEXT NOT NULL,
+                   transaction_signature TEXT,
+                   num_reads INTEGER,
+                   lastread_at TEXT NOT NULL,
+                   created_at TEXT NOT NULL,
+                   updated_at TEXT NOT NULL
+                 );
+
+                 CREATE INDEX IF NOT EXISTS idx_prompts_wallet ON hcp_prompts(wallet_address);
+                 CREATE INDEX IF NOT EXISTS idx_prompts_sas_id ON hcp_prompts(sas_credential_id);
+                 CREATE INDEX IF NOT EXISTS idx_prompts_case_ref ON hcp_prompts(case_ref);
+                 CREATE INDEX IF NOT EXISTS idx_prompts_prompt_hash ON hcp_prompts(prompt_hash);
+               `);
+
+               return true;
+             } catch (error) {
+               if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
+                 return false;
+               }
+               throw error;
+             }
+           }
+         },
      ];
-  
+
   console.log(`   Total migrations defined: ${migrations.length}`);
-  
+
   // Run pending migrations
   let appliedCount = 0;
   
