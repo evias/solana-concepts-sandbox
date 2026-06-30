@@ -849,8 +849,24 @@ router.get('/authorized-signers', async (req, res) => {
 });
 
 /**
- * GET /api/v1/carecircle/documentation
- * Return CareCircle documentation as markdown
+ * @swagger
+ * /api/v1/carecircle/documentation:
+ *   get:
+ *     tags:
+ *       - CareCircle
+ *     summary: Returns concept documentation as Markdown.
+ *     description: Returns concept documentation as Markdown.
+ *     responses:
+ *       200:
+ *         description: Documentation opened successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: string
+ *       404:
+ *         description: Documentation not found.
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/documentation', (req, res) => {
   try {
