@@ -12,10 +12,10 @@ const { credentialDb } = require('./database');
  */
 router.post('/build-attestation-tx', async (req, res) => {
   try {
-    const { wallet, credentialId, promptHash } = req.body;
+    const { wallet, credentialId, caseRef, promptHash, promptText } = req.body;
 
-    if (!wallet || !credentialId || !promptHash) {
-      return res.status(400).json({ error: 'wallet, credentialId, and promptHash required' });
+    if (!wallet || !credentialId || !caseRef || !promptHash || !promptText) {
+      return res.status(400).json({ error: 'wallet, credentialId, caseRef, promptHash, and promptText required' });
     }
 
     const ownerAddress = wallet;

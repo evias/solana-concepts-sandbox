@@ -413,7 +413,9 @@ function hcpConsole() {
     credentials: [],
     selectedCredential: '',
 
+    caseRef: '',
     promptHash: '',
+    promptText: '',
     agentUrl: '',
     agentId: '',
 
@@ -627,9 +629,12 @@ ${purposes.map(p=>'- '+p).join('\n')}
         document.getElementById('qrcode').innerHTML='<span class="spinner"></span>';
         document.getElementById('qrCaption').textContent='Preparing code\u2026';
 
+        const caseRef=document.getElementById('caseRef').value;
         const prompt=document.getElementById('promptBox').value;
         const hashBz=await this.sha256(prompt);
         this.promptHash = this.bytes_to_hex(hashBz);
+        this.promptText = prompt;
+        this.caseRef = caseRef;
 
         await this.blockingWait(600);
         this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
@@ -691,6 +696,8 @@ ${purposes.map(p=>'- '+p).join('\n')}
     async createSasSchemaAndAttestation() {
       const credentialId = this.selectedCredential;
       const promptHash = this.promptHash;
+      const promptText = this.promptText;
+      const caseRef = this.caseRef;
       
       try {
         // Single API call: backend creates, signs, and broadcasts directly
@@ -701,7 +708,9 @@ ${purposes.map(p=>'- '+p).join('\n')}
           body: JSON.stringify({
             wallet: this.userAddress,
             credentialId: credentialId,
-            promptHash: promptHash
+            promptHash: promptHash,
+            promptText: promptText,
+            caseRef: caseRef,
           })
         });
 
