@@ -24,24 +24,8 @@ const MEMO_PROGRAM_ID = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgD
 const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
 
 /**
- * POST /register
- * Register a new healthcare worker credential
- * 
- * Body:
- * {
- *   walletAddress: string (currently connected wallet),
- *   fullName: string,
- *   dateOfBirth: string (YYYY-MM-DD),
- *   email: string,
- *   profession: string,
- *   didDocumentJson: string (JSON stringified DID document)
- * }
- * 
- * Returns: Credential object with on-chain transaction details
- */
-/**
  * @swagger
- * /api/v1/healthcred/register-start:
+ * /api/v1/healthcred/register:
  *   post:
  *     tags:
  *       - HealthCred
@@ -261,7 +245,7 @@ router.post('/register', async (req, res) => {
 
 /**
  * @swagger
- * /api/v1/healthcred/register-verify:
+ * /api/v1/healthcred/submit-signed-transaction:
  *   post:
  *     tags:
  *       - HealthCred
@@ -505,8 +489,36 @@ router.post('/submit-signed-transaction', async (req, res) => {
 });
 
 /**
- * GET /credentials?limit=10&offset=0
- * Get all registered credentials with pagination
+ * @swagger
+ * /api/v1/healthcred/credentials:
+ *   get:
+ *     tags:
+ *       - HealthCred
+ *     summary: List credentials
+ *     description: Returns all credentials.
+ *     responses:
+ *       200:
+ *         description: Credentials retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 credentials:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string }
+ *                       name: { type: string }
+ *                       mint: { type: string }
+ *                       owner: { type: string }
+ *                       didId: { type: string }
+ *                       sasCredentialId: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/credentials', (req, res) => {
   try {
@@ -553,8 +565,41 @@ router.get('/credentials', (req, res) => {
 });
 
 /**
- * GET /credentials/:id
- * Get a specific credential by ID
+ * @swagger
+ * /api/v1/healthcred/credentials/:id:
+ *   get:
+ *     tags:
+ *       - HealthCred
+ *     summary: Retrieve a credential by ID.
+ *     description: Returns a credential by ID.
+ *     responses:
+ *       200:
+ *         description: Credential retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id: { type: string }
+ *                 wallet_address: { type: string }
+ *                 full_name: { type: string }
+ *                 date_of_birth: { type: string }
+ *                 profession: { type: string }
+ *                 email: { type: string }
+ *                 did_id: { type: string }
+ *                 did_document_hash: { type: string }
+ *                 sas_credential_id: { type: string }
+ *                 mint_address: { type: string }
+ *                 transaction_signature: { type: string }
+ *                 transaction_hash: { type: string }
+ *                 created_at: { type: string }
+ *                 badges_count: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/credentials/:id', (req, res) => {
   try {
@@ -591,9 +636,24 @@ router.get('/credentials/:id', (req, res) => {
 });
 
 /**
- * GET /did/:didId
- * Download DID document JSON by DID ID
- * Returns: application/did+json mimetype with DID document content
+ * @swagger
+ * /api/v1/healthcred/did/:id:
+ *   get:
+ *     tags:
+ *       - HealthCred
+ *     summary: Retrieve a DID document by ID.
+ *     description: Returns a DID document by ID.
+ *     responses:
+ *       200:
+ *         description: DID Document retrieved successfully
+ *         content:
+ *           application/did+json:
+ *             schema:
+ *               type: string
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/did/:didId', (req, res) => {
   try {
@@ -912,8 +972,41 @@ router.post('/submit-signed-badge-transaction', async (req, res) => {
 });
 
 /**
- * GET /badges/:credentialId
- * Get all badges for a credential
+ * @swagger
+ * /api/v1/healthcred/badges/:credentialId:
+ *   get:
+ *     tags:
+ *       - HealthCred
+ *     summary: Returns badges for a given credential ID.
+ *     description: Returns badges for a given credential ID.
+ *     responses:
+ *       200:
+ *         description: Badges retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 credential_id:
+ *                   type: string
+ *                 badges:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: {type: string}
+ *                       credential_id: {type: string}
+ *                       issuer_wallet: {type: string}
+ *                       emoji: {type: string}
+ *                       description: {type: string}
+ *                       mint_address: {type: string}
+ *                       transaction_signature: {type: string}
+ *                       transaction_hash: {type: string}
+ *                       created_at: {type: string}
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/badges/:credentialId', (req, res) => {
   try {
@@ -1233,9 +1326,45 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
    }
 });
 
+
 /**
- * GET /certifications/:credentialId
- * Get all certifications for a credential
+ * @swagger
+ * /api/v1/healthcred/certifications/:credentialId:
+ *   get:
+ *     tags:
+ *       - HealthCred
+ *     summary: Returns certifications for a given credential ID.
+ *     description: Returns certifications for a given credential ID.
+ *     responses:
+ *       200:
+ *         description: Certifications retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 credential_id:
+ *                   type: string
+ *                 certifications:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: {type: string}
+ *                       credential_id: {type: string}
+ *                       issuer_wallet: {type: string}
+ *                       certification_name: {type: string}
+ *                       filename: {type: string}
+ *                       file_hash: {type: string}
+ *                       file_size: {type: string}
+ *                       file_type: {type: string}
+ *                       transaction_signature: {type: string}
+ *                       transaction_hash: {type: string}
+ *                       created_at: {type: string}
+ *       404:
+ *         description: Credential not found.
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.get('/certifications/:credentialId', (req, res) => {
   try {

@@ -1,14 +1,127 @@
 const express = require('express');
 const crypto = require('crypto');
+const config = require('./config');
 const { createLogger } = require('./logger');
 const log = createLogger('concept/hcpconsole');
 const router = express.Router();
-const { credentialDb } = require('./database');
+const { credentialDb, hcpConsoleDb } = require('./database');
+
+const cipher_algo = config.cipher.algorithm;
 
 /**
- * POST /api/v1/hcpconsole/build-attestation-tx
- * Creates schema (if needed) and attestation on Solana Attestation Service
- * Backend payer pays for all transactions
+ * Helper: Encrypt text using AES and a configured encryption key.
+ */
+function encrypt(message) {
+  try {
+    const secretKey = require('./cipher').getCipherKey();
+    if (secretKey.length != 32) {
+      throw new Error(`Expected encryption key size of 32 bytes; got: ${secretKey.length}b`);
+    }
+
+    const iv = crypto.randomBytes(16); // random 16b IV
+    const cipher = crypto.createCipheriv(cipher_algo, secretKey, iv);
+
+    let ciphertext = cipher.update(message, 'utf8', 'hex');
+    ciphertext += cipher.final('hex');
+
+    return {
+      iv: iv.toString('hex'),
+      ciphertext,
+    };
+   } catch (error) {
+     log.error('Error encrypting message', { error: error.message });
+     return null;
+   }
+}
+
+/**
+ * Helper: Decrypt text using AES and a configured encryption key.
+ */
+function decrypt(cipherObj) {
+  try {
+    if (!cipherObj || !cipherObj.iv || !cipherObj.ciphertext) {
+      throw new Error(`Invalid encrypted payload, must contain fields: iv, ciphertext.`);
+    }
+
+    const secretKey = require('./cipher').getCipherKey();
+    if (secretKey.length != 32) {
+      throw new Error(`Expected encryption key size of 32 bytes; got: ${secretKey.length}b`);
+    }
+
+    const decipher = crypto.createDecipheriv(
+      cipher_algo,
+      secretKey,
+      Buffer.from(cipherObj.iv, 'hex')
+    );
+
+    let message = decipher.update(cipherObj.ciphertext, 'hex', 'utf8');
+    message += decipher.final('utf8');
+    return message;
+  } catch (error) {
+     log.error('Error decrypting message', { error: error.message });
+     return null;
+   }
+}
+
+/**
+ * @swagger
+ * /api/v1/hcpconsole/build-attestation-tx:
+ *   post:
+ *     tags:
+ *       - HCPConsole
+ *     summary: Create a patient journey with provider attested AI prompt.
+ *     description: Creates an AI prompt for a patient journey which is SAS attested by a provider.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - wallet
+ *               - credentialId
+ *               - caseRef
+ *               - promptHash
+ *               - promptText
+ *             properties:
+ *               wallet:
+ *                 type: string
+ *                 description: Solana wallet address
+ *               credentialId:
+ *                 type: string
+ *                 description: Credential sasCredentialId
+ *               caseRef:
+ *                 type: string
+ *                 description: Reference of the case
+ *               promptHash:
+ *                 type: string
+ *                 description: SHA256 hash of the AI prompt
+ *               promptText:
+ *                 type: string
+ *                 description: AI prompt content
+ *     responses:
+ *       200:
+ *         description: Prompt attestation created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 file:
+ *                   type: object
+ *                   properties:
+ *                     txSig: { type: string }
+ *                     credentialPda: { type: string }
+ *                     schemaPda: { type: string }
+ *                     attestationPda: { type: string }
+ *                     isTestMode: { type: boolean }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Access denied - wallet not authorized for credential
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
 router.post('/build-attestation-tx', async (req, res) => {
   try {
@@ -168,6 +281,22 @@ router.post('/build-attestation-tx', async (req, res) => {
     const attestationTxSig = await sasIntegration.sendTransaction(attestationWeb3Ix, payer, false); // false=setFeePayer
     log.info('Confirmed SAS Attestation Tx', { attestationTxSig });
 
+    // Create hcp_prompts record in database
+    log.info('Creating hcp_prompts record', {wallet: credential.wallet_address});
+    let hcp_prompts_row;
+    const promptId = `hcpp_${uuidv4()}`;
+    promptPayload = encrypt(promptText); // encrypt using AES
+    hcp_prompts_row = hcpConsoleDb.createPrompt({
+      id: promptId,
+      walletAddress: credential.wallet_address,
+      sasCredentialId: credential.sas_credential_id,
+      promptHash,
+      promptCipher: promptPayload.ciphertext,
+      promptIV: promptPayload,iv,
+      caseRef,
+      transactionSignature: attestationTxSig,
+    });
+
     return res.status(200).json({
       success:true,
       txSig: attestationTxSig,
@@ -187,23 +316,51 @@ router.post('/build-attestation-tx', async (req, res) => {
 });
 
 /**
- * POST /api/v1/hcpconsole/submit-attestation-tx
- * No longer used - deprecated
+ * @swagger
+ * /api/v1/hcpconsole/prompt:
+ *   get:
+ *     tags:
+ *       - HCPConsole
+ *     summary: Retrieve hcp_prompts.prompt_cipher in plaintext by case_ref
+ *     description: Retrieves hcp_prompts.prompt_cipher in plaintext by case_ref.
+ *     responses:
+ *       200:
+ *         description: Prompt retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 prompt:
+ *                   type: string
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
  */
-router.post('/submit-attestation-tx', async (req, res) => {
-  return res.json({
-    message: 'Attestation creation is now synchronous. Use /build-attestation-tx which returns txSig directly.',
-    note: 'This endpoint is deprecated'
+router.get('/prompt', (req, res) => {
+  const { caseRef } = req.query;
+  if (!caseRef) {
+    return res.status(402).json({ error: 'Invalid Request' });
+  }
+
+  const hcpPrompt = hcpConsoleDb.getPromptByCaseRef(caseRef);
+  if (!hcpPrompt || !hcpPrompt.cipher_iv || !hcpPrompt.prompt_cipher) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  const cleartextPrompt = decrypt({
+    iv: hcpPrompt.cipher_iv,
+    ciphertext: hcpPrompt.prompt_cipher
+  });
+
+  if (!cleartextPrompt) {
+    return res.status(500).json({ error: 'Decryption failed: unknown error' });
+  } 
+
+  return res.status(200).json({
+    prompt: cleartextPrompt,
   });
 });
-
-/**
- * Helper: Extract UUID from credential ID
- */
-function extractCredentialUuid(credentialId) {
-  if (!credentialId) return null;
-  const parts = credentialId.split('_');
-  return parts.length > 1 ? parts[1] : credentialId;
-}
 
 module.exports = router;

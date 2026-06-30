@@ -628,7 +628,6 @@ router.post('/feed', express.json(), async (req, res) => {
   }
 });
 
-// GET /api/v1/petdiet/feeding-history - Get feeding actions for a nutrition plan
 router.get('/feeding-history', async (req, res) => {
   try {
     const { planId } = req.query;

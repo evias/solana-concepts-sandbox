@@ -5,6 +5,7 @@ TASKS.md
 sandbox.db
 sandbox.test.db
 .payer-keypair.json
+.cipher-keypair.json
 .env
 sandbox.log
 sandbox.log.*

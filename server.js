@@ -11,6 +11,10 @@ const bindPort = config.server.bindPort;
 const buildType = config.server.buildType || 'development';
 const log = createLogger('http');
 
+// Load keypairs before anything
+require('./api/payer');
+require('./api/cipher');
+
 // Middleware to parse JSON with increased size limit for file uploads
 app.use(express.json({ limit: '5mb' }));
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const config = require('./config');
 const { createLogger } = require('./logger');
 const log = createLogger('cipher');
@@ -24,7 +25,7 @@ function initializeEncryptionKey() {
   } else {
     // Create new cipher keypair
     cipher = new Uint8Array(crypto.randomBytes(32));
-    fs.writeFileSync(cipherPath, JSON.stringify(Array.from(cipher.secretKey)));
+    fs.writeFileSync(cipherPath, JSON.stringify(Array.from(cipher)));
     log.info('Created new encryption key:', { value: cipherPath });
   }
 
