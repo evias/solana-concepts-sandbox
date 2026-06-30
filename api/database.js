@@ -824,6 +824,13 @@ const hcpConsoleDb = {
     return row;
   },
 
+  // Get prompt by prompt_hash
+  getPromptByHash(ref) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE prompt_hash = ?');
+    const row = stmt.get(ref);
+    return row;
+  },
+
   // Get all prompts with wallet_address and with pagination
   getPromptsByWallet(walletAddress, limit = 10, offset = 0) {
     const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE wallet_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');

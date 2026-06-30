@@ -2008,6 +2008,26 @@
         ],
         "summary": "Retrieve hcp_prompts.prompt_cipher in plaintext by case_ref",
         "description": "Retrieves hcp_prompts.prompt_cipher in plaintext by case_ref.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "caseRef",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The patient journey case reference."
+          },
+          {
+            "in": "query",
+            "name": "promptHash",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The prompt hash."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Prompt retrieved successfully.",
