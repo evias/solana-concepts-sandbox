@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const { v4: uuidv4 } = require('uuid');
 const config = require('./config');
 const { createLogger } = require('./logger');
 const log = createLogger('concept/hcpconsole');
@@ -293,7 +294,7 @@ router.post('/build-attestation-tx', async (req, res) => {
       sasCredentialId: credential.sas_credential_id,
       promptHash,
       promptCipher: promptPayload.ciphertext,
-      promptIV: promptPayload,iv,
+      promptIV: promptPayload.iv,
       caseRef,
       transactionSignature: attestationTxSig,
     });
@@ -337,6 +338,12 @@ router.post('/build-attestation-tx', async (req, res) => {
  *         schema:
  *           type: string
  *         description: The prompt hash.
+ *       - in: query
+ *         name: enableMeta
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Whether to include metadata.
  *     responses:
  *       200:
  *         description: Prompt retrieved successfully.
@@ -353,7 +360,7 @@ router.post('/build-attestation-tx', async (req, res) => {
  *         $ref: '#/components/schemas/Error'
  */
 router.get('/prompt', (req, res) => {
-  const { caseRef, promptHash } = req.query;
+  const { caseRef, promptHash, enableMeta } = req.query;
   if (!caseRef && !promptHash) {
     return res.status(402).json({ error: 'Invalid Request' });
   }
@@ -376,11 +383,26 @@ router.get('/prompt', (req, res) => {
 
   if (!cleartextPrompt) {
     return res.status(500).json({ error: 'Decryption failed: unknown error' });
-  } 
+  }
 
-  return res.status(200).json({
+  // UPDATE hcp_prompts.lastread_at
+  hcpPrompt = hcpConsoleDb.updateLastRead(hcpPrompt.id);
+
+  let response = {
     prompt: cleartextPrompt,
-  });
+  };
+  if (!!enableMeta) {
+    response = {
+      ownerAddress: hcpPrompt.wallet_address,
+      credentialId: hcpPrompt.sas_credential_id,
+      caseRef: hcpPrompt.case_ref,
+      promptHash: hcpPrompt.prompt_hash,
+      prompt: cleartextPrompt,
+      lastRead: hcpPrompt.lastread_at
+    };
+  }
+
+  return res.status(200).json(response);
 });
 
 module.exports = router;
