@@ -132,6 +132,21 @@ function initializeDatabase() {
   `);
   
   log.info('Database schema created at:', { value: dbPath });
+
+  // IMPORTANT
+  // ---------
+  // NOTE: Database migrations included in scripts/db-migrate.js
+  // - Migration 1: Add mandate_authority to pets
+  // - Migration 2: Add transaction_signature to vaccinations
+  // - Migration 3: Add transaction_hash to vaccinations
+  // - Migration 4: Update mint_address for existing vaccinations
+  // - Migration 5: Create nutrition_plans and feeding_actions tables
+  // - Migration 6: Add recorded_by column to feeding_actions
+  // - Migration 7: Create HealthCred tables (credentials, badges, certifications)
+  // - Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
+  // - Migration 9: Add certification_name column to certifications table
+  // - Migration 10: Add sas_credential_address column to credentials table
+  // - Migration 11: Create hcp_prompts table
 }
 
 // Database migrations
@@ -762,5 +777,79 @@ const certificationDb = {
   }
 };
 
+// HCP Prompts database helpers
+const hcpConsoleDb = {
+  // Create new hcp_prompts entry
+  createPrompt({
+    id,
+    walletAddress,
+    sasCredentialId,
+    caseRef,
+    promptHash,
+    promptCipher,
+    promptIV,
+    transactionSignature,
+  }) {
+    const now = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      INSERT INTO hcp_prompts (
+        id, wallet_address, sas_credential_id, case_ref,
+        prompt_hash, prompt_cipher, cipher_iv,
+        transaction_signature, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id, walletAddress, sasCredentialId, caseRef, 
+      promptHash, promptCipher, promptIV,
+      transactionSignature || null,
+      now, now
+    );
+
+    return hcpConsoleDb.getPromptById(id);
+  },
+
+  // Get prompt by ID
+  getPromptById(id) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get prompt by case_ref
+  getPromptByCaseRef(ref) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE case_ref = ?');
+    const row = stmt.get(ref);
+    return row;
+  },
+
+  // Get all prompts with wallet_address and with pagination
+  getPromptsByWallet(walletAddress, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE wallet_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(walletAddress, limit, offset);
+    return rows;
+  },
+
+  // Get all prompts with pagination
+  getAllPrompts(limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(limit, offset);
+    return rows;
+  },
+  
+  // Get total prompts count
+  getPromptsCount(byAddress) {
+    let stmt;
+    if (!!byAddress && byAddress.length) {
+      stmt = db.prepare('SELECT COUNT(*) as count FROM hcp_prompts WHERE wallet_address = ?');
+      return stmt.get(byAddress).count;
+    }
+
+    stmt = db.prepare('SELECT COUNT(*) as count FROM hcp_prompts');
+    return stmt.get().count;
+  }
+};
+
 // Export database and helper functions (do NOT initialize on require)
-module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, initializeDatabase, runMigrations };
+module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, hcpConsoleDb, initializeDatabase, runMigrations };
