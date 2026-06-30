@@ -286,6 +286,7 @@ router.post('/build-attestation-tx', async (req, res) => {
     let hcp_prompts_row;
     const promptId = `hcpp_${uuidv4()}`;
     promptPayload = encrypt(promptText); // encrypt using AES
+
     hcp_prompts_row = hcpConsoleDb.createPrompt({
       id: promptId,
       walletAddress: credential.wallet_address,
@@ -323,6 +324,19 @@ router.post('/build-attestation-tx', async (req, res) => {
  *       - HCPConsole
  *     summary: Retrieve hcp_prompts.prompt_cipher in plaintext by case_ref
  *     description: Retrieves hcp_prompts.prompt_cipher in plaintext by case_ref.
+ *     parameters:
+ *       - in: query
+ *         name: caseRef
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: The patient journey case reference.
+ *       - in: query
+ *         name: promptHash
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: The prompt hash.
  *     responses:
  *       200:
  *         description: Prompt retrieved successfully.
@@ -339,12 +353,18 @@ router.post('/build-attestation-tx', async (req, res) => {
  *         $ref: '#/components/schemas/Error'
  */
 router.get('/prompt', (req, res) => {
-  const { caseRef } = req.query;
-  if (!caseRef) {
+  const { caseRef, promptHash } = req.query;
+  if (!caseRef && !promptHash) {
     return res.status(402).json({ error: 'Invalid Request' });
   }
 
-  const hcpPrompt = hcpConsoleDb.getPromptByCaseRef(caseRef);
+  let hcpPrompt;
+  if (!!caseRef && caseRef.length) {
+    hcpPrompt = hcpConsoleDb.getPromptByCaseRef(caseRef);
+  } else if (!!promptHash && promptHash.length) {
+    hcpPrompt = hcpConsoleDb.getPromptByHash(promptHash);
+  }
+
   if (!hcpPrompt || !hcpPrompt.cipher_iv || !hcpPrompt.prompt_cipher) {
     return res.status(404).json({ error: 'Not Found' });
   }
