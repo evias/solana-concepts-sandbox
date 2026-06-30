@@ -796,18 +796,30 @@ const hcpConsoleDb = {
       INSERT INTO hcp_prompts (
         id, wallet_address, sas_credential_id, case_ref,
         prompt_hash, prompt_cipher, cipher_iv,
-        transaction_signature, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        transaction_signature, lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       id, walletAddress, sasCredentialId, caseRef, 
       promptHash, promptCipher, promptIV,
       transactionSignature || null,
-      now, now
+      now, now, now
     );
 
     return hcpConsoleDb.getPromptById(id);
+  },
+
+  updateLastRead(promptId) {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE hcp_prompts
+      SET lastread_at = ?, updated_at = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(now, now, promptId);
+    return hcpConsoleDb.getPromptById(promptId);
   },
 
   // Get prompt by ID
