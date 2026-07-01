@@ -311,14 +311,15 @@
         <div class="qr-card">
           <div id="qrcode"><span class="spinner"></span></div>
           <div class="qr-caption" id="qrCaption">Preparing code&hellip;</div>
+          <div x-show="false" id="agentUrl"></div>
           <div class="badge" id="chainBadge" style="display:none"><span class="pulse"></span>Blockchain secured</div>
         </div>
         <div>
           <ul class="chain-log">
-            <li id="log1"><span class="st">1</span><div><strong>Agent created</strong><br><span class="mono" id="agentId"></span></div></li>
-            <li id="log2"><span class="st">2</span><div><strong>Prompt fingerprint computed</strong> (SHA-256)<br><span class="mono" id="promptHash"></span></div></li>
-            <li id="log3"><span class="st">3</span><div><strong>Attestation submitted</strong> to the Solana Attestation Service<br><span class="mono" id="attPda"></span></div></li>
-            <li id="log4"><span class="st">4</span><div><strong>Confirmed on Solana</strong><br><span class="mono" id="txSig"></span></div></li>
+            <li id="log1"><span class="st">1</span><div><strong>Agent created</strong></div></li>
+            <li id="log2"><span class="st">2</span><div><strong>Prompt fingerprint computed</strong> (SHA-256)<br><span class="mono" id="promptHash"></span>&nbsp;<span x-show="!!promptHash && promptHash.length" class="copyBtn" rel="#promptHash" target="#hashCopyMsg"><svg class="w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg></span>&nbsp;<span id="hashCopyMsg"></span></div></li>
+            <li id="log3"><span class="st">3</span><div><strong>Attestation submitted</strong> to the Solana Attestation Service<br><span x-show="!!txSignature && txSignature.length" class="mono">Attestation PDA: </span><span class="mono" id="attPda"></span></div></li>
+            <li id="log4"><span class="st">4</span><div><strong>Confirmed on Solana</strong><br><span x-show="!!txSignature && txSignature.length" class="mono">Signature: </span><span class="mono" id="txSig"></span>&nbsp;<span x-show="!!txSignature && txSignature.length" class="copyBtn" rel="#txSig" target="#sigCopyMsg"><svg class="w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg></span>&nbsp;<span id="sigCopyMsg"></span></div></li>
           </ul>
           <div class="notice green" id="verifyNote" style="display:none">At every scan the agent checks this attestation before it starts. A copied or altered code will not open a journey.</div>
         </div>
@@ -341,7 +342,7 @@
         <button class="share-btn" onclick="window.print()"><span class="ic">&#128424;</span><strong>Print handout</strong><span>A5 sheet with the code and short instructions</span></button>
         <button class="share-btn" id="emailBtn"><span class="ic">&#9993;</span><strong>Email</strong><span>Opens your mail client with the link</span></button>
         <button class="share-btn" id="msgBtn"><span class="ic">&#128172;</span><strong>Messenger</strong><span>Share via WhatsApp or Signal</span></button>
-        <button class="share-btn" id="copyBtn"><span class="ic">&#128279;</span><strong>Copy link</strong><span>Paste it anywhere</span></button>
+        <button class="share-btn copyBtn" rel="#agentUrl" target="#copyMsg"><span class="ic">&#128279;</span><strong>Copy link</strong><span>Paste it anywhere</span></button>
         <button class="share-btn" id="pngBtn"><span class="ic">&#11015;</span><strong>Download QR</strong><span>PNG for your own templates</span></button>
       </div>
       <div class="copied" id="copyMsg"></div>
@@ -418,13 +419,14 @@ function hcpConsole() {
     promptText: '',
     agentUrl: '',
     agentId: '',
+    txSignature: '',
 
     async init() {
       // Setup speech recognition for Dictate button
       const micBtn = document.getElementById('micBtn');
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       let rec = null, listening = false;
-      
+
       if (SR) {
         rec = new SR();
         rec.continuous = true;
@@ -440,7 +442,7 @@ function hcpConsole() {
           micBtn.innerHTML = '&#127908; Dictate';
         };
       }
-      
+
       micBtn.addEventListener('click', () => {
         if (!rec) {
           alert('Dictation is not supported in this browser. Please type instead.');
@@ -463,6 +465,18 @@ function hcpConsole() {
         micBtn.classList.add('listening');
         micBtn.innerHTML = '&#9632; Stop';
       });
+
+      const copyBtns = document.querySelectorAll('.copyBtn');
+      for (let i = 0; i < copyBtns.length; i++) {
+        let elm = copyBtns[i];
+        elm.addEventListener('click', async() => {
+          const valueElm = document.querySelector(elm.getAttribute('rel'))
+          const statusElm = document.querySelector(elm.getAttribute('target'));
+
+          const textToCopy = valueElm.textContent;
+          await this.copyToClipboard(textToCopy, statusElm);
+        });
+      }
 
       this.initStepper();
       this.initSharing();
@@ -583,11 +597,6 @@ ${purposes.map(p=>'- '+p).join('\n')}
     },
 
     initSharing() {
-      document.getElementById('copyBtn').addEventListener('click',async()=>{
-        try{await navigator.clipboard.writeText(this.agentUrl);document.getElementById('copyMsg').textContent='Link copied.';}
-        catch(e){document.getElementById('copyMsg').textContent=this.agentUrl;}
-        setTimeout(()=>document.getElementById('copyMsg').textContent='',2500);
-      });
       document.getElementById('emailBtn').addEventListener('click',()=>{
         const body=encodeURIComponent('Hello\n\nHere is the link to your Personal Health Agent, prepared after today\u2019s consultation. Open it on your phone and start straight away. No registration is needed.\n\n'+this.agentUrl+'\n\nKind regards\nYour care team');
         location.href='mailto:?subject='+encodeURIComponent('Your Personal Health Agent')+'&body='+body;
@@ -638,7 +647,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
 
         await this.blockingWait(600);
         this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
-        document.getElementById('agentId').textContent=this.promptHash;
+        document.getElementById('agentUrl').textContent=this.agentUrl;
         document.getElementById('log1').classList.add('on');
 
         await this.blockingWait(700);
@@ -670,7 +679,7 @@ ${purposes.map(p=>'- '+p).join('\n')}
         if (!sasError) {
           document.getElementById('qrcode').innerHTML='';
           new QRCode(document.getElementById('qrcode'),{text:this.agentUrl,width:200,height:200,colorDark:'#16352C',correctLevel:QRCode.CorrectLevel.M});
-          document.getElementById('qrCaption').textContent=this.agentUrl.replace(this.promptHash, this.shortenHash(this.promptHash));
+          document.getElementById('qrCaption').innerHTML='<a href="'+this.agentUrl+'" target="_blank">'+this.agentUrl.replace(this.promptHash, this.shortenHash(this.promptHash))+'</a>';
           document.getElementById('chainBadge').style.display='inline-flex';
           document.getElementById('verifyNote').style.display='block';
           document.getElementById('toStep4').disabled=false;
@@ -720,10 +729,10 @@ ${purposes.map(p=>'- '+p).join('\n')}
         }
 
         const data = await response.json();
-        
+
         // Display results
-        document.getElementById('attPda').textContent='Attestation PDA: '+data.attestationPda;
-        document.getElementById('txSig').textContent='Signature: '+data.txSig;
+        document.getElementById('attPda').textContent=data.attestationPda;
+        document.getElementById('txSig').textContent=data.txSig;
         log.info('Attestation created successfully', { 
           credentialPda: data.credentialPda,
           schemaPda: data.schemaPda,
@@ -731,6 +740,8 @@ ${purposes.map(p=>'- '+p).join('\n')}
           txSig: data.txSig,
           isTestMode: data.isTestMode
         });
+
+        this.txSignature = data.txSig;
       } catch (error) {
         log.error('Error creating attestation', { error: error.message });
         throw error;
@@ -743,8 +754,19 @@ ${purposes.map(p=>'- '+p).join('\n')}
       document.getElementById('escalation').value='';
       document.getElementById('followup').value='';
       this.selectedCredential = '';
+      this.txSignature = '';
       this.disconnectWallet();
       this.goToScreen(1);
+    },
+
+    async copyToClipboard(message, statusElm) {
+      try {
+        await navigator.clipboard.writeText(message);
+        if (!!statusElm) {
+          statusElm.textContent = '✓ Copied.';
+          setTimeout(()=>statusElm.textContent='', 2500);
+        }
+      } catch(e) {}
     },
 
     async sha256(str) {
