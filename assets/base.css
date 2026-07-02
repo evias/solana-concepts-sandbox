@@ -1,1 +1,82 @@
-@import "tailwindcss"
+@import "tailwindcss";
+
+.prose {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.prose h1 {
+  font-size: 1.875rem;
+  font-weight: bold;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+.prose h2 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.prose h3 {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+.prose p {
+  margin-bottom: 1rem;
+}
+.prose ul, .prose ol {
+  margin-bottom: 1rem;
+  margin-left: 1.5rem;
+}
+.prose li {
+  margin-bottom: 0.25rem;
+}
+.prose code {
+  background-color: #f3f4f6;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #dc2626;
+}
+.prose pre {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+.prose pre code {
+  background-color: transparent;
+  color: #f3f4f6;
+  padding: 0;
+}
+.prose blockquote {
+  border-left: 4px solid #d1d5db;
+  padding-left: 1rem;
+  margin-left: 0;
+  color: #6b7280;
+  font-style: italic;
+}
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+.prose table td, .prose table th {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+}
+.prose table th {
+  background-color: #f3f4f6;
+  font-weight: bold;
+}
+.prose a {
+  color: #3b82f6;
+  text-decoration: underline;
+}
+.prose a:hover {
+  color: #1d4ed8;
+}
