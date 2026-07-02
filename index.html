@@ -8,6 +8,7 @@
   <link href="/assets/base.min.css" rel="stylesheet">
   <script defer src="/assets/alpinejs.min.js"></script>
   <script src="/assets/logger.js"></script>
+  <script defer src="/assets/marked.min.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="min-h-screen flex flex-col" x-data="landingPage()">
@@ -15,21 +16,17 @@
       <div class="max-w-7xl mx-auto p-8">
         <!-- Intro Section with Sponsors -->
         <section class="mb-12">
-          <h1 class="text-4xl font-bold mb-6 text-center">Solana Concepts Sandbox</h1>
-          
+          <h1 class="text-4xl font-bold mb-6 text-center">SCS - Solana Concepts Sandbox</h1>
+
           <!-- Introductory Message -->
           <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <p class="text-gray-700 leading-relaxed mb-4">
-              A comprehensive sandbox for exploring Solana concepts, building with SPL tokens, and testing dapp integration patterns. Includes a fully functional <strong>PetTracker</strong> application that demonstrates hybrid on-chain/off-chain storage using SPL tokens.
-            </p>
-            
             <!-- Warning Message -->
             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-6">
               <div class="flex items-start gap-3">
                 <div class="text-xl">⚠️</div>
                 <div>
                   <h3 class="font-semibold text-yellow-900 mb-1">Experimental Software</h3>
-                  <p class="text-sm text-yellow-800">This is experimental software not intended for production use. Use at your own risk. See LICENSE for the complete terms and liability limitations.</p>
+                  <p class="text-sm text-yellow-800">This is experimental software not intended for production use. Use at your own risk. See <a class="hover:underline hover:opacity-80 transition-opacity" href="#" @click="openLicense()">LICENSE</a> for the complete terms and liability limitations.</p>
                 </div>
               </div>
             </div>
@@ -106,6 +103,19 @@
           </template>
         </section>
       </div>
+
+      <!-- License Modal -->
+      <div x-show="showLicense" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showLicense = false">
+        <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+            <h2 class="text-2xl font-bold">SCS License</h2>
+            <button
+              @click="showLicense = false"
+              class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+          </div>
+          <div class="p-6 prose prose-sm max-w-none" x-html="licenseMarkdown"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Footer -->
@@ -137,6 +147,8 @@
         searchQuery: '',
         selectedTag: '',
         appVersion: '@main/dev',
+        showLicense: false,
+        licenseMarkdown: '',
         loading: false,
         concepts: [
           {
@@ -236,6 +248,25 @@
               this.loading = false;
             }
         },
+
+        async openLicense() {
+          console.log('Reading license from API...');
+
+          const response = await fetch('/api/v1/system/license');
+          const data = await response.json();
+
+          const markdown = data.license
+          console.log('Markdown loaded, length:', markdown.length);
+
+          if (typeof marked === 'undefined') {
+            throw new Error('marked.js library not loaded');
+          }
+
+          // Parse markdown to HTML using marked
+          this.licenseMarkdown = marked.parse(markdown);
+          this.showLicense = true;
+          console.log('License content set successfully');
+        } 
       };
     }
   </script>
