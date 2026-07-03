@@ -158,7 +158,7 @@
 
                     <div class="min-w-0">
                       <h3 class="text-2xl font-bold tracking-tight text-slate-900 transition group-hover:text-indigo-600" x-text="concept.name"></h3>
-                      <p class="mt-1 text-sm font-medium text-slate-500" x-text="concept.enabled ? 'Launch concept' : 'Coming soon'"></p>
+                      <p class="mt-1 text-sm font-medium text-slate-500" x-text="concept.enabled ? concept.subtitle : 'Coming soon'"></p>
                     </div>
                   </div>
 
@@ -230,6 +230,7 @@
           {
             id: 'pettracker',
             name: 'PetTracker',
+            subtitle: 'Registry for Pets',
             description: 'Register and manage pets as SPL tokens on Solana devnet. Explore hybrid on-chain/off-chain storage patterns with SQLite metadata and blockchain verification.',
             link: '/pettracker',
             enabled: true,
@@ -238,6 +239,7 @@
           {
             id: 'petvax',
             name: 'PetVax',
+            subtitle: 'Vaccination records',
             description: 'Proof of immunization system combining SPL tokens with vaccination records. Create verifiable, on-chain proof of veterinary care and vaccine administration.',
             link: '/petvax',
             enabled: true,
@@ -246,6 +248,7 @@
           {
             id: 'petdiet',
             name: 'PetDiet',
+            subtitle: 'Nutrition plans',
             description: 'Decentralized nutrition plans with daily feeding logs on-chain. Create customized meal schedules and cryptographically verify feeding actions.',
             link: '/petdiet',
             enabled: true,
@@ -254,6 +257,7 @@
           {
             id: 'healthcred',
             name: 'HealthCred',
+            subtitle: 'Healthcare credentials',
             description: 'Public registry for healthcare worker credentials with badges, certifications, and DID documents on-chain.',
             link: '/healthcred',
             enabled: true,
@@ -262,6 +266,7 @@
           {
             id: 'carecircle',
             name: 'CareCircle',
+            subtitle: 'Storage permission mandates',
             description: 'Secure file sharing and caregiver delegation via SAS Credentials.',
             link: '/carecircle',
             enabled: true,
@@ -270,6 +275,7 @@
           {
             id: 'hcpconsole',
             name: 'HCPConsole',
+            subtitle: 'Patient journeys with AI',
             description: 'Type or dictate a patient journey, generates prompt with SAS Attestation.',
             link: '/hcpconsole',
             enabled: true,
