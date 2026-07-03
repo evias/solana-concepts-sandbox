@@ -194,5 +194,6 @@ For issues or questions:
 
 MIT License - See [LICENSE](LICENSE) file for details
 
-Copyright © 2026 Grégory Saive for re:Software S.L. (hola@resoftware.es)
+Copyright © 2026 Grégory Saive for re:Software S.L. (hola@resoftware.es),
+All rights reserved.
 
