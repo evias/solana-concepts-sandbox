@@ -13,471 +13,497 @@
     <!-- Solana Web3.js -->
     <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8" x-data="petDiet()">
-        <header class="mb-8 flex justify-between items-start">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">PetDiet</h1>
-                <p class="text-gray-600">Nutrition Plans & Feeding Logs for Registered Pets</p>
+<body class="bg-slate-50 text-slate-900">
+    <div class="container mx-auto" x-data="petDiet()">
+        <header class="px-6 pt-6">
+            <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-amber-500"></div>
+                    <div>
+                        <p class="text-sm font-semibold text-slate-900">PetDiet</p>
+                        <p class="text-xs text-slate-500">Nutrition Plans & Feeding Logs for Registered Pets</p>
+                    </div>
+                </div>
+
+                <div class="hidden sm:flex text-sm text-slate-500">
+                    <a href="/" class="px-2 transition hover:-translate-y-1">← Back</a>
+
+                    <a href="#" @click="openDocumentation()" class="px-2 transition hover:-translate-y-1">📚 Documentation</button>
+
+                    <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="px-2 transition hover:-translate-y-1">📖 API Documentation</a>
+
+                    <div class="hidden sm:flex inline items-center gap-2 rounded-full bg-emerald-50 mx-4 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Solana Devnet Ready
+                    </div>
+                </div>
             </div>
-             <div class="flex gap-2">
-                 <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
-                     ← Back
-                 </a>
-                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                     📚 Documentation
-                 </button>
-                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                     📖 API Documentation
-                 </a>
-             </div>
         </header>
 
-        <!-- Documentation Modal -->
-        <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
-            <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">PetDiet Documentation</h2>
-                    <button
-                        @click="showDocumentation = false"
-                        class="text-gray-500 hover:text-gray-700 text-2xl">
-                        ✕
-                    </button>
-                </div>
-                <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
-            </div>
-        </div>
-
-        <div class="space-y-8">
-            <!-- Wallet Connection -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
-                <div class="flex gap-2 items-center flex-wrap">
-                    <button 
-                        type="button"
-                        @click="showWalletModal = true"
-                        :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-                        class="text-white px-4 py-2 rounded-md transition-colors">
-                        <span x-show="!userAddress">Connect Wallet</span>
-                        <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
-                    </button>
-                    <button 
-                        type="button"
-                        x-show="userAddress"
-                        @click="disconnectWallet"
-                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                        Disconnect
-                    </button>
-                </div>
-                <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to create nutrition plans or log feeding actions</p>
-                <p x-show="userAddress" class="text-sm text-gray-600 mt-2 font-mono break-all" x-text="'Your Account: ' + userAddress"></p>
-            </section>
-
-            <!-- Select Pet -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Select a Pet</h2>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Available Pets</label>
-                        <select x-model="selectedPetId" @change="loadSelectedPet()" class="block w-full max-w-md rounded-md border-gray-300 shadow-sm">
-                            <option value="">-- Choose a pet --</option>
-                            <template x-for="pet in availablePets" :key="pet.id">
-                                <option :value="pet.id" x-text="`${pet.name} (${pet.species})`"></option>
-                            </template>
-                        </select>
+        <main class="mx-auto min-w-7xl max-w-7xl px-6 pb-16 pt-8">
+            <div class="space-y-8">
+                <!-- Wallet Connection -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+                    <div class="flex gap-2 items-center flex-wrap">
+                        <button 
+                            type="button"
+                            @click="showWalletModal = true"
+                            :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                            class="text-white px-4 py-2 rounded-md transition-colors">
+                            <span x-show="!userAddress">Connect Wallet</span>
+                            <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+                        </button>
+                        <button 
+                            type="button"
+                            x-show="userAddress"
+                            @click="disconnectWallet"
+                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                            Disconnect
+                        </button>
                     </div>
-                    <div x-show="selectedPet" class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-lg p-6 shadow-md">
-                        <!-- Pet Name and Species Header -->
-                        <div class="mb-4 pb-4 border-b-2 border-indigo-200">
-                            <p class="text-3xl font-bold text-indigo-900"><span x-text="selectedPet ? getSpeciesEmoji(selectedPet.species) : '🐾'"></span> <span x-text="selectedPet ? selectedPet.name : ''"></span></p>
-                            <p class="text-lg text-indigo-700 mt-1"><span x-text="selectedPet ? selectedPet.species : ''"></span> <span x-show="selectedPet" x-text="selectedPet ? `(${selectedPet.breed || 'Unknown breed'})` : ''"></span></p>
-                        </div>
-                        
-                        <!-- Owner Info Card -->
-                        <div class="bg-white rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
-                            <p class="text-sm text-gray-600 font-semibold mb-2">OWNER</p>
-                            <p class="text-gray-900 font-mono"><a x-show="selectedPet" :href="selectedPet ? 'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet' : '#'" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-bold" x-text="selectedPet ? selectedPet.owner : ''"></a></p>
-                        </div>
-                        
-                        <!-- Authorized Nutritioners -->
-                        <div x-show="selectedPet && getAuthorizedVets().length > 0" class="bg-white rounded-lg p-4 border-l-4 border-green-500">
-                            <p class="text-sm text-gray-600 font-semibold mb-3">AUTHORIZED NUTRITIONERS</p>
-                            <div class="flex flex-wrap gap-2">
-                                <template x-for="vet in getAuthorizedVets()" :key="vet">
-                                    <a :href="'https://solscan.io/address/' + vet + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-mono hover:bg-green-200 transition">
-                                        <span x-text="vet.substring(0, 6) + '...' + vet.substring(vet.length - 4)"></span>
-                                    </a>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+                    <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to create nutrition plans or log feeding actions</p>
+                    <p x-show="userAddress" class="text-sm text-gray-600 mt-2 font-mono break-all" x-text="'Your Account: ' + userAddress"></p>
+                </section>
 
-            <!-- Nutrition Plans List -->
-            <section x-show="selectedPet" class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Nutrition Plans</h2>
-                
-                <div x-show="nutritionPlans.length === 0" class="text-gray-500 py-4">
-                    No nutrition plans created yet for this pet.
-                </div>
-                
-                <!-- Nutrition Plans Grid (3 columns) -->
-                <div x-show="nutritionPlans.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <template x-for="plan in nutritionPlans" :key="plan.id">
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col">
-                            <div class="mb-3">
-                                <h3 class="text-lg font-semibold text-gray-800" x-text="plan.plan_name"></h3>
-                                <p class="text-sm text-gray-600" x-text="'Start: ' + new Date(plan.start_date).toLocaleDateString()"></p>
-                                <p class="text-sm text-gray-600" x-text="'Duration: ' + plan.duration"></p>
-                            </div>
-                            
-                            <!-- Mint Address -->
-                            <div class="mb-3 text-xs">
-                                <p class="text-gray-600 font-medium">Mint Address:</p>
-                                <a :href="'https://solscan.io/token/' + plan.mint_address + '?cluster=devnet'" 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   class="text-blue-600 hover:text-blue-800 break-all"
-                                   x-text="plan.mint_address.substring(0, 12) + '...' + plan.mint_address.substring(plan.mint_address.length - 8)"></a>
-                            </div>
-                            
-                            <!-- Transaction Link -->
-                            <div class="mb-3 text-xs">
-                                <p class="text-gray-600 font-medium">Ingredients Transaction:</p>
-                                <a :href="'https://solscan.io/tx/' + plan.transaction_hash + '?cluster=devnet'" 
-                                   target="_blank" 
-                                   rel="noopener noreferrer"
-                                   class="text-blue-600 hover:text-blue-800 break-all"
-                                   x-text="plan.transaction_hash.substring(0, 12) + '...'"></a>
-                            </div>
-                            
-                            <p class="text-sm text-gray-500 mb-3 flex-grow">
-                                <span x-show="plan.authorized_nutritioner" x-text="'Nutritioner: ' + plan.authorized_nutritioner.substring(0, 6) + '...'"></span>
-                            </p>
-                            
-                            <div class="flex gap-2 flex-col">
-                                <button @click="openFeedNowModal(plan)" class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 text-sm w-full">
-                                    🍽️ Feed Now
-                                </button>
-                                <button @click="openFeedingHistoryModal(plan)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1">
-                                    📋 View History
-                                </button>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </section>
-
-            <!-- Nutrition Plan Registration Form -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-6">Create Nutrition Plan</h2>
-                
-                <form @submit.prevent="submitNutritionPlan()" class="space-y-6">
-                    <!-- Plan Name -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Plan Name *</label>
-                        <input 
-                            x-model="nutritionForm.planName"
-                            type="text" 
-                            placeholder="e.g., Summer Health Plan"
-                            class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
-                            :disabled="!userAddress || !selectedPetId"
-                            required>
-                    </div>
-
-                    <!-- Start Date -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
-                        <input 
-                            x-model="nutritionForm.startDate"
-                            type="date" 
-                            class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
-                            required>
-                    </div>
-
-                    <!-- Ingredients Per Day of Week -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-4">Ingredients Per Day of the Week</label>
-                        <div class="space-y-3">
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Monday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsMonday"
-                                    type="text"
-                                    placeholder="e.g., Chicken, Rice, Vegetables"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Tuesday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsTuesday"
-                                    type="text"
-                                    placeholder="e.g., Beef, Carrots, Potatoes"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Wednesday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsWednesday"
-                                    type="text"
-                                    placeholder="e.g., Fish, Sweet Potato, Spinach"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Thursday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsThursday"
-                                    type="text"
-                                    placeholder="e.g., Chicken, Brown Rice, Peas"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Friday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsFriday"
-                                    type="text"
-                                    placeholder="e.g., Turkey, Barley, Broccoli"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Saturday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsSaturday"
-                                    type="text"
-                                    placeholder="e.g., Lamb, Quinoa, Green Beans"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Sunday</label>
-                                <input 
-                                    x-model="nutritionForm.ingredientsSunday"
-                                    type="text"
-                                    placeholder="e.g., Chicken, Oats, Blueberries"
-                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                            </div>
-                        </div>
-                        <p x-show="ingredientsError" class="text-red-600 text-sm mt-2" x-text="ingredientsError"></p>
-                    </div>
-
-                    <!-- Duration Selector -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
-                        <select 
-                            x-model="nutritionForm.duration"
-                            class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
-                            required>
-                            <option value="">-- Select Duration --</option>
-                            <option value="2 weeks">2 weeks</option>
-                            <option value="1 month">1 month</option>
-                            <option value="2 months">2 months</option>
-                            <option value="3 months">3 months</option>
-                            <option value="6 months">6 months</option>
-                            <option value="1 year">1 year</option>
-                        </select>
-                    </div>
-
-                    <!-- Authorized Nutritioner Address (Optional) -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Authorized Nutritioner Address (Optional)</label>
-                        <input 
-                            x-model="nutritionForm.authorizedNutritioner"
-                            type="text" 
-                            placeholder="Enter Solana account address (optional)"
-                            class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                        <p x-show="nutritionerAddressError" class="text-red-600 text-sm mt-1" x-text="nutritionerAddressError"></p>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button 
-                        type="submit"
-                        :disabled="!isFormComplete() || formSubmitInProgress"
-                        :class="(!isFormComplete() || formSubmitInProgress) ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'"
-                        class="w-full text-white px-4 py-2 rounded-md font-semibold transition-colors">
-                        <span x-show="!formSubmitInProgress">Create Nutrition Plan</span>
-                        <span x-show="formSubmitInProgress">Creating Plan...</span>
-                    </button>
-                    <p x-show="!userAddress" class="text-red-600 text-sm">Please connect your wallet first</p>
-                    <p x-show="!selectedPetId && userAddress" class="text-red-600 text-sm">Please select a pet first</p>
-                    <p x-show="userAddress && selectedPetId && !nutritionForm.planName" class="text-red-600 text-sm">Please enter a plan name</p>
-                    <p x-show="userAddress && selectedPetId && nutritionForm.planName && !nutritionForm.startDate" class="text-red-600 text-sm">Please select a start date</p>
-                    <p x-show="ingredientsError" class="text-red-600 text-sm" x-text="ingredientsError"></p>
-                    <p x-show="userAddress && selectedPetId && nutritionForm.planName && nutritionForm.startDate && !nutritionForm.duration" class="text-red-600 text-sm">Please select a duration</p>
-                </form>
-            </section>
-        </div>
-
-        <!-- Feed Now Modal -->
-        <div x-show="showFeedNowModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showFeedNowModal = false">
-            <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full">
-                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Feed Your Pet</h2>
-                    <button
-                        @click="showFeedNowModal = false"
-                        class="text-gray-500 hover:text-gray-700 text-2xl">
-                        ✕
-                    </button>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div x-show="currentPlanForFeeding">
-                        <p class="font-semibold text-lg" x-text="currentPlanForFeeding ? currentPlanForFeeding.plan_name : ''"></p>
-                    </div>
-
-                    <form @submit.prevent="submitFeedingAction()" class="space-y-4">
-                        <!-- Ingredients (Pre-filled with today's ingredients) -->
+                <!-- Select Pet -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">Select a Pet</h2>
+                    <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Ingredients Given *</label>
-                            <textarea 
-                                x-model="feedingForm.ingredients"
-                                placeholder="Ingredients fed to the pet today"
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Available Pets</label>
+                            <select x-model="selectedPetId" @change="loadSelectedPet()" class="block w-full max-w-md rounded-md border-gray-300 shadow-sm">
+                                <option value="">-- Choose a pet --</option>
+                                <template x-for="pet in availablePets" :key="pet.id">
+                                    <option :value="pet.id" x-text="`${pet.name} (${pet.species})`"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div x-show="selectedPet" class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-indigo-200 rounded-lg p-6 shadow-md">
+                            <!-- Pet Name and Species Header -->
+                            <div class="mb-4 pb-4 border-b-2 border-indigo-200">
+                                <p class="text-3xl font-bold text-indigo-900"><span x-text="selectedPet ? getSpeciesEmoji(selectedPet.species) : '🐾'"></span> <span x-text="selectedPet ? selectedPet.name : ''"></span></p>
+                                <p class="text-lg text-indigo-700 mt-1"><span x-text="selectedPet ? selectedPet.species : ''"></span> <span x-show="selectedPet" x-text="selectedPet ? `(${selectedPet.breed || 'Unknown breed'})` : ''"></span></p>
+                            </div>
+                            
+                            <!-- Owner Info Card -->
+                            <div class="bg-white rounded-lg p-4 mb-4 border-l-4 border-indigo-500">
+                                <p class="text-sm text-gray-600 font-semibold mb-2">OWNER</p>
+                                <p class="text-gray-900 font-mono"><a x-show="selectedPet" :href="selectedPet ? 'https://solscan.io/address/' + selectedPet.owner + '?cluster=devnet' : '#'" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-bold" x-text="selectedPet ? selectedPet.owner : ''"></a></p>
+                            </div>
+                            
+                            <!-- Authorized Nutritioners -->
+                            <div x-show="selectedPet && getAuthorizedVets().length > 0" class="bg-white rounded-lg p-4 border-l-4 border-green-500">
+                                <p class="text-sm text-gray-600 font-semibold mb-3">AUTHORIZED NUTRITIONERS</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <template x-for="vet in getAuthorizedVets()" :key="vet">
+                                        <a :href="'https://solscan.io/address/' + vet + '?cluster=devnet'" target="_blank" rel="noopener noreferrer" class="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-mono hover:bg-green-200 transition">
+                                            <span x-text="vet.substring(0, 6) + '...' + vet.substring(vet.length - 4)"></span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Nutrition Plans List -->
+                <section x-show="selectedPet" class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">Nutrition Plans</h2>
+                    
+                    <div x-show="nutritionPlans.length === 0" class="text-gray-500 py-4">
+                        No nutrition plans created yet for this pet.
+                    </div>
+                    
+                    <!-- Nutrition Plans Grid (3 columns) -->
+                    <div x-show="nutritionPlans.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <template x-for="plan in nutritionPlans" :key="plan.id">
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow flex flex-col">
+                                <div class="mb-3">
+                                    <h3 class="text-lg font-semibold text-gray-800" x-text="plan.plan_name"></h3>
+                                    <p class="text-sm text-gray-600" x-text="'Start: ' + new Date(plan.start_date).toLocaleDateString()"></p>
+                                    <p class="text-sm text-gray-600" x-text="'Duration: ' + plan.duration"></p>
+                                </div>
+                                
+                                <!-- Mint Address -->
+                                <div class="mb-3 text-xs">
+                                    <p class="text-gray-600 font-medium">Mint Address:</p>
+                                    <a :href="'https://solscan.io/token/' + plan.mint_address + '?cluster=devnet'" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    class="text-blue-600 hover:text-blue-800 break-all"
+                                    x-text="plan.mint_address.substring(0, 12) + '...' + plan.mint_address.substring(plan.mint_address.length - 8)"></a>
+                                </div>
+                                
+                                <!-- Transaction Link -->
+                                <div class="mb-3 text-xs">
+                                    <p class="text-gray-600 font-medium">Ingredients Transaction:</p>
+                                    <a :href="'https://solscan.io/tx/' + plan.transaction_hash + '?cluster=devnet'" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    class="text-blue-600 hover:text-blue-800 break-all"
+                                    x-text="plan.transaction_hash.substring(0, 12) + '...'"></a>
+                                </div>
+                                
+                                <p class="text-sm text-gray-500 mb-3 flex-grow">
+                                    <span x-show="plan.authorized_nutritioner" x-text="'Nutritioner: ' + plan.authorized_nutritioner.substring(0, 6) + '...'"></span>
+                                </p>
+                                
+                                <div class="flex gap-2 flex-col">
+                                    <button @click="openFeedNowModal(plan)" class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 text-sm w-full">
+                                        🍽️ Feed Now
+                                    </button>
+                                    <button @click="openFeedingHistoryModal(plan)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold px-2 py-1">
+                                        📋 View History
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </section>
+
+                <!-- Nutrition Plan Registration Form -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-6">Create Nutrition Plan</h2>
+                    
+                    <form @submit.prevent="submitNutritionPlan()" class="space-y-6">
+                        <!-- Plan Name -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Plan Name *</label>
+                            <input 
+                                x-model="nutritionForm.planName"
+                                type="text" 
+                                placeholder="e.g., Summer Health Plan"
                                 class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
-                                rows="4"
-                                required></textarea>
+                                :disabled="!userAddress || !selectedPetId"
+                                required>
+                        </div>
+
+                        <!-- Start Date -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
+                            <input 
+                                x-model="nutritionForm.startDate"
+                                type="date" 
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                                required>
+                        </div>
+
+                        <!-- Ingredients Per Day of Week -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-4">Ingredients Per Day of the Week</label>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Monday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsMonday"
+                                        type="text"
+                                        placeholder="e.g., Chicken, Rice, Vegetables"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Tuesday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsTuesday"
+                                        type="text"
+                                        placeholder="e.g., Beef, Carrots, Potatoes"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Wednesday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsWednesday"
+                                        type="text"
+                                        placeholder="e.g., Fish, Sweet Potato, Spinach"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Thursday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsThursday"
+                                        type="text"
+                                        placeholder="e.g., Chicken, Brown Rice, Peas"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Friday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsFriday"
+                                        type="text"
+                                        placeholder="e.g., Turkey, Barley, Broccoli"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Saturday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsSaturday"
+                                        type="text"
+                                        placeholder="e.g., Lamb, Quinoa, Green Beans"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-600">Sunday</label>
+                                    <input 
+                                        x-model="nutritionForm.ingredientsSunday"
+                                        type="text"
+                                        placeholder="e.g., Chicken, Oats, Blueberries"
+                                        class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                                </div>
+                            </div>
+                            <p x-show="ingredientsError" class="text-red-600 text-sm mt-2" x-text="ingredientsError"></p>
+                        </div>
+
+                        <!-- Duration Selector -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Duration *</label>
+                            <select 
+                                x-model="nutritionForm.duration"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                                required>
+                                <option value="">-- Select Duration --</option>
+                                <option value="2 weeks">2 weeks</option>
+                                <option value="1 month">1 month</option>
+                                <option value="2 months">2 months</option>
+                                <option value="3 months">3 months</option>
+                                <option value="6 months">6 months</option>
+                                <option value="1 year">1 year</option>
+                            </select>
+                        </div>
+
+                        <!-- Authorized Nutritioner Address (Optional) -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Authorized Nutritioner Address (Optional)</label>
+                            <input 
+                                x-model="nutritionForm.authorizedNutritioner"
+                                type="text" 
+                                placeholder="Enter Solana account address (optional)"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                            <p x-show="nutritionerAddressError" class="text-red-600 text-sm mt-1" x-text="nutritionerAddressError"></p>
                         </div>
 
                         <!-- Submit Button -->
                         <button 
                             type="submit"
-                            :disabled="!userAddress || feedingSubmitInProgress"
-                            :class="(!userAddress || feedingSubmitInProgress) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+                            :disabled="!isFormComplete() || formSubmitInProgress"
+                            :class="(!isFormComplete() || formSubmitInProgress) ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'"
                             class="w-full text-white px-4 py-2 rounded-md font-semibold transition-colors">
-                            <span x-show="!feedingSubmitInProgress">Sign & Submit Feeding</span>
-                            <span x-show="feedingSubmitInProgress" x-text="feedingStatus"></span>
+                            <span x-show="!formSubmitInProgress">Create Nutrition Plan</span>
+                            <span x-show="formSubmitInProgress">Creating Plan...</span>
                         </button>
+                        <p x-show="!userAddress" class="text-red-600 text-sm">Please connect your wallet first</p>
+                        <p x-show="!selectedPetId && userAddress" class="text-red-600 text-sm">Please select a pet first</p>
+                        <p x-show="userAddress && selectedPetId && !nutritionForm.planName" class="text-red-600 text-sm">Please enter a plan name</p>
+                        <p x-show="userAddress && selectedPetId && nutritionForm.planName && !nutritionForm.startDate" class="text-red-600 text-sm">Please select a start date</p>
+                        <p x-show="ingredientsError" class="text-red-600 text-sm" x-text="ingredientsError"></p>
+                        <p x-show="userAddress && selectedPetId && nutritionForm.planName && nutritionForm.startDate && !nutritionForm.duration" class="text-red-600 text-sm">Please select a duration</p>
                     </form>
-
-                    <div x-show="feedingSuccessMessage" class="bg-green-50 border border-green-200 rounded-md p-4">
-                        <p class="text-green-800" x-html="feedingSuccessMessage"></p>
-                    </div>
-
-                    <div x-show="feedingErrorMessage" class="bg-red-50 border border-red-200 rounded-md p-4">
-                        <p class="text-red-800" x-text="feedingErrorMessage"></p>
-                    </div>
-                </div>
+                </section>
             </div>
-        </div>
 
-        <!-- Feeding History Modal -->
-        <div x-show="showFeedingHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showFeedingHistoryModal = false">
-            <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">Feeding History</h2>
-                    <button
-                        @click="showFeedingHistoryModal = false"
-                        class="text-gray-500 hover:text-gray-700 text-2xl">
-                        ✕
-                    </button>
-                </div>
-                <div class="p-6">
-                     <div x-show="feedingHistory.length === 0" class="text-gray-500 py-4">
-                         No feeding actions recorded yet for this nutrition plan.
-                     </div>
-                     
-                     <div x-show="feedingHistory.length > 0">
-                         <!-- 7-Column Grid for Days of Week -->
-                         <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-4">
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Monday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Tuesday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Wednesday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Thursday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Friday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Saturday</div>
-                             <div class="text-center text-gray-600 py-2 border-b border-gray-300">Sunday</div>
-                         </div>
-
-                         <!-- Feeding Entries Grid -->
-                         <div class="space-y-4">
-                             <template x-for="action in feedingHistory" :key="action.id">
-                                 <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                                     <!-- Day of Week (calculated from created_at) -->
-                                     <div class="text-xs text-gray-600 font-medium mb-3">
-                                         <span x-text="getDayOfWeek(new Date(action.created_at))"></span> -
-                                         <span x-text="new Date(action.created_at).toLocaleDateString()"></span>
-                                     </div>
-
-                                     <!-- Ingredients -->
-                                     <div class="mb-3 bg-white p-2 rounded border border-gray-100">
-                                         <p class="text-sm font-medium text-gray-700 mb-1">Ingredients:</p>
-                                         <p class="text-sm text-gray-800" x-text="action.ingredients"></p>
-                                     </div>
-
-                                     <!-- Recorded By (Solscan Link) -->
-                                     <div class="mb-3">
-                                         <p class="text-xs text-gray-600 font-medium mb-1">Recorded By:</p>
-                                         <a :href="'https://solscan.io/account/' + action.recorded_by + '?cluster=devnet'" 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            class="text-xs text-blue-600 hover:text-blue-800 font-semibold break-all"
-                                            x-show="action.recorded_by"
-                                            x-text="action.recorded_by.substring(0, 8) + '...' + action.recorded_by.substring(action.recorded_by.length - 8)"></a>
-                                         <span x-show="!action.recorded_by" class="text-xs text-gray-500">Not recorded</span>
-                                     </div>
-
-                                     <!-- Pet Signature with Icon -->
-                                     <div class="mb-3">
-                                         <p class="text-xs text-gray-600 font-medium mb-1">Pet Signature:</p>
-                                         <div class="flex items-center gap-2">
-                                             <span class="text-xl" x-text="selectedPet && selectedPet.species === 'Cat' ? '🐱' : '🐕'"></span>
-                                             <span class="text-xs font-mono text-gray-700 break-all" 
-                                                   x-text="'🔏 ' + (action.pet_signature ? action.pet_signature.substring(0, 12) + '...' : 'N/A')"></span>
-                                         </div>
-                                     </div>
-
-                                     <!-- Solscan Link -->
-                                     <a x-show="action.transaction_hash" 
-                                        :href="'https://solscan.io/tx/' + action.transaction_hash + '?cluster=devnet'" 
-                                        target="_blank" 
-                                        rel="noopener noreferrer" 
-                                        class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
-                                         🔗 View on Solscan
-                                     </a>
-                                 </div>
-                             </template>
-                         </div>
-                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Wallet Connection Modal (Phantom) -->
-        <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
-            <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
-                <div class="border-b p-4 flex justify-between items-center">
-                    <h2 class="text-xl font-bold">Connect Wallet</h2>
-                    <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-                </div>
-                <div class="p-6 space-y-4">
-                    <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
-                        🌐 Connect Phantom Wallet
-                    </button>
-                    <div class="relative">
-                        <div class="absolute inset-0 flex items-center">
-                            <div class="w-full border-t border-gray-300"></div>
-                        </div>
-                        <div class="relative flex justify-center text-sm">
-                            <span class="px-2 bg-white text-gray-500">or</span>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Enter Account Address Manually</label>
-                        <input 
-                            x-model="manualAddress"
-                            type="text" 
-                            placeholder="Solana account address"
-                            class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
-                        <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
-                            Use This Address
+            <!-- Documentation Modal -->
+            <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">PetDiet Documentation</h2>
+                        <button
+                            @click="showDocumentation = false"
+                            class="text-gray-500 hover:text-gray-700 text-2xl">
+                            ✕
                         </button>
                     </div>
+                    <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
                 </div>
             </div>
-        </div>
+
+            <!-- Feed Now Modal -->
+            <div x-show="showFeedNowModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showFeedNowModal = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full">
+                    <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">Feed Your Pet</h2>
+                        <button
+                            @click="showFeedNowModal = false"
+                            class="text-gray-500 hover:text-gray-700 text-2xl">
+                            ✕
+                        </button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div x-show="currentPlanForFeeding">
+                            <p class="font-semibold text-lg" x-text="currentPlanForFeeding ? currentPlanForFeeding.plan_name : ''"></p>
+                        </div>
+
+                        <form @submit.prevent="submitFeedingAction()" class="space-y-4">
+                            <!-- Ingredients (Pre-filled with today's ingredients) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Ingredients Given *</label>
+                                <textarea 
+                                    x-model="feedingForm.ingredients"
+                                    placeholder="Ingredients fed to the pet today"
+                                    class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none"
+                                    rows="4"
+                                    required></textarea>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button 
+                                type="submit"
+                                :disabled="!userAddress || feedingSubmitInProgress"
+                                :class="(!userAddress || feedingSubmitInProgress) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'"
+                                class="w-full text-white px-4 py-2 rounded-md font-semibold transition-colors">
+                                <span x-show="!feedingSubmitInProgress">Sign & Submit Feeding</span>
+                                <span x-show="feedingSubmitInProgress" x-text="feedingStatus"></span>
+                            </button>
+                        </form>
+
+                        <div x-show="feedingSuccessMessage" class="bg-green-50 border border-green-200 rounded-md p-4">
+                            <p class="text-green-800" x-html="feedingSuccessMessage"></p>
+                        </div>
+
+                        <div x-show="feedingErrorMessage" class="bg-red-50 border border-red-200 rounded-md p-4">
+                            <p class="text-red-800" x-text="feedingErrorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feeding History Modal -->
+            <div x-show="showFeedingHistoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showFeedingHistoryModal = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">Feeding History</h2>
+                        <button
+                            @click="showFeedingHistoryModal = false"
+                            class="text-gray-500 hover:text-gray-700 text-2xl">
+                            ✕
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div x-show="feedingHistory.length === 0" class="text-gray-500 py-4">
+                            No feeding actions recorded yet for this nutrition plan.
+                        </div>
+                        
+                        <div x-show="feedingHistory.length > 0">
+                            <!-- 7-Column Grid for Days of Week -->
+                            <div class="grid grid-cols-7 gap-2 text-xs font-semibold mb-4">
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Monday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Tuesday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Wednesday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Thursday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Friday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Saturday</div>
+                                <div class="text-center text-gray-600 py-2 border-b border-gray-300">Sunday</div>
+                            </div>
+
+                            <!-- Feeding Entries Grid -->
+                            <div class="space-y-4">
+                                <template x-for="action in feedingHistory" :key="action.id">
+                                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                        <!-- Day of Week (calculated from created_at) -->
+                                        <div class="text-xs text-gray-600 font-medium mb-3">
+                                            <span x-text="getDayOfWeek(new Date(action.created_at))"></span> -
+                                            <span x-text="new Date(action.created_at).toLocaleDateString()"></span>
+                                        </div>
+
+                                        <!-- Ingredients -->
+                                        <div class="mb-3 bg-white p-2 rounded border border-gray-100">
+                                            <p class="text-sm font-medium text-gray-700 mb-1">Ingredients:</p>
+                                            <p class="text-sm text-gray-800" x-text="action.ingredients"></p>
+                                        </div>
+
+                                        <!-- Recorded By (Solscan Link) -->
+                                        <div class="mb-3">
+                                            <p class="text-xs text-gray-600 font-medium mb-1">Recorded By:</p>
+                                            <a :href="'https://solscan.io/account/' + action.recorded_by + '?cluster=devnet'" 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-semibold break-all"
+                                                x-show="action.recorded_by"
+                                                x-text="action.recorded_by.substring(0, 8) + '...' + action.recorded_by.substring(action.recorded_by.length - 8)"></a>
+                                            <span x-show="!action.recorded_by" class="text-xs text-gray-500">Not recorded</span>
+                                        </div>
+
+                                        <!-- Pet Signature with Icon -->
+                                        <div class="mb-3">
+                                            <p class="text-xs text-gray-600 font-medium mb-1">Pet Signature:</p>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xl" x-text="selectedPet && selectedPet.species === 'Cat' ? '🐱' : '🐕'"></span>
+                                                <span class="text-xs font-mono text-gray-700 break-all" 
+                                                    x-text="'🔏 ' + (action.pet_signature ? action.pet_signature.substring(0, 12) + '...' : 'N/A')"></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Solscan Link -->
+                                        <a x-show="action.transaction_hash" 
+                                            :href="'https://solscan.io/tx/' + action.transaction_hash + '?cluster=devnet'" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            class="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                                            🔗 View on Solscan
+                                        </a>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallet Connection Modal (Phantom) -->
+            <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
+                    <div class="border-b p-4 flex justify-between items-center">
+                        <h2 class="text-xl font-bold">Connect Wallet</h2>
+                        <button @click="showWalletModal = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <button @click="connectPhantom()" class="w-full bg-purple-600 text-white px-4 py-3 rounded-md hover:bg-purple-700 font-semibold">
+                            🌐 Connect Phantom Wallet
+                        </button>
+                        <div class="relative">
+                            <div class="absolute inset-0 flex items-center">
+                                <div class="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div class="relative flex justify-center text-sm">
+                                <span class="px-2 bg-white text-gray-500">or</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Enter Account Address Manually</label>
+                            <input 
+                                x-model="manualAddress"
+                                type="text" 
+                                placeholder="Solana account address"
+                                class="w-full px-4 py-2 rounded-md border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+                            <button @click="connectManually()" class="w-full mt-2 bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold">
+                                Use This Address
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="px-6 pb-8">
+            <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm text-slate-500">
+                        <em x-text="appVersion"></em>
+                    </p>
+                    <p class="text-sm font-medium text-slate-600">
+                        © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>, All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </footer>
+
     </div>
 
     <script>
         function petDiet() {
             const log = window.createLogger('concept/petdiet');
             return {
+                appVersion: '@main/dev',
+                copyYear: '2026',
                 userAddress: '',
                 selectedPetId: '',
                 selectedPet: null,
@@ -498,7 +524,7 @@
                 feedingSuccessMessage: '',
                 feedingErrorMessage: '',
                 currentPlanForFeeding: null,
-                
+
                 nutritionForm: {
                     planName: '',
                     startDate: '',
@@ -515,6 +541,30 @@
 
                 feedingForm: {
                     ingredients: ''
+                },
+
+                async init() {
+                    this.loadSystemInfo();
+
+                    // Check for Phantom wallet on load
+                    if (window.solana?.isConnected) {
+                        this.userAddress = window.solana.publicKey.toString();
+                        this.loadPets();
+                    }
+                },
+
+                async loadSystemInfo() {
+                    if ((new Date()).getFullYear() > 2026) {
+                        this.copyYear = "2026-" + (new Date()).getFullYear();
+                    }
+                    const log = window.createLogger('core/system');
+                    try {
+                        const res = await fetch(`/api/v1/system/info`);
+                        const data = await res.json();
+                        this.appVersion = data.appVersion;
+                    } catch (err) {
+                        log.error('Error loading system information', { err });
+                    }
                 },
 
                 async connectPhantom() {
@@ -539,7 +589,7 @@
                         alert('Please enter a valid address');
                         return;
                     }
-                    
+
                     const addressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
                     if (!addressRegex.test(this.manualAddress)) {
                         alert('Invalid Solana address format');
@@ -659,7 +709,7 @@
 
                 validateIngredientsInput() {
                     this.ingredientsError = '';
-                    
+
                     const ingredients = [
                         this.nutritionForm.ingredientsMonday,
                         this.nutritionForm.ingredientsTuesday,
@@ -682,16 +732,12 @@
                 isFormComplete() {
                     // Check wallet connectivity
                     if (!this.userAddress) return false;
-                    
                     // Check pet selection
                     if (!this.selectedPetId) return false;
-                    
                     // Check required fields: plan name
                     if (!this.nutritionForm.planName || !this.nutritionForm.planName.trim()) return false;
-                    
                     // Check required fields: start date
                     if (!this.nutritionForm.startDate) return false;
-                    
                     // Check required fields: at least one ingredient
                     const ingredients = [
                         this.nutritionForm.ingredientsMonday,
@@ -704,16 +750,13 @@
                     ];
                     const hasAtLeastOneIngredient = ingredients.some(i => i && i.trim());
                     if (!hasAtLeastOneIngredient) return false;
-                    
                     // Check required fields: duration
                     if (!this.nutritionForm.duration) return false;
-                    
                     return true;
                 },
 
                 validateNutritionerAddress() {
                     this.nutritionerAddressError = '';
-                    
                     if (!this.nutritionForm.authorizedNutritioner || !this.nutritionForm.authorizedNutritioner.trim()) {
                         return true;
                     }
@@ -933,39 +976,9 @@
                         log.error('Error loading documentation', { error: error.message });
                         alert('Failed to load documentation');
                     }
-                },
-
-                init() {
-                    // Check for Phantom wallet on load
-                    if (window.solana?.isConnected) {
-                        this.userAddress = window.solana.publicKey.toString();
-                        this.loadPets();
-                    }
                 }
             };
         }
     </script>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t mt-12">
-      <div class="max-w-7xl mx-auto px-8 py-8">
-        <!-- Sponsors in Footer -->
-        <div class="mb-6 flex flex-col md:flex-row items-center justify-center gap-6 opacity-60">
-          <a href="https://evi.as" target="_blank" rel="noopener noreferrer" title="Visit Evi.as">
-            <img src="/assets/evias-logo.png" alt="Evi.as logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-          <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" title="Visit re:Software">
-            <img src="/assets/resoftware-logo.png" alt="re:Software logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-          <a href="https://dhealth.com" target="_blank" rel="noopener noreferrer" title="Visit dHealth">
-            <img src="/assets/dhealth-logo.png" alt="dHealth logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-        </div>
-        <!-- Copyright -->
-        <div class="text-center text-gray-600 text-sm border-t pt-6">
-          <p>© 2026 <a href="https://evi.as" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a> All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
 </body>
 </html>

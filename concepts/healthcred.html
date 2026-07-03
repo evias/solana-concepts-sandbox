@@ -66,61 +66,372 @@
         }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8" x-data="healthCred()">
-        <!-- Header -->
-        <header class="mb-8 flex justify-between items-start">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-800">HealthCred</h1>
-                <p class="text-gray-600">Healthcare Worker Credentials with Badges & Certifications</p>
+<body class="bg-slate-50 text-slate-900">
+    <div class="container mx-auto" x-data="healthCred()">
+        <header class="px-6 pt-6">
+            <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-sky-500"></div>
+                    <div>
+                        <p class="text-sm font-semibold text-slate-900">HealthCred</p>
+                        <p class="text-xs text-slate-500">Healthcare Worker Credentials with Badges & Certifications</p>
+                    </div>
+                </div>
+
+                <div class="hidden sm:flex text-sm text-slate-500">
+                    <a href="/" class="px-2 transition hover:-translate-y-1">← Back</a>
+
+                    <a href="#" @click="openDocumentation()" class="px-2 transition hover:-translate-y-1">📚 Documentation</button>
+
+                    <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="px-2 transition hover:-translate-y-1">📖 API Documentation</a>
+
+                    <div class="hidden sm:flex inline items-center gap-2 rounded-full bg-emerald-50 mx-4 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+                        <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        Solana Devnet Ready
+                    </div>
+                </div>
             </div>
-             <div class="flex gap-2">
-                 <a href="/" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
-                     ← Back
-                 </a>
-                 <button @click="openDocumentation()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                     📚 Documentation
-                 </button>
-                 <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
-                     📖 API Documentation
-                 </a>
-             </div>
         </header>
 
-        <!-- Documentation Modal -->
-        <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
-            <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">HealthCred Documentation</h2>
-                    <button @click="showDocumentation = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
-                </div>
-                <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
-            </div>
-        </div>
+        <main class="mx-auto min-w-7xl max-w-7xl px-6 pb-16 pt-8">
+            <div class="space-y-8">
+                <!-- Wallet Connection -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+                    <div class="flex gap-2 items-center flex-wrap">
+                        <button 
+                            type="button"
+                            @click="showWalletModal = true"
+                            :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
+                            class="text-white px-4 py-2 rounded-md transition-colors">
+                            <span x-show="!userAddress">Connect Wallet</span>
+                            <span x-show="userAddress" x-text="userAddress ? 'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4) : 'Connect Wallet'"></span>
+                        </button>
+                        <button 
+                            type="button"
+                            x-show="userAddress"
+                            @click="disconnectWallet"
+                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                            Disconnect
+                        </button>
+                    </div>
+                    <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to register credentials, send badges, or upload certifications</p>
+                </section>
 
-        <div class="space-y-8">
-            <!-- Wallet Connection -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
-                <div class="flex gap-2 items-center flex-wrap">
-                    <button 
-                        type="button"
-                        @click="showWalletModal = true"
-                        :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-                        class="text-white px-4 py-2 rounded-md transition-colors">
-                        <span x-show="!userAddress">Connect Wallet</span>
-                        <span x-show="userAddress" x-text="userAddress ? 'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4) : 'Connect Wallet'"></span>
-                    </button>
-                    <button 
-                        type="button"
-                        x-show="userAddress"
-                        @click="disconnectWallet"
-                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                        Disconnect
-                    </button>
-                </div>
-                <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to register credentials, send badges, or upload certifications</p>
-            </section>
+                <!-- Registration Form -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Register Healthcare Credential</h2>
+                        <button 
+                            @click="showRegistrationForm = !showRegistrationForm"
+                            class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                            :title="showRegistrationForm ? 'Collapse' : 'Expand'">
+                            <span x-show="showRegistrationForm">▼</span>
+                            <span x-show="!showRegistrationForm">▶</span>
+                        </button>
+                    </div>
+                    <form @submit.prevent="submitRegistration()" class="space-y-4" x-show="showRegistrationForm" x-collapse>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                                <input 
+                                    x-model="form.fullName" 
+                                    type="text" 
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Dr. Jane Smith">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
+                                <input 
+                                    x-model="form.dateOfBirth" 
+                                    type="date" 
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                                <input 
+                                    x-model="form.email" 
+                                    type="email" 
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="jane@healthcare.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Profession *</label>
+                                <input 
+                                    x-model="form.profession" 
+                                    type="text" 
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g.: Dentist or Nurse">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">DID Document JSON *</label>
+                            <textarea 
+                                x-model="form.didDocument" 
+                                required
+                                rows="6"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                placeholder='{"id":"did:example:123","authentication":["key-1"]}'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Must be valid JSON with "id" and "authentication" fields</p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button 
+                                type="submit"
+                                :disabled="!userAddress || !form.fullName || !form.email || !form.profession || !form.didDocument || registering"
+                                class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!registering">Register Credential</span>
+                                <span x-show="registering">Registering...</span>
+                            </button>
+                        </div>
+
+                        <div x-show="registerProgress" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+                            <span x-text="registerProgress"></span>
+                        </div>
+
+                        <div x-show="registerError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            <span x-text="registerError"></span>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Upload Certification Form -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Upload a Certification</h2>
+                        <button 
+                            @click="showCertificationForm = !showCertificationForm"
+                            class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
+                            :title="showCertificationForm ? 'Collapse' : 'Expand'">
+                            <span x-show="showCertificationForm">▼</span>
+                            <span x-show="!showCertificationForm">▶</span>
+                        </button>
+                    </div>
+                    <form @submit.prevent="submitCertification()" class="space-y-4" x-show="showCertificationForm" x-collapse>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Select Your Credential *</label>
+                                <select 
+                                    x-model="certForm.credentialId"
+                                    required
+                                    :disabled="!userAddress || ownedCredentials.length === 0"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select credential...</option>
+                                    <template x-for="cred in ownedCredentials" :key="cred.id">
+                                        <option :value="cred.id" x-text="`${cred.full_name} (${cred.profession})`"></option>
+                                    </template>
+                                </select>
+                                <p x-show="userAddress && ownedCredentials.length === 0" class="text-xs text-gray-500 mt-1">You don't have any registered credentials yet</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Certification Name *</label>
+                                <input 
+                                    x-model="certForm.certificationName"
+                                    type="text"
+                                    placeholder="e.g., Advanced First Aid Certification"
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Name of the certification</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">File *</label>
+                                <input 
+                                    @change="onCertFileSelected"
+                                    type="file" 
+                                    accept="application/pdf,image/png,image/jpeg"
+                                    required
+                                    class="w-full">
+                                <p class="text-xs text-gray-500 mt-1">Accepted: PDF, PNG, JPG</p>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button 
+                                type="submit"
+                                :disabled="!userAddress || !certForm.credentialId || !certForm.certificationName || !certForm.file || uploadingCert"
+                                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!uploadingCert">Upload Certification</span>
+                                <span x-show="uploadingCert">Uploading...</span>
+                            </button>
+                        </div>
+
+                        <div x-show="certError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                            <span x-text="certError"></span>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Credentials Listing -->
+                <section class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Registered Credentials</h2>
+                        <button @click="loadCredentials()" class="text-blue-600 hover:text-blue-700 text-sm">
+                            🔄 Refresh
+                        </button>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="mb-6 space-y-2">
+                        <div class="flex gap-2 items-center">
+                            <input 
+                                x-model="credentialSearchQuery" 
+                                type="text" 
+                                placeholder="Search by name, profession, email, DID ID, or wallet address..." 
+                                class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
+                            <button 
+                                @click="clearCredentialSearch" 
+                                x-show="credentialSearchQuery"
+                                class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
+                                Clear Filter
+                            </button>
+                        </div>
+                        <p x-show="credentialSearchQuery && filteredCredentials.length === 0" class="text-red-600 text-sm">No credentials match your search.</p>
+                        <p x-show="credentialSearchQuery && filteredCredentials.length > 0" class="text-gray-600 text-sm" x-text="`Found ${filteredCredentials.length} credential(s) matching your search.`"></p>
+                    </div>
+
+                    <div x-show="loading" class="text-center py-8">
+                        <p class="text-gray-500">Loading credentials...</p>
+                    </div>
+
+                    <div x-show="!loading && credentials.length === 0" class="text-center py-8 text-gray-500">
+                        <p>No credentials registered yet</p>
+                    </div>
+
+                    <div x-show="!loading && credentials.length > 0 && filteredCredentials.length === 0" class="text-center py-8 text-gray-500">
+                        <p>No credentials match your search filter</p>
+                    </div>
+
+                    <div x-show="!loading && filteredCredentials.length > 0" class="space-y-4">
+                        <template x-for="cred in paginatedCredentials" :key="cred.id">
+                            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <h3 class="font-semibold text-lg mb-2" x-text="cred.full_name"></h3>
+                                        <div class="text-sm text-gray-600 space-y-1">
+                                            <div>
+                                                <strong>Owner Address:</strong>
+                                                <div class="font-mono text-xs">
+                                                    <a :href="`https://solscan.io/account/${cred.wallet_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                        <span x-text="cred.wallet_address.substring(0, 8) + '...' + cred.wallet_address.substring(cred.wallet_address.length - 8)"></span> ↗
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div><strong>Profession:</strong> <span x-text="cred.profession"></span></div>
+                                            <div><strong>Email:</strong> <span x-text="cred.email"></span></div>
+                                            <div><strong>DID ID:</strong> <span x-text="cred.did_id" class="font-mono text-xs"></span></div>
+                                            <div><strong>Created:</strong> <span x-text="new Date(cred.created_at).toLocaleDateString()"></span></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-sm text-gray-600 space-y-1">
+                                        <div>
+                                            <strong>SAS Credential ID:</strong>
+                                            <div class="font-mono text-xs break-all" x-text="cred.sas_credential_id || 'N/A'"></div>
+                                        </div>
+                                        <div>
+                                            <strong>Mint Address:</strong>
+                                            <div class="font-mono text-xs">
+                                                <template x-if="cred.mint_address">
+                                                    <a :href="`https://solscan.io/token/${cred.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                        <span x-text="cred.mint_address.substring(0, 8) + '...' + cred.mint_address.substring(cred.mint_address.length - 8)"></span> ↗
+                                                    </a>
+                                                </template>
+                                                <span x-show="!cred.mint_address">N/A</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <strong>Transaction:</strong>
+                                            <div class="font-mono text-xs">
+                                                <template x-if="cred.transaction_hash">
+                                                    <a :href="`https://solscan.io/tx/${cred.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
+                                                        <span x-text="cred.transaction_hash.substring(0, 8) + '...' + cred.transaction_hash.substring(cred.transaction_hash.length - 8)"></span> ↗
+                                                    </a>
+                                                </template>
+                                                <span x-show="!cred.transaction_hash">N/A</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Badges Section -->
+                                <div x-show="credentialBadges[cred.id] && credentialBadges[cred.id].length > 0" class="mt-4 pt-4 border-t border-gray-200">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2">Badges Received:</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="badge in credentialBadges[cred.id]" :key="badge.id">
+                                            <a 
+                                                :href="`https://solscan.io/token/${badge.mint_address}?cluster=devnet`"
+                                                target="_blank"
+                                                rel="noopener"
+                                                :title="badge.description"
+                                                class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100 hover:bg-yellow-200 transition text-xl">
+                                                <span x-text="badge.emoji"></span>
+                                            </a>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Certifications Section -->
+                                <div x-show="credentialCertifications[cred.id] && credentialCertifications[cred.id].length > 0" class="mt-4 pt-4 border-t border-gray-200">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2">Certifications Uploaded:</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <template x-for="cert in credentialCertifications[cred.id]" :key="cert.id">
+                                            <a 
+                                                :href="`https://solscan.io/tx/${cert.transaction_signature}?cluster=devnet`"
+                                                target="_blank"
+                                                rel="noopener"
+                                                :title="cert.certification_name"
+                                                class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 transition text-xl">
+                                                <span>📄✏️</span>
+                                            </a>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-2 mt-4">
+                                    <button 
+                                        @click="openBadgeModal(cred.id)"
+                                        :disabled="userAddress === cred.wallet_address"
+                                        :title="userAddress === cred.wallet_address ? 'You cannot send a badge to yourself' : 'Send a badge to this credential holder'"
+                                        class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                        🎖️ Send Badge
+                                    </button>
+                                    <button 
+                                        @click="viewCredentialDetails(cred.id)"
+                                        class="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600 transition">
+                                        View Full Details
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div x-show="!loading && filteredCredentials.length > 0 && (displayedCredentialsCount < filteredCredentials.length || displayedCredentialsCount > 10)" class="flex justify-center gap-4 mt-6">
+                        <button 
+                            @click="loadMoreCredentials" 
+                            x-show="displayedCredentialsCount < filteredCredentials.length"
+                            class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                            Load More
+                        </button>
+                        <button 
+                            @click="collapseCredentials" 
+                            x-show="displayedCredentialsCount > 10"
+                            class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors">
+                            Collapse
+                        </button>
+                    </div>
+                </section>
+            </div>
 
             <!-- Wallet Connection Modal -->
             <div x-show="showWalletModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showWalletModal = false">
@@ -174,466 +485,181 @@
                 </div>
             </div>
 
-            <!-- Registration Form -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold">Register Healthcare Credential</h2>
-                    <button 
-                        @click="showRegistrationForm = !showRegistrationForm"
-                        class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
-                        :title="showRegistrationForm ? 'Collapse' : 'Expand'">
-                        <span x-show="showRegistrationForm">▼</span>
-                        <span x-show="!showRegistrationForm">▶</span>
-                    </button>
-                </div>
-                <form @submit.prevent="submitRegistration()" class="space-y-4" x-show="showRegistrationForm" x-collapse>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                            <input 
-                                x-model="form.fullName" 
-                                type="text" 
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Dr. Jane Smith">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Date of Birth *</label>
-                            <input 
-                                x-model="form.dateOfBirth" 
-                                type="date" 
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                            <input 
-                                x-model="form.email" 
-                                type="email" 
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="jane@healthcare.com">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Profession *</label>
-                            <input 
-                                x-model="form.profession" 
-                                type="text" 
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="e.g.: Dentist or Nurse">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">DID Document JSON *</label>
-                        <textarea 
-                            x-model="form.didDocument" 
-                            required
-                            rows="6"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                            placeholder='{"id":"did:example:123","authentication":["key-1"]}'></textarea>
-                        <p class="text-xs text-gray-500 mt-1">Must be valid JSON with "id" and "authentication" fields</p>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button 
-                            type="submit"
-                            :disabled="!userAddress || !form.fullName || !form.email || !form.profession || !form.didDocument || registering"
-                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span x-show="!registering">Register Credential</span>
-                            <span x-show="registering">Registering...</span>
-                        </button>
-                    </div>
-
-                    <div x-show="registerProgress" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
-                        <span x-text="registerProgress"></span>
-                    </div>
-
-                    <div x-show="registerError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        <span x-text="registerError"></span>
-                    </div>
-                </form>
-            </section>
-
-            <!-- Upload Certification Form -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold">Upload a Certification</h2>
-                    <button 
-                        @click="showCertificationForm = !showCertificationForm"
-                        class="text-gray-600 hover:text-gray-800 text-2xl font-bold"
-                        :title="showCertificationForm ? 'Collapse' : 'Expand'">
-                        <span x-show="showCertificationForm">▼</span>
-                        <span x-show="!showCertificationForm">▶</span>
-                    </button>
-                </div>
-                <form @submit.prevent="submitCertification()" class="space-y-4" x-show="showCertificationForm" x-collapse>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Select Your Credential *</label>
-                            <select 
-                                x-model="certForm.credentialId"
-                                required
-                                :disabled="!userAddress || ownedCredentials.length === 0"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select credential...</option>
-                                <template x-for="cred in ownedCredentials" :key="cred.id">
-                                    <option :value="cred.id" x-text="`${cred.full_name} (${cred.profession})`"></option>
-                                </template>
-                            </select>
-                            <p x-show="userAddress && ownedCredentials.length === 0" class="text-xs text-gray-500 mt-1">You don't have any registered credentials yet</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Certification Name *</label>
-                            <input 
-                                x-model="certForm.certificationName"
-                                type="text"
-                                placeholder="e.g., Advanced First Aid Certification"
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <p class="text-xs text-gray-500 mt-1">Name of the certification</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">File *</label>
-                            <input 
-                                @change="onCertFileSelected"
-                                type="file" 
-                                accept="application/pdf,image/png,image/jpeg"
-                                required
-                                class="w-full">
-                            <p class="text-xs text-gray-500 mt-1">Accepted: PDF, PNG, JPG</p>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button 
-                            type="submit"
-                            :disabled="!userAddress || !certForm.credentialId || !certForm.certificationName || !certForm.file || uploadingCert"
-                            class="flex-1 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span x-show="!uploadingCert">Upload Certification</span>
-                            <span x-show="uploadingCert">Uploading...</span>
-                        </button>
-                    </div>
-
-                    <div x-show="certError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                        <span x-text="certError"></span>
-                    </div>
-                </form>
-            </section>
-
-            <!-- Credentials Listing -->
-            <section class="bg-white rounded-lg shadow-md p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold">Registered Credentials</h2>
-                    <button @click="loadCredentials()" class="text-blue-600 hover:text-blue-700 text-sm">
-                        🔄 Refresh
-                    </button>
-                </div>
-
-                <!-- Search Bar -->
-                <div class="mb-6 space-y-2">
-                    <div class="flex gap-2 items-center">
-                        <input 
-                            x-model="credentialSearchQuery" 
-                            type="text" 
-                            placeholder="Search by name, profession, email, DID ID, or wallet address..." 
-                            class="flex-1 px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none">
-                        <button 
-                            @click="clearCredentialSearch" 
-                            x-show="credentialSearchQuery"
-                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm">
-                            Clear Filter
-                        </button>
-                    </div>
-                    <p x-show="credentialSearchQuery && filteredCredentials.length === 0" class="text-red-600 text-sm">No credentials match your search.</p>
-                    <p x-show="credentialSearchQuery && filteredCredentials.length > 0" class="text-gray-600 text-sm" x-text="`Found ${filteredCredentials.length} credential(s) matching your search.`"></p>
-                </div>
-
-                <div x-show="loading" class="text-center py-8">
-                    <p class="text-gray-500">Loading credentials...</p>
-                </div>
-
-                <div x-show="!loading && credentials.length === 0" class="text-center py-8 text-gray-500">
-                    <p>No credentials registered yet</p>
-                </div>
-
-                <div x-show="!loading && credentials.length > 0 && filteredCredentials.length === 0" class="text-center py-8 text-gray-500">
-                    <p>No credentials match your search filter</p>
-                </div>
-
-                <div x-show="!loading && filteredCredentials.length > 0" class="space-y-4">
-                    <template x-for="cred in paginatedCredentials" :key="cred.id">
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Credential Details Modal -->
+            <div x-show="showCredentialDetailsModal" @click.self="showCredentialDetailsModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+                <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <h3 class="text-2xl font-bold mb-4">Credential Details</h3>
+                    <template x-if="selectedCredential">
+                        <div class="space-y-4 text-sm">
+                            <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <h3 class="font-semibold text-lg mb-2" x-text="cred.full_name"></h3>
-                                    <div class="text-sm text-gray-600 space-y-1">
-                                        <div>
-                                            <strong>Owner Address:</strong>
-                                            <div class="font-mono text-xs">
-                                                <a :href="`https://solscan.io/account/${cred.wallet_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
-                                                    <span x-text="cred.wallet_address.substring(0, 8) + '...' + cred.wallet_address.substring(cred.wallet_address.length - 8)"></span> ↗
-                                                </a>
-                                            </div>
-                                        </div>
-                                        <div><strong>Profession:</strong> <span x-text="cred.profession"></span></div>
-                                        <div><strong>Email:</strong> <span x-text="cred.email"></span></div>
-                                        <div><strong>DID ID:</strong> <span x-text="cred.did_id" class="font-mono text-xs"></span></div>
-                                        <div><strong>Created:</strong> <span x-text="new Date(cred.created_at).toLocaleDateString()"></span></div>
-                                    </div>
+                                    <strong class="text-gray-700">Full Name:</strong>
+                                    <p x-text="selectedCredential.full_name"></p>
                                 </div>
-                                <div class="text-sm text-gray-600 space-y-1">
-                                    <div>
-                                        <strong>SAS Credential ID:</strong>
-                                        <div class="font-mono text-xs break-all" x-text="cred.sas_credential_id || 'N/A'"></div>
-                                    </div>
-                                    <div>
-                                        <strong>Mint Address:</strong>
-                                        <div class="font-mono text-xs">
-                                            <template x-if="cred.mint_address">
-                                                <a :href="`https://solscan.io/token/${cred.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
-                                                    <span x-text="cred.mint_address.substring(0, 8) + '...' + cred.mint_address.substring(cred.mint_address.length - 8)"></span> ↗
-                                                </a>
-                                            </template>
-                                            <span x-show="!cred.mint_address">N/A</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <strong>Transaction:</strong>
-                                        <div class="font-mono text-xs">
-                                            <template x-if="cred.transaction_hash">
-                                                <a :href="`https://solscan.io/tx/${cred.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 break-all">
-                                                    <span x-text="cred.transaction_hash.substring(0, 8) + '...' + cred.transaction_hash.substring(cred.transaction_hash.length - 8)"></span> ↗
-                                                </a>
-                                            </template>
-                                            <span x-show="!cred.transaction_hash">N/A</span>
-                                        </div>
-                                    </div>
+                                <div>
+                                    <strong class="text-gray-700">Profession:</strong>
+                                    <p x-text="selectedCredential.profession"></p>
+                                </div>
+                                <div>
+                                    <strong class="text-gray-700">Email:</strong>
+                                    <p x-text="selectedCredential.email"></p>
+                                </div>
+                                <div>
+                                    <strong class="text-gray-700">Date of Birth:</strong>
+                                    <p x-text="selectedCredential.date_of_birth"></p>
                                 </div>
                             </div>
-                            
-                            <!-- Badges Section -->
-                            <div x-show="credentialBadges[cred.id] && credentialBadges[cred.id].length > 0" class="mt-4 pt-4 border-t border-gray-200">
-                                <p class="text-sm font-semibold text-gray-700 mb-2">Badges Received:</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <template x-for="badge in credentialBadges[cred.id]" :key="badge.id">
-                                        <a 
-                                            :href="`https://solscan.io/token/${badge.mint_address}?cluster=devnet`"
-                                            target="_blank"
-                                            rel="noopener"
-                                            :title="badge.description"
-                                            class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-yellow-100 hover:bg-yellow-200 transition text-xl">
-                                            <span x-text="badge.emoji"></span>
-                                        </a>
-                                    </template>
-                                </div>
+
+                            <hr class="my-4">
+
+                            <div>
+                                <strong class="text-gray-700">DID ID:</strong>
+                                <p class="font-mono text-xs break-all" x-text="selectedCredential.did_id"></p>
                             </div>
-                            
-                            <!-- Certifications Section -->
-                            <div x-show="credentialCertifications[cred.id] && credentialCertifications[cred.id].length > 0" class="mt-4 pt-4 border-t border-gray-200">
-                                <p class="text-sm font-semibold text-gray-700 mb-2">Certifications Uploaded:</p>
-                                <div class="flex flex-wrap gap-2">
-                                    <template x-for="cert in credentialCertifications[cred.id]" :key="cert.id">
-                                        <a 
-                                            :href="`https://solscan.io/tx/${cert.transaction_signature}?cluster=devnet`"
-                                            target="_blank"
-                                            rel="noopener"
-                                            :title="cert.certification_name"
-                                            class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 hover:bg-green-200 transition text-xl">
-                                            <span>📄✏️</span>
-                                        </a>
-                                    </template>
-                                </div>
+
+                            <div>
+                                <strong class="text-gray-700">SAS Credential ID:</strong>
+                                <p class="font-mono text-xs break-all" x-text="selectedCredential.sas_credential_id || 'N/A'"></p>
                             </div>
-                            
-                            <div class="flex gap-2 mt-4">
-                                <button 
-                                    @click="openBadgeModal(cred.id)"
-                                    :disabled="userAddress === cred.wallet_address"
-                                    :title="userAddress === cred.wallet_address ? 'You cannot send a badge to yourself' : 'Send a badge to this credential holder'"
-                                    class="flex-1 bg-yellow-500 text-white px-2 py-1 rounded text-sm hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                                    🎖️ Send Badge
-                                </button>
-                                <button 
-                                    @click="viewCredentialDetails(cred.id)"
-                                    class="flex-1 bg-gray-500 text-white px-2 py-1 rounded text-sm hover:bg-gray-600 transition">
-                                    View Full Details
-                                </button>
+
+                            <div>
+                                <strong class="text-gray-700">SPL Token Mint:</strong>
+                                <template x-if="selectedCredential.mint_address">
+                                    <a :href="`https://solscan.io/token/${selectedCredential.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
+                                        <span x-text="selectedCredential.mint_address"></span> ↗
+                                    </a>
+                                </template>
+                                <p x-show="!selectedCredential.mint_address">N/A</p>
+                            </div>
+
+                            <div>
+                                <strong class="text-gray-700">Transaction Hash:</strong>
+                                <template x-if="selectedCredential.transaction_hash">
+                                    <a :href="`https://solscan.io/tx/${selectedCredential.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
+                                        <span x-text="selectedCredential.transaction_hash"></span> ↗
+                                    </a>
+                                </template>
+                                <p x-show="!selectedCredential.transaction_hash">N/A</p>
+                            </div>
+
+                            <div>
+                                <strong class="text-gray-700">DID Document Hash:</strong>
+                                <p class="font-mono text-xs break-all" x-text="selectedCredential.did_document_hash"></p>
+                            </div>
+
+                            <div>
+                                <strong class="text-gray-700">Created:</strong>
+                                <p x-text="new Date(selectedCredential.created_at).toLocaleString()"></p>
+                            </div>
+
+                            <div>
+                                <strong class="text-gray-700">Badge Count:</strong>
+                                <p x-text="selectedCredential.badges_count"></p>
                             </div>
                         </div>
                     </template>
-                </div>
-
-                <!-- Pagination -->
-                <div x-show="!loading && filteredCredentials.length > 0 && (displayedCredentialsCount < filteredCredentials.length || displayedCredentialsCount > 10)" class="flex justify-center gap-4 mt-6">
-                    <button 
-                        @click="loadMoreCredentials" 
-                        x-show="displayedCredentialsCount < filteredCredentials.length"
-                        class="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                        Load More
-                    </button>
-                    <button 
-                        @click="collapseCredentials" 
-                        x-show="displayedCredentialsCount > 10"
-                        class="bg-gray-600 text-white px-6 py-2 rounded-md hover:bg-gray-700 transition-colors">
-                        Collapse
-                    </button>
-                </div>
-            </section>
-        </div>
-
-        <!-- Credential Details Modal -->
-        <div x-show="showCredentialDetailsModal" @click.self="showCredentialDetailsModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
-            <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <h3 class="text-2xl font-bold mb-4">Credential Details</h3>
-                <template x-if="selectedCredential">
-                    <div class="space-y-4 text-sm">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <strong class="text-gray-700">Full Name:</strong>
-                                <p x-text="selectedCredential.full_name"></p>
-                            </div>
-                            <div>
-                                <strong class="text-gray-700">Profession:</strong>
-                                <p x-text="selectedCredential.profession"></p>
-                            </div>
-                            <div>
-                                <strong class="text-gray-700">Email:</strong>
-                                <p x-text="selectedCredential.email"></p>
-                            </div>
-                            <div>
-                                <strong class="text-gray-700">Date of Birth:</strong>
-                                <p x-text="selectedCredential.date_of_birth"></p>
-                            </div>
-                        </div>
-
-                        <hr class="my-4">
-
-                        <div>
-                            <strong class="text-gray-700">DID ID:</strong>
-                            <p class="font-mono text-xs break-all" x-text="selectedCredential.did_id"></p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">SAS Credential ID:</strong>
-                            <p class="font-mono text-xs break-all" x-text="selectedCredential.sas_credential_id || 'N/A'"></p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">SPL Token Mint:</strong>
-                            <template x-if="selectedCredential.mint_address">
-                                <a :href="`https://solscan.io/token/${selectedCredential.mint_address}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
-                                    <span x-text="selectedCredential.mint_address"></span> ↗
-                                </a>
-                            </template>
-                            <p x-show="!selectedCredential.mint_address">N/A</p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">Transaction Hash:</strong>
-                            <template x-if="selectedCredential.transaction_hash">
-                                <a :href="`https://solscan.io/tx/${selectedCredential.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
-                                    <span x-text="selectedCredential.transaction_hash"></span> ↗
-                                </a>
-                            </template>
-                            <p x-show="!selectedCredential.transaction_hash">N/A</p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">DID Document Hash:</strong>
-                            <p class="font-mono text-xs break-all" x-text="selectedCredential.did_document_hash"></p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">Created:</strong>
-                            <p x-text="new Date(selectedCredential.created_at).toLocaleString()"></p>
-                        </div>
-
-                        <div>
-                            <strong class="text-gray-700">Badge Count:</strong>
-                            <p x-text="selectedCredential.badges_count"></p>
-                        </div>
-                    </div>
-                </template>
-                <div class="flex gap-2 mt-6">
-                    <button 
-                        @click="showCredentialDetailsModal = false"
-                        class="flex-1 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Badge Modal -->
-        <div x-show="showBadgeModal" @click.self="showBadgeModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full">
-                <h3 class="text-lg font-bold mb-4">Send a Badge</h3>
-                <form @submit.prevent="submitBadge()" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Emoji *</label>
-                        <div class="grid grid-cols-5 gap-2">
-                            <template x-for="emoji in ['⭐', '💯', '🏆', '🎖️', '👑', '✨', '🌟', '🔥', '💎', '🚀']" :key="emoji">
-                                <button 
-                                    type="button"
-                                    @click="badgeForm.emoji = emoji"
-                                    :class="{'bg-blue-100 border-2 border-blue-500': badgeForm.emoji === emoji, 'border-2 border-gray-300': badgeForm.emoji !== emoji}"
-                                    class="p-2 text-2xl rounded transition hover:border-blue-500">
-                                    <span x-text="emoji"></span>
-                                </button>
-                            </template>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                        <input 
-                            x-model="badgeForm.description" 
-                            type="text" 
-                            required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="e.g., Excellent patient care">
-                    </div>
-
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 mt-6">
                         <button 
-                            type="button"
-                            @click="showBadgeModal = false"
-                            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit"
-                            :disabled="!badgeForm.emoji || !badgeForm.description || sendingBadge"
-                            class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span x-show="!sendingBadge">🎖️ Send Badge</span>
-                            <span x-show="sendingBadge" x-text="badgeProgress || '⏳ Sending...'"></span>
+                            @click="showCredentialDetailsModal = false"
+                            class="flex-1 bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400">
+                            Close
                         </button>
                     </div>
-
-                    <div x-show="badgeProgress && sendingBadge" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded text-sm">
-                        <span x-text="badgeProgress"></span>
-                    </div>
-
-                    <div x-show="badgeError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
-                        <span x-text="badgeError"></span>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
+
+            <!-- Badge Modal -->
+            <div x-show="showBadgeModal" @click.self="showBadgeModal = false" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style="display: none;">
+                <div class="bg-white rounded-lg p-6 max-w-md w-full">
+                    <h3 class="text-lg font-bold mb-4">Send a Badge</h3>
+                    <form @submit.prevent="submitBadge()" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Select Emoji *</label>
+                            <div class="grid grid-cols-5 gap-2">
+                                <template x-for="emoji in ['⭐', '💯', '🏆', '🎖️', '👑', '✨', '🌟', '🔥', '💎', '🚀']" :key="emoji">
+                                    <button 
+                                        type="button"
+                                        @click="badgeForm.emoji = emoji"
+                                        :class="{'bg-blue-100 border-2 border-blue-500': badgeForm.emoji === emoji, 'border-2 border-gray-300': badgeForm.emoji !== emoji}"
+                                        class="p-2 text-2xl rounded transition hover:border-blue-500">
+                                        <span x-text="emoji"></span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                            <input 
+                                x-model="badgeForm.description" 
+                                type="text" 
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="e.g., Excellent patient care">
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button 
+                                type="button"
+                                @click="showBadgeModal = false"
+                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit"
+                                :disabled="!badgeForm.emoji || !badgeForm.description || sendingBadge"
+                                class="flex-1 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span x-show="!sendingBadge">🎖️ Send Badge</span>
+                                <span x-show="sendingBadge" x-text="badgeProgress || '⏳ Sending...'"></span>
+                            </button>
+                        </div>
+
+                        <div x-show="badgeProgress && sendingBadge" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded text-sm">
+                            <span x-text="badgeProgress"></span>
+                        </div>
+
+                        <div x-show="badgeError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
+                            <span x-text="badgeError"></span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Documentation Modal -->
+            <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+                <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                        <h2 class="text-2xl font-bold">HealthCred Documentation</h2>
+                        <button @click="showDocumentation = false" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                    </div>
+                    <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="px-6 pb-8">
+            <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm text-slate-500">
+                        <em x-text="appVersion"></em>
+                    </p>
+                    <p class="text-sm font-medium text-slate-600">
+                        © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>, All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </footer>
+
     </div>
 
     <script>
         function healthCred() {
             const log = window.createLogger('concept/healthcred');
             return {
+                appVersion: '@main/dev',
+                copyYear: '2026',
                 userAddress: null,
                 showWalletModal: false,
                 showManualAddressModal: false,
@@ -704,9 +730,25 @@
                 },
 
                 async init() {
+                    this.loadSystemInfo();
+
                     this.autoConnectWallet();
                     this.loadCredentials();
                     this.loadDocumentation();
+                },
+
+                async loadSystemInfo() {
+                    if ((new Date()).getFullYear() > 2026) {
+                        this.copyYear = "2026-" + (new Date()).getFullYear();
+                    }
+                    const log = window.createLogger('core/system');
+                    try {
+                        const res = await fetch(`/api/v1/system/info`);
+                        const data = await res.json();
+                        this.appVersion = data.appVersion;
+                    } catch (err) {
+                        log.error('Error loading system information', { err });
+                    }
                 },
 
                 autoConnectWallet() {
@@ -1195,27 +1237,5 @@
             };
         }
     </script>
-
-    <!-- Footer -->
-    <footer class="bg-white border-t mt-12">
-      <div class="max-w-7xl mx-auto px-8 py-8">
-        <!-- Sponsors in Footer -->
-        <div class="mb-6 flex flex-col md:flex-row items-center justify-center gap-6 opacity-60">
-          <a href="https://evi.as" target="_blank" rel="noopener noreferrer" title="Visit Evi.as">
-            <img src="/assets/evias-logo.png" alt="Evi.as logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-          <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" title="Visit re:Software">
-            <img src="/assets/resoftware-logo.png" alt="re:Software logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-          <a href="https://dhealth.com" target="_blank" rel="noopener noreferrer" title="Visit dHealth">
-            <img src="/assets/dhealth-logo.png" alt="dHealth logo" class="h-8 hover:opacity-100 transition-opacity">
-          </a>
-        </div>
-        <!-- Copyright -->
-        <div class="text-center text-gray-600 text-sm border-t pt-6">
-          <p>© 2026 <a href="https://evi.as" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a> All rights reserved.</p>
-        </div>
-      </div>
-    </footer>
 </body>
 </html>
