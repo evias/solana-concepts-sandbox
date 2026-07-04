@@ -6,7 +6,7 @@
 [![Alpine.js](https://img.shields.io/badge/alpinejs-white.svg?style=for-the-badge&logo=alpinedotjs&logoColor=%238BC0D0)](https://alpinejs.dev/)
 [![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 
-A comprehensive sandbox for exploring Solana concepts, building with SPL tokens, and testing dapp integration patterns. Includes a fully functional **PetTracker** application that demonstrates hybrid on-chain/off-chain storage using SPL tokens.
+A comprehensive sandbox for exploring Solana concepts, building with SPL tokens, and testing dapp integration patterns. Includes a fully functional **pets registry** and **healthcare credentials** to demonstrates hybrid on-chain/off-chain storage using SPL tokens, and Solana Attestation Service.
 
 ⚠️ CAUTION: EXPERIMENTAL SOFTWARE
 
