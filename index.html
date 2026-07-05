@@ -12,10 +12,10 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
   <div id="sandbox-container" class="min-h-screen flex flex-col" x-data="landingPage()">
-    <header class="px-6 pt-6">
-      <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+    <header class="px-2 sm:px-6 pt-6">
+      <div class="mx-auto flex max-w-screen sm:max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
         <div class="flex items-center gap-3">
-          <div class="h-8 w-8 rounded-full bg-indigo-600"></div>
+          <div class="h-4 w-4 sm:h-8 sm:w-8 rounded-full bg-indigo-600"></div>
           <div>
             <p class="text-sm font-semibold text-slate-900">SCS - Solana Concepts Sandbox</p>
             <p class="text-xs text-slate-500">Explore blockchain concepts with simple use cases.</p>
@@ -29,29 +29,29 @@
       </div>
     </header>
 
-    <main class="mx-auto min-w-7xl max-w-7xl px-6 pb-16 pt-8">
-      <section class="overflow-hidden rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 px-8 py-14 shadow-[0_24px_70px_rgba(79,70,229,0.30)] md:px-12">
-        <div class="max-w-3xl">
-          <p class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-sm font-medium text-white/90 backdrop-blur">
+    <main class="mx-auto max-w-screen sm:min-w-7xl sm:max-w-7xl px-2 sm:px-6 pb-16 pt-4 sm:pt-8">
+      <section class="overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 px-8 py-14 shadow-[0_24px_70px_rgba(79,70,229,0.30)] md:px-12">
+        <div class="max-w-3xl sm:max-w-screen">
+          <p class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-1 text-xs sm:text-sm font-medium text-white/90 backdrop-blur">
             Solana • SPL Tokens • Credentials • Attestations
           </p>
 
-          <h1 class="text-4xl font-bold tracking-tight text-white md:text-6xl">
+          <h1 class="text-xl sm:text-6xl font-bold tracking-tight text-white">
             Solana Concepts Sandbox
           </h1>
 
-          <p class="mt-5 max-w-2xl text-lg leading-8 text-white/90 md:text-xl">
+          <p class="mt-5 max-w-screen sm:max-w-2xl text-md sm:text-xl leading-8 text-white/90">
             Explore SPL tokens, credentials, attestations, and hybrid dapps in one polished sandbox environment.
           </p>
 
           <div class="mt-8 flex flex-wrap gap-3">
             <a href="https://resoftware.es/get-a-free-quote/"
                target="_blank"
-               class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50">
+               class="inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-xs sm:text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-indigo-50">
               Request a demo
             </a>
             <a href="#concepts"
-               class="inline-flex items-center justify-center rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15">
+               class="inline-flex items-center justify-center rounded-xl border border-white/30 bg-white/10 px-5 py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15">
               Browse Concepts
             </a>
           </div>
@@ -136,14 +136,7 @@
                 <!-- Accent bar -->
                 <div
                   class="h-2"
-                  :class="{
-                    'bg-indigo-600': concept.id === 'pettracker',
-                    'bg-sky-500': concept.id === 'healthcred',
-                    'bg-emerald-500': concept.id === 'carecircle',
-                    'bg-violet-500': concept.id === 'petvax',
-                    'bg-amber-500': concept.id === 'petdiet',
-                    'bg-rose-500': concept.id === 'hcpconsole'
-                  }"
+                  :class="concept.color"
                 ></div>
 
                 <div class="p-6">
@@ -231,10 +224,11 @@
             id: 'pettracker',
             name: 'PetTracker',
             subtitle: 'Registry for Pets',
-            description: 'Register and manage pets as SPL tokens on Solana devnet. Explore hybrid on-chain/off-chain storage patterns with SQLite metadata and blockchain verification.',
+            description: 'Register and manage pets as SPL tokens on Solana devnet. Explore hybrid on-chain/off-chain storage patterns with SQLite and blockchain verification.',
             link: '/pettracker',
             enabled: true,
-            tags: ['SPL Token (NFT)', 'SAS Credential', 'SAS Authorization']
+            tags: ['SPL Token', 'SAS Credential', 'NFT'],
+            color: 'bg-indigo-600'
           },
           {
             id: 'petvax',
@@ -243,7 +237,8 @@
             description: 'Proof of immunization system combining SPL tokens with vaccination records. Create verifiable, on-chain proof of veterinary care and vaccine administration.',
             link: '/petvax',
             enabled: true,
-            tags: ['SPL Token (NFT)', 'Digital Signature', 'SAS Authorization', 'Transaction Memo']
+            tags: ['SPL Token', 'Digital Signature', 'SAS Credential'],
+            color: 'bg-violet-500'
           },
           {
             id: 'petdiet',
@@ -252,34 +247,68 @@
             description: 'Decentralized nutrition plans with daily feeding logs on-chain. Create customized meal schedules and cryptographically verify feeding actions.',
             link: '/petdiet',
             enabled: true,
-            tags: ['SPL Token (NFT)', 'Digital Signature', 'SAS Authorization', 'Transaction Memo']
+            tags: ['SPL Token', 'Digital Signature', 'SAS Credential'],
+            color: 'bg-amber-500'
           },
           {
             id: 'healthcred',
             name: 'HealthCred',
             subtitle: 'Healthcare credentials',
-            description: 'Public registry for healthcare worker credentials with badges, certifications, and DID documents on-chain.',
+            description: 'Public registry for healthcare worker credentials with badges, and DID documents on-chain. Create a SAS credential and attach your certifications.',
             link: '/healthcred',
             enabled: true,
-            tags: ['SPL Token (NFT)', 'SAS Credential', 'NFT Badges', 'Storage']
+            tags: ['SPL Token', 'SAS Credential', 'NFT Badges'],
+            color: 'bg-sky-500'
           },
           {
             id: 'carecircle',
             name: 'CareCircle',
             subtitle: 'Storage permission mandates',
-            description: 'Secure file sharing and caregiver delegation via SAS Credentials.',
+            description: 'Secure file sharing and caregiver delegation via SAS Credentials. Authorize caregivers and/or family members to access your healthcare related storage.',
             link: '/carecircle',
             enabled: true,
-            tags: ['SAS Credential', 'SAS Authorization', 'Storage', 'Permissions']
+            tags: ['SAS Credential', 'Mandates', 'Storage'],
+            color: 'bg-emerald-500'
           },
           {
             id: 'hcpconsole',
             name: 'HCPConsole',
             subtitle: 'Patient journeys with AI',
-            description: 'Type or dictate a patient journey, generates prompt with SAS Attestation.',
+            description: 'Type or dictate a patient journey, generates a verifiable AI prompt with SAS Attestation. Create the QRCode your patients were missing to date. ',
             link: '/hcpconsole',
             enabled: true,
-            tags: ['SAS Credential', 'SAS Authorization', 'QRCode', 'AI Prompt']
+            tags: ['SAS Credential', 'QRCode', 'AI Prompt'],
+            color: 'bg-rose-500'
+          },
+          {
+            id: 'tokenwall',
+            name: 'TokenWall',
+            subtitle: 'Access by token',
+            description: 'Create QRCode invoices to require token payments to unlock access. Lock your website/product/content with a token transfer (paywall), e.g. Gated content.',
+            link: '/tokenwall',
+            enabled: false,
+            tags: ['SPL Token', 'QRCode', 'Payment', 'Invoice'],
+            color: 'bg-teal-500'
+          },
+          {
+            id: 'prescrypted',
+            name: 'Prescrypted',
+            subtitle: 'Verifiable prescriptions',
+            description: 'Doctors issue prescriptions, pharmacies may verify on-chain to prevent fraud. No more lost and/or forged prescriptions. Prescriptions made verifiable.',
+            link: '/prescrypted',
+            enabled: false,
+            tags: ['SPL Token', 'SAS Credential', 'QRCode'],
+            color: 'bg-yellow-500'
+          },
+          {
+            id: 'petigree',
+            name: 'Petigree',
+            subtitle: 'Pets family trees',
+            description: 'Tracks pet lineage and builds a visual family tree, using the PetTracker registry. Create beautiful and dynamic pets family trees ready to be printed.',
+            link: '/petigree',
+            enabled: false,
+            tags: ['SPL Token', 'SAS Credential', 'QRCode'],
+            color: 'bg-olive-500'
           }
         ],
         get availableTags() {
