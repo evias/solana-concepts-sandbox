@@ -15,16 +15,38 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div class="container mx-auto" x-data="petDiet()">
-        <header class="px-6 pt-6">
+        <header class="px-2 sm:px-6 pt-6">
             <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
                 <div class="flex items-center gap-3">
                     <div class="h-8 w-8 rounded-full bg-amber-500"></div>
                     <div>
                         <p class="text-sm font-semibold text-slate-900">PetDiet</p>
-                        <p class="text-xs text-slate-500">Nutrition Plans & Feeding Logs for Registered Pets</p>
+                        <p class="text-xs text-slate-500">Nutrition Plans for beloved Pets</p>
                     </div>
                 </div>
-
+                <div class="inline sm:hidden text-xs -mt-4">
+                    <a href="/">
+                        <svg class="pl-4 pt-4 w-16 h-16" viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+                            <rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/>
+                            <g transform="matrix(0.04 0 0 0.04 12 12)" >
+                                <g style="" >
+                                    <g transform="matrix(1 0 0 1 0 0)" >
+                                        <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(224,79,95); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -256)" d="M 7.9 256 C 7.9 119 119 7.9 256 7.9 C 393 7.9 504.1 119 504.1 256 C 504.1 393 393 504.1 256 504.1 C 119 504.1 7.9 393 7.9 256 z" stroke-linecap="round" />
+                                    </g>
+                                    <g transform="matrix(1 0 0 1 -0.05 -67.52)" >
+                                        <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-255.95, -188.48)" d="M 408.1 206.8 L 258 131.9 C 256.7 131.3 255.3 131.3 254 131.9 L 103.80000000000001 206.8 C 102.10000000000001 207.60000000000002 101.10000000000001 209.20000000000002 101.10000000000001 211.10000000000002 L 101.10000000000001 240.70000000000002 C 101.10000000000001 242.3 101.9 243.8 103.30000000000001 244.70000000000002 C 104.70000000000002 245.60000000000002 106.4 245.70000000000002 107.80000000000001 245.00000000000003 L 256 171.00000000000003 L 404.1 245.00000000000003 C 404.70000000000005 245.30000000000004 405.40000000000003 245.50000000000003 406.1 245.50000000000003 C 407 245.50000000000003 407.90000000000003 245.30000000000004 408.6 244.80000000000004 C 410 243.90000000000003 410.8 242.40000000000003 410.8 240.80000000000004 L 410.8 211 C 410.8 209.2 409.8 207.5 408.1 206.8 z" stroke-linecap="round" />
+                                    </g>
+                                    <g transform="matrix(1 0 0 1 0 16.3)" >
+                                        <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -272.3)" d="M 380.5 245.8 L 256 183.8 L 131.5 245.8 L 131.5 360.8 L 200.5 360.8 L 200.5 272.6 L 248 272.6 L 248 360.8 L 380.5 360.8 z" stroke-linecap="round" />
+                                    </g>
+                                    <g transform="matrix(1 0 0 1 23.7 32.6)" >
+                                        <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(234,73,73); fill-rule: nonzero; opacity: 1;" transform=" translate(-279.7, -288.6)" d="M 263.7 272.6 L 295.7 272.6 L 295.7 304.6 L 263.7 304.6 z" stroke-linecap="round" />
+                                    </g>
+                                </g>
+                            </g>
+                        </svg>
+                    </a>
+                </div>
                 <div class="hidden sm:flex text-sm text-slate-500">
                     <a href="/" class="px-2 transition hover:-translate-y-1">← Back</a>
 
@@ -40,35 +62,35 @@
             </div>
         </header>
 
-        <main class="mx-auto min-w-7xl max-w-7xl px-6 pb-16 pt-8">
+        <main class="mx-auto min-w-screen max-w-screen sm:min-w-7xl sm:max-w-7xl px-2 sm:px-5 pb-16 pt-8">
             <div class="space-y-8">
                 <!-- Wallet Connection -->
                 <section class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-bold mb-4">Connect Account</h2>
+                    <h2 class="text-md sm:text-2xl font-bold mb-4">🔐 Wallet Connection</h2>
                     <div class="flex gap-2 items-center flex-wrap">
                         <button 
                             type="button"
                             @click="showWalletModal = true"
                             :class="userAddress ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'"
-                            class="text-white px-4 py-2 rounded-md transition-colors">
-                            <span x-show="!userAddress">Connect Wallet</span>
+                            class="text-sm sm:text-md text-white px-4 py-2 rounded-md transition-colors">
+                            <span x-show="!userAddress">🔗 Connect Wallet</span>
                             <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
                         </button>
                         <button 
                             type="button"
                             x-show="userAddress"
                             @click="disconnectWallet"
-                            class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
-                            Disconnect
+                            class="text-sm sm:text-md bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+                            🔓 Disconnect
                         </button>
                     </div>
-                    <p x-show="!userAddress" class="text-sm text-gray-500 mt-2">Connect your wallet to create nutrition plans or log feeding actions</p>
-                    <p x-show="userAddress" class="text-sm text-gray-600 mt-2 font-mono break-all" x-text="'Your Account: ' + userAddress"></p>
+                    <p x-show="!userAddress" class="text-xs sm:text-sm text-gray-600 mt-3">Connect your wallet to create nutrition plans or log feeding actions</p>
+                    <p x-show="userAddress" class="text-xs sm:text-sm text-gray-700 mt-3 font-mono break-all bg-white p-3 rounded border border-green-200" x-text="'Your Account: ' + userAddress"></p>
                 </section>
 
                 <!-- Select Pet -->
                 <section class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-bold mb-4">Select a Pet</h2>
+                    <h2 class="text-md sm:text-2xl font-bold mb-4">Select a Pet</h2>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Available Pets</label>
@@ -109,7 +131,7 @@
 
                 <!-- Nutrition Plans List -->
                 <section x-show="selectedPet" class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-2xl font-bold mb-4">Nutrition Plans</h2>
+                    <h2 class="text-md sm:text-2xl font-bold mb-4">Nutrition Plans</h2>
                     
                     <div x-show="nutritionPlans.length === 0" class="text-gray-500 py-4">
                         No nutrition plans created yet for this pet.
@@ -483,14 +505,14 @@
         </main>
 
         <!-- Footer -->
-        <footer class="px-6 pb-8">
+        <footer class="px-2 sm:px-6 pb-8">
             <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-sm text-slate-500">
+                <div class="flex flex-col gap-3 sm:flex-row items-center sm:items-start sm:justify-between">
+                    <p class="text-xs sm:text-sm text-slate-500">
                         <em x-text="appVersion"></em>
                     </p>
-                    <p class="text-sm font-medium text-slate-600">
-                        © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>, All rights reserved.
+                    <p class="text-xs sm:text-sm text-center font-medium text-slate-600">
+                        © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>,<br />All rights reserved.
                     </p>
                 </div>
             </div>
