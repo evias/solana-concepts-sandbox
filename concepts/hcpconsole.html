@@ -62,41 +62,60 @@
 
   <main class="print:hidden mx-auto max-w-[880px] px-4 py-7 pb-14 md:px-[18px]">
 
-    <section class="mb-8 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
-      <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Connect your Wallet</h2>
-      <div class="mt-2 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          @click="showWalletModal = true"
-          class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
-          :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
-          <span x-show="!userAddress">Connect Wallet</span>
-          <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
-        </button>
-        <button
-          type="button"
-          x-show="userAddress"
-          @click="disconnectWallet"
-          class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white hover:bg-red-700">
-          Disconnect
+    <section
+      class="mb-8 rounded-[14px] border bg-white p-3 sm:p-7"
+      :class="userAddress && selectedCredential ? 'border-green-700' : 'border-red-700'">
+      <div class="flex justify-between items-center mb-2">
+        <h2
+          @click="if (userAddress && selectedCredential) showWalletDetails = !showWalletDetails"
+          class="text-md sm:text-[1.25rem] font-bold">
+          <span x-show="!userAddress">Connect your Wallet</span>
+          <span x-show="userAddress" x-text="'Connected as ' + getCredentialName() + ' (' + shortenAddr(userAddress) + ')'"></span>
+        </h2>
+        <button 
+          x-show="userAddress && selectedCredential"
+          @click="showWalletDetails = !showWalletDetails"
+          class="text-gray-600 hover:text-gray-800 text-md sm:text-2xl font-bold"
+          :title="showWalletDetails ? 'Collapse' : 'Expand'">
+          <span x-show="showWalletDetails">▼</span>
+          <span x-show="!showWalletDetails">▶</span>
         </button>
       </div>
-      <p x-show="!userAddress" class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
-        Connect your wallet and select a credential
-      </p>
+      <div class="mt-2 flex flex-col" x-show="showWalletDetails" x-collapse>
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            @click="showWalletModal = true"
+            class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
+            :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
+            <span x-show="!userAddress">Connect Wallet</span>
+            <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+          </button>
+          <button
+            type="button"
+            x-show="userAddress"
+            @click="disconnectWallet"
+            class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white hover:bg-red-700">
+            Disconnect
+          </button>
+        </div>
+        <p x-show="!userAddress" class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
+          Connect your wallet and select a credential
+        </p>
 
-      <label for="credential" class="mt-[18px] mb-2 block text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">
-        Associated credential
-      </label>
-      <select id="credential" @change="selectedCredential = $el.value" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-        <option value="">Select a credential...</option>
-        <template x-for="cred in credentials" :key="cred.id">
-          <option :value="cred.sasCredentialId" x-text="cred.name"></option>
-        </template>
-      </select>
-      <div x-show="userAddress && credentials.length === 0" class="mt-3 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
-        You don't have any credentials yet.
-        <a href="/healthcred" class="font-semibold underline">Create your first credential in HealthCred</a>.
+        <label for="credential" class="mt-[18px] mb-2 block text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+          Associated credential
+        </label>
+        <select id="credential" @change="selectedCredential = $el.value" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+          <option value="">Select a credential...</option>
+          <template x-for="cred in credentials" :key="cred.id">
+            <option :value="cred.sasCredentialId" x-text="cred.name"></option>
+          </template>
+        </select>
+        <div x-show="userAddress && credentials.length === 0" class="mt-3 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
+          You don't have any credentials yet.
+          <a href="/healthcred" class="font-semibold underline">Create your first credential in HealthCred</a>.
+        </div>
       </div>
     </section>
 
@@ -174,7 +193,7 @@
 
     <section x-show="currentScreen===2" class="animate-fade">
       <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
-        <h2 class="font-display text-md sm:text-[1.25rem] font-semibold font-semibold text-[#16352C]">Review the system prompt</h2>
+        <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Review the system prompt</h2>
         <p class="mb-[22px] mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">This is the instruction set the QR code will carry. Edit freely. The guardrails below are always included and cannot be removed.</p>
 
         <div class="mb-5 grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
@@ -198,7 +217,7 @@
 
     <section x-show="currentScreen===3" class="animate-fade">
       <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
-        <h2 class="font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+        <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">
           <span class="hidden sm:flex">Generate and register on chain</span>
           <span class="flex sm:hidden">Register on chain</span>
         </h2>
@@ -333,6 +352,7 @@ function hcpConsole() {
     userAddress: '',
     manualAddress: '',
     showWalletModal: false,
+    showWalletDetails: true,
     credentials: [],
     selectedCredential: '',
 
@@ -369,7 +389,23 @@ function hcpConsole() {
       });
     },
 
+    getCredentialName() {
+      if (!this.selectedCredential) {
+        return '';
+      }
+
+      for (let i = 0; i < this.credentials.length; i++) {
+        if (this.credentials[i].sasCredentialId == this.selectedCredential) {
+          return this.credentials[i].name;
+        }
+      }
+
+      return '';
+    },
+
     async init() {
+      this.showWalletDetails = !this.userAddress || !this.selectedCredential;
+
       // Setup speech recognition for Dictate button
       const micBtn = document.getElementById('micBtn');
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -752,7 +788,12 @@ ${purposes.map(p=>'- '+p).join('\n')}
     shortenHash(hash) {
       if (!hash || hash.length < 10) return hash;
       return hash.substring(0, 6) + '...' + hash.substring(hash.length - 4);
-    }
+    },
+
+    shortenAddr(addr) {
+      if (!addr || addr.length < 10) return addr;
+      return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
+    } 
   };
 }
   </script>

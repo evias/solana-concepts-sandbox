@@ -923,6 +923,9 @@
   .border-red-600 {
     border-color: var(--color-red-600);
   }
+  .border-red-700 {
+    border-color: var(--color-red-700);
+  }
   .border-slate-100 {
     border-color: var(--color-slate-100);
   }
