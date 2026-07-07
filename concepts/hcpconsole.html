@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
 </head>
 <body x-data="hcpConsole()" @load="init()" x-init="init()" class="bg-[#F4F6F5] text-[#22312D] font-sans print:bg-white">
-  <header class="print:hidden flex flex-wrap items-center gap-4 bg-[#16352C] px-7 py-[18px] text-white">
+  <header class="print:hidden flex sm:flex-wrap items-center gap-4 bg-[#16352C] px-7 py-[18px] text-white">
     <a href="/" class="flex items-center gap-2 opacity-80 transition-opacity hover:opacity-100">
       <span class="text-[1.2rem]">←</span>
     </a>
@@ -29,46 +29,46 @@
         <line x1="22" y1="17" x2="29" y2="27"/>
       </g>
     </svg>
-    <div class="font-display text-[1.15rem] font-semibold tracking-[.2px]">
+    <div class="font-display text-[1rem] sm:text-[1.15rem] font-semibold tracking-[.2px] inline">
       dHealth Intelligence
-      <small class="block font-sans text-[.8rem] font-normal tracking-[.3px] opacity-75">
+      <small class="block font-sans text-[.7rem] sm:text-[.8rem] font-normal tracking-[.3px] opacity-75">
         Personal Health Agents: learn, simplify, prepare for care
       </small>
     </div>
-    <div class="ml-auto rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[.85rem] tracking-[.4px]">HCP Console</div>
+    <div class="hidden sm:flex ml-auto rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[.85rem] tracking-[.4px]">HCP Console</div>
   </header>
 
   <nav aria-label="Progress" class="print:hidden flex flex-wrap justify-center gap-0 border-b border-[#D9E2DF] bg-white px-3 py-[18px]">
     <div id="s1" class="flex items-center gap-2 px-3 text-[.92rem] font-semibold transition-colors" :class="currentScreen >= 1 ? 'text-[#16352C]' : 'text-[#5F6F6A]'">
       <div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 text-[.85rem] font-bold" :class="currentScreen >= 1 ? 'border-[#2E7D6B] bg-[#2E7D6B] text-white' : 'border-[#D9E2DF] bg-white text-[#22312D]'">1</div>
-      Describe
+      <span class="hidden sm:flex">Describe</span>
     </div>
-    <div class="mt-[14px] h-0.5 w-14 border-t border-dashed border-[#D9E2DF]"></div>
+    <div class="mt-[14px] h-0.5 w-6 sm:w-14 border-t border-dashed border-[#D9E2DF]"></div>
     <div id="s2" class="flex items-center gap-2 px-3 text-[.92rem] transition-colors" :class="currentScreen >= 2 ? 'text-[#16352C] font-semibold' : 'text-[#5F6F6A]'">
       <div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 text-[.85rem] font-bold" :class="currentScreen >= 2 ? 'border-[#2E7D6B] bg-[#2E7D6B] text-white' : 'border-[#D9E2DF] bg-white text-[#22312D]'">2</div>
-      Review prompt
+      <span class="hidden sm:flex">Review prompt</span>
     </div>
-    <div class="mt-[14px] h-0.5 w-14 border-t border-dashed border-[#D9E2DF]"></div>
+    <div class="mt-[14px] h-0.5 w-6 sm:w-14 border-t border-dashed border-[#D9E2DF]"></div>
     <div id="s3" class="flex items-center gap-2 px-3 text-[.92rem] transition-colors" :class="currentScreen >= 3 ? 'text-[#16352C] font-semibold' : 'text-[#5F6F6A]'">
       <div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 text-[.85rem] font-bold" :class="currentScreen >= 3 ? 'border-[#2E7D6B] bg-[#2E7D6B] text-white' : 'border-[#D9E2DF] bg-white text-[#22312D]'">3</div>
-      Generate and attest
+      <span class="hidden sm:flex">Generate and attest</span>
     </div>
-    <div class="mt-[14px] h-0.5 w-14 border-t border-dashed border-[#D9E2DF]"></div>
+    <div class="mt-[14px] h-0.5 w-6 sm:w-14 border-t border-dashed border-[#D9E2DF]"></div>
     <div id="s4" class="flex items-center gap-2 px-3 text-[.92rem] transition-colors" :class="currentScreen >= 4 ? 'text-[#16352C] font-semibold' : 'text-[#5F6F6A]'">
       <div class="flex h-[30px] w-[30px] items-center justify-center rounded-full border-2 text-[.85rem] font-bold" :class="currentScreen >= 4 ? 'border-[#2E7D6B] bg-[#2E7D6B] text-white' : 'border-[#D9E2DF] bg-white text-[#22312D]'">4</div>
-      Share
+      <span class="hidden sm:flex">Share</span>
     </div>
   </nav>
 
   <main class="print:hidden mx-auto max-w-[880px] px-4 py-7 pb-14 md:px-[18px]">
 
-    <section class="mb-8 rounded-[14px] border border-[#D9E2DF] bg-white p-7">
-      <h2 class="font-display text-[1.25rem] font-semibold text-[#16352C]">Connect Account</h2>
-      <div class="mt-4 flex flex-wrap items-center gap-3">
+    <section class="mb-8 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+      <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Connect your Wallet</h2>
+      <div class="mt-2 flex flex-wrap items-center gap-3">
         <button
           type="button"
           @click="showWalletModal = true"
-          class="rounded-[6px] border px-4 py-2.5 text-[.95rem] font-medium text-white transition-colors"
+          class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
           :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
           <span x-show="!userAddress">Connect Wallet</span>
           <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
@@ -77,18 +77,18 @@
           type="button"
           x-show="userAddress"
           @click="disconnectWallet"
-          class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-[.95rem] font-medium text-white hover:bg-red-700">
+          class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white hover:bg-red-700">
           Disconnect
         </button>
       </div>
-      <p x-show="!userAddress" class="mt-2 text-[.875rem] text-[#6b7280]">
-        Connect your wallet to access and manage previous forms
+      <p x-show="!userAddress" class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
+        Connect your wallet and select a credential
       </p>
 
-      <label for="credential" class="mt-[18px] block font-semibold text-[#16352C]">
-        Associated credential <span class="text-[.85rem] font-normal text-[#5F6F6A]">(select the credential to attest)</span>
+      <label for="credential" class="mt-[18px] mb-2 block text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">
+        Associated credential
       </label>
-      <select id="credential" @change="selectedCredential = $el.value" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+      <select id="credential" @change="selectedCredential = $el.value" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
         <option value="">Select a credential...</option>
         <template x-for="cred in credentials" :key="cred.id">
           <option :value="cred.sasCredentialId" x-text="cred.name"></option>
@@ -101,43 +101,47 @@
     </section>
 
     <section x-show="currentScreen===1" class="animate-fade">
-      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-7">
-        <h2 class="font-display text-[1.25rem] font-semibold text-[#16352C]">Describe the patient journey</h2>
-        <p class="mb-[22px] mt-1 text-[.95rem] text-[#5F6F6A]">Type or dictate during the consultation. This takes about one minute.</p>
+      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+        <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe patient journey</h2>
+        <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Type or dictate during the consultation. This takes about one minute.</p>
 
-        <label for="caseRef" class="block font-semibold text-[#16352C]">
-          Case reference <span class="text-[.85rem] font-normal text-[#5F6F6A]">(initials or internal number, never a full name)</span>
-        </label>
-        <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-
-        <label for="diagnosis" class="mt-[18px] block font-semibold text-[#16352C]">Health problem or diagnosis, and today's instructions</label>
-        <div class="relative">
-          <textarea id="diagnosis" placeholder="e.g. Newly diagnosed asthma. Started on a daily inhaled corticosteroid and a relief inhaler. Watch for night symptoms and increased use of the relief inhaler. Follow up in three weeks." class="min-h-[120px] w-full resize-y rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20"></textarea>
-          <button class="mic-btn absolute bottom-2.5 right-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#D9E2DF] bg-[#F4F6F5] px-3.5 py-2 text-[.85rem] text-[#16352C] hover:bg-[#E7F1EE]" id="micBtn" type="button" title="Dictate">&#127908; Dictate</button>
+        <div class="my-2 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-4 py-3 text-xs sm:text-[.88rem] text-warn">
+          Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.
         </div>
 
-        <label class="mt-[18px] block font-semibold text-[#16352C]">Purpose of the agent <span class="text-[.85rem] font-normal text-[#5F6F6A]">(select all that apply)</span></label>
-        <div class="flex flex-wrap gap-2" id="purposeChips">
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Explain the condition</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Support medication adherence</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Daily or weekly check-ins</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Recognise warning signs</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Prepare for the next visit</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Explain lab results and prescriptions</button>
-          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Nutrition and lifestyle guidance</button>
+        <label for="caseRef" class="block text-md font-semibold text-[#16352C]">
+          Case reference <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(initials or number, never a full name)</em>
+        </label>
+        <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+
+        <label for="diagnosis" class="mt-[18px] block text-md font-semibold text-[#16352C]">Health problem or diagnosis, and today's instructions</label>
+        <div class="relative">
+          <textarea id="diagnosis" placeholder="e.g. Newly diagnosed asthma. Started on a daily inhaled corticosteroid and a relief inhaler. Watch for night symptoms and increased use of the relief inhaler. Follow up in three weeks." class="min-h-[120px] w-full resize-y rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[8px] sm:py-[11px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20"></textarea>
+          <button class="mic-btn absolute bottom-2.5 right-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#D9E2DF] bg-[#F4F6F5] px-1.5 sm:px-3.5 py-1.5 sm:py-2 text-xs sm:text-[.85rem] text-[#16352C] hover:bg-[#E7F1EE]" id="micBtn" type="button" title="Dictate">&#127908; Dictate</button>
+        </div>
+
+        <label class="mt-[18px] block text-md font-semibold text-[#16352C]">Purpose of the agent <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(select all that apply)</em></label>
+        <div class="flex flex-wrap gap-2 mt-2" id="purposeChips">
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Explain the condition</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Support medication adherence</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Daily or weekly check-ins</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Recognise warning signs</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Prepare for the next visit</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Explain lab results and prescriptions</button>
+          <button class="chip rounded-full border border-[#D9E2DF] bg-white px-4 py-2 text-xs sm:text-[.9rem] text-[#22312D]" type="button" @click="toggleChip($el)">Nutrition and lifestyle guidance</button>
         </div>
 
         <div class="mt-4 grid gap-4 md:grid-cols-2">
           <div>
-            <label class="block font-semibold text-[#16352C]">Agent type</label>
+            <label class="block text-md font-semibold text-[#16352C] mb-2">Agent type</label>
             <div id="agentToggle" class="flex w-fit overflow-hidden rounded-[12px] border border-[#D9E2DF]">
-              <button class="selected rounded-none border-0 bg-[#2E7D6B] px-5 py-2.5 text-sm font-semibold text-white" type="button" @click="selectToggle($el)">Personal Health Agent</button>
-              <button class="rounded-none border-0 bg-white px-5 py-2.5 text-sm font-semibold text-[#5F6F6A]" type="button" @click="selectToggle($el)">Care Partner</button>
+              <button class="selected rounded-none border-0 bg-[#2E7D6B] px-5 py-2.5 text-xs sm:text-sm font-semibold text-white" type="button" @click="selectToggle($el)">Personal Health Agent</button>
+              <button class="rounded-none border-0 bg-white px-5 py-2.5 text-xs sm:text-sm font-semibold text-[#5F6F6A]" type="button" @click="selectToggle($el)">Care Partner</button>
             </div>
           </div>
           <div>
-            <label for="lang" class="block font-semibold text-[#16352C]">Language</label>
-            <select id="lang" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <label for="lang" class="block text-md font-semibold text-[#16352C] mb-2">Language</label>
+            <select id="lang" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-sm text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
               <option>German</option><option selected>English</option><option>French</option><option>Italian</option><option>Spanish</option>
             </select>
           </div>
@@ -145,58 +149,60 @@
 
         <div class="mt-4 grid gap-4 md:grid-cols-2">
           <div>
-            <label for="period" class="block font-semibold text-[#16352C]">Support period</label>
-            <select id="period" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <label for="period" class="block text-md font-semibold text-[#16352C] mb-2">Support period</label>
+            <select id="period" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-sm text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
               <option>7 days</option><option selected>30 days</option><option>90 days</option><option>180 days</option><option>365 days</option>
             </select>
           </div>
           <div>
-            <label for="followup" class="block font-semibold text-[#16352C]">Next consultation <span class="text-[.85rem] font-normal text-[#5F6F6A]">(optional)</span></label>
-            <input type="date" id="followup" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <label for="followup" class="block text-md font-semibold text-[#16352C]">Next consultation <span class="text-[.85rem] font-normal text-[#5F6F6A]">(optional)</span></label>
+            <input type="date" id="followup" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 text-sm text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
           </div>
         </div>
 
-        <label for="escalation" class="mt-[18px] block font-semibold text-[#16352C]">Escalation contact for urgent concerns</label>
-        <input type="text" id="escalation" placeholder="e.g. Praxis Dr. Weber, 044 123 45 67, or 144 in an emergency" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-
-        <div class="mt-5 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-4 py-3 text-[.88rem] text-warn">
-          Do not enter names, addresses, or insurance numbers. The agent is configured for one journey, not for one identity. Patient data stays with the patient.
-        </div>
+        <label for="escalation" class="mt-[18px] block text-md font-semibold text-[#16352C] mb-2">Escalation contact for urgent concerns</label>
+        <input type="text" id="escalation" placeholder="e.g. Praxis Dr. Weber, 044 123 45 67, or 144 in an emergency" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] text-sm text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
 
         <div class="mt-6 flex flex-wrap justify-between gap-3">
           <span></span>
-          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep2" :disabled="!userAddress || !selectedCredential">
-            Generate system prompt &rarr;
+          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep2" :disabled="!userAddress || !selectedCredential">
+            Generate prompt &rarr;
           </button>
         </div>
       </div>
     </section>
 
     <section x-show="currentScreen===2" class="animate-fade">
-      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-7">
-        <h2 class="font-display text-[1.25rem] font-semibold text-[#16352C]">Review the system prompt</h2>
-        <p class="mb-[22px] mt-1 text-[.95rem] text-[#5F6F6A]">This is the instruction set the QR code will carry. Edit freely. The guardrails below are always included and cannot be removed.</p>
+      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+        <h2 class="font-display text-md sm:text-[1.25rem] font-semibold font-semibold text-[#16352C]">Review the system prompt</h2>
+        <p class="mb-[22px] mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">This is the instruction set the QR code will carry. Edit freely. The guardrails below are always included and cannot be removed.</p>
 
         <div class="mb-5 grid gap-2 md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Educates and prepares. Never diagnoses or treats.</div>
-          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Escalates to your contact or 144 when symptoms worsen.</div>
-          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Shows the medical disclaimer. Low risk under the EU AI Act.</div>
-          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>No data leaves the patient without explicit consent.</div>
+          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-xs sm:text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Educates and prepares. Never diagnoses or treats.</div>
+          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-xs sm:text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Escalates to your contact or 144 when symptoms worsen.</div>
+          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-xs sm:text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>Shows the medical disclaimer. Low risk under the EU AI Act.</div>
+          <div class="rounded-[10px] border border-[#C8DDD6] bg-[#E7F1EE] px-[13px] py-2.5 text-xs sm:text-[.86rem] text-[#16352C]"><span class="mr-2 font-bold text-[#2E7D6B]">✓</span>No data leaves the patient without explicit consent.</div>
         </div>
 
-        <textarea id="promptBox" spellcheck="false" class="min-h-[300px] w-full rounded-[10px] border border-[#D9E2DF] bg-[#FBFDFC] px-3 py-[11px] font-mono text-[.85rem] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20"></textarea>
+        <textarea id="promptBox" spellcheck="false" class="min-h-[300px] w-full rounded-[10px] border border-[#D9E2DF] bg-[#FBFDFC] px-3 py-[11px] font-mono text-sm sm:text-[.85rem] text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20"></textarea>
 
         <div class="mt-6 flex flex-wrap justify-between gap-3">
-          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 font-semibold text-[#16352C] hover:bg-[#F4F6F5] disabled:cursor-not-allowed disabled:opacity-45" @click="goToScreen(1)" :disabled="!userAddress">← Back</button>
-          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep3" :disabled="!userAddress">Looks right, create the QR code &rarr;</button>
+          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 font-semibold text-sm text-[#16352C] hover:bg-[#F4F6F5] disabled:cursor-not-allowed disabled:opacity-45" @click="goToScreen(1)" :disabled="!userAddress">← Back</button>
+          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-sm text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep3" :disabled="!userAddress">
+            <span class="hidden sm:flex">Looks right, create the QR code &rarr;</span>
+            <span class="flex sm:hidden">View QR &rarr;</span>
+          </button>
         </div>
       </div>
     </section>
 
     <section x-show="currentScreen===3" class="animate-fade">
-      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-7">
-        <h2 class="font-display text-[1.25rem] font-semibold text-[#16352C]">Generate and register on chain</h2>
-        <p class="mb-[22px] mt-1 text-[.95rem] text-[#5F6F6A]">The QR code carries the agent link and the fingerprint of your prompt. Registration on Solana makes it verifiable and tamper proof at every scan.</p>
+      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+        <h2 class="font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+          <span class="hidden sm:flex">Generate and register on chain</span>
+          <span class="flex sm:hidden">Register on chain</span>
+        </h2>
+        <p class="mb-[22px] mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">The QR code carries the agent link and the fingerprint of your prompt. Registration on Solana makes it verifiable and tamper proof at every scan.</p>
 
         <div class="grid gap-7 lg:grid-cols-[280px_1fr] lg:items-start">
           <div class="rounded-[14px] border border-[#D9E2DF] bg-white p-5 text-center">
@@ -204,61 +210,73 @@
               <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#D9E2DF] border-t-[#2E7D6B]"></span>
             </div>
             <div id="qrCaption" class="mt-3 text-[.82rem] text-[#5F6F6A]">Preparing code…</div>
+            <div class="mx-auto">
+              <div id="agentUrl" class="hidden"></div>
+              <span x-show="!!agentUrl && agentUrl.length" class="copyBtn" rel="#agentUrl" target="#urlCopyMsg">
+                <svg class="w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+              </span>&nbsp;<span id="urlCopyMsg"></span>
+            </div>
             <div id="chainBadge" class="mx-auto mt-3 hidden inline-flex items-center gap-2 rounded-full bg-[#16352C] px-3.5 py-1.5 text-[.8rem] text-white">
               <span class="h-2 w-2 rounded-full bg-[#5BD6B5]"></span>Blockchain secured
             </div>
           </div>
           <div>
             <ul class="list-none">
-              <li id="log1" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">1</span><div><strong>Agent created</strong><br><span id="agentId" class="break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
-              <li id="log2" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">2</span><div><strong>Prompt fingerprint computed</strong> (SHA-256)<br><span id="promptHash" class="break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
-              <li id="log3" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">3</span><div><strong>Attestation submitted</strong> to the Solana Attestation Service<br><span id="attPda" class="break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
-              <li id="log4" class="flex gap-3 py-2.5 text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">4</span><div><strong>Confirmed on Solana</strong><br><span id="txSig" class="break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
+              <li id="log1" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-sm sm:text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">1</span><div><strong>Agent created</strong><br><span id="agentId" class="hidden sm:flex break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
+              <li id="log2" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-sm sm:text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">2</span><div><strong>Prompt fingerprint computed</strong> (SHA-256)<br><span id="promptHash" class="hidden sm:flex break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
+              <li id="log3" class="flex gap-3 border-b border-dashed border-[#D9E2DF] py-2.5 text-sm sm:text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">3</span><div><strong>Attestation submitted</strong> to the Solana Attestation Service<br><span id="attPda" class="hidden sm:flex break-all font-mono text-[.78rem] text-[#5F6F6A]"></span></div></li>
+              <li id="log4" class="flex gap-3 py-2.5 text-sm sm:text-[.92rem] opacity-[.35] transition-opacity"><span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 border-[#D9E2DF] text-[.7rem]">4</span><div><strong>Confirmed on Solana</strong><br><span id="txSig" class="break-all font-mono text-[.78rem] text-[#5F6F6A]"></span>&nbsp;<span x-show="!!txSignature && txSignature.length" class="copyBtn" rel="#txSig" target="#sigCopyMsg"><svg class="w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg></span>&nbsp;<span id="sigCopyMsg"></span></div></li>
             </ul>
-            <div id="verifyNote" class="mt-4 hidden rounded-[10px] border border-[#BFD9D1] bg-[#E7F1EE] px-4 py-3 text-[.88rem] text-[#16352C]">
+            <div id="verifyNote" class="mt-4 hidden rounded-[10px] border border-[#BFD9D1] bg-[#E7F1EE] px-4 py-3 text-xs sm:text-[.88rem] text-[#16352C]">
               At every scan the agent checks this attestation before it starts. A copied or altered code will not open a journey.
             </div>
           </div>
         </div>
 
         <div class="mt-6 flex flex-wrap justify-between gap-3">
-          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 font-semibold text-[#16352C] hover:bg-[#F4F6F5] disabled:cursor-not-allowed disabled:opacity-45" @click="goToScreen(2)" :disabled="!userAddress">← Back</button>
-          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep4" :disabled="!userAddress || !promptHash">Share with the patient &rarr;</button>
+          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 text-sm font-semibold text-[#16352C] hover:bg-[#F4F6F5] disabled:cursor-not-allowed disabled:opacity-45" @click="goToScreen(2)" :disabled="!userAddress">← Back</button>
+          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 text-sm font-semibold text-white hover:bg-[#256555] disabled:cursor-not-allowed disabled:opacity-45" id="toStep4" :disabled="!userAddress || !promptHash">
+            <span class="hidden sm:flex">Share with the patient &rarr;</span>
+            <span class="flex sm:hidden">Share &rarr;</span>
+          </button>
         </div>
       </div>
     </section>
 
     <section x-show="currentScreen===4" class="animate-fade">
-      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-7">
-        <h2 class="font-display text-[1.25rem] font-semibold text-[#16352C]">Share the QR code</h2>
-        <p class="mb-[22px] mt-1 text-[.95rem] text-[#5F6F6A]">The patient scans the code and starts straight away. No registration, no login, free for the sponsored period.</p>
+      <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+        <h2 class="font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">Share the QR code</h2>
+        <p class="mb-[22px] mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">The patient scans the code and starts straight away. No registration, no login, free for the sponsored period.</p>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="my-2 rounded-[10px] border border-[#BFD9D1] bg-[#E7F1EE] px-4 py-3 text-xs sm:text-[.88rem] text-[#16352C]">
+          <b>Summary:</b> <span id="summaryLine"></span>
+        </div>
+
+        <div class="grid gap-1 grid-cols-2 sm:gap-3 lg:grid-cols-5">
           <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE]" onclick="window.print()">
-            <span class="mb-1 block text-[1.5rem]">🖨</span><strong class="block text-[#16352C]">Print handout</strong><span class="text-[.8rem] text-[#5F6F6A]">A5 sheet with the code and short instructions</span>
+            <span class="mb-1 block text-[1.5rem]">🖨</span><strong class="block text-[#16352C]">Print handout</strong><span class="hidden sm:flex text-[.8rem] text-[#5F6F6A]">A5 sheet with the code and short instructions</span>
           </button>
           <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE]" id="emailBtn">
-            <span class="mb-1 block text-[1.5rem]">✉</span><strong class="block text-[#16352C]">Email</strong><span class="text-[.8rem] text-[#5F6F6A]">Opens your mail client with the link</span>
+            <span class="mb-1 block text-[1.5rem]">✉</span><strong class="block text-[#16352C]">Email</strong><span class="hidden sm:flex text-[.8rem] text-[#5F6F6A]">Opens your mail client with the link</span>
           </button>
           <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE]" id="msgBtn">
-            <span class="mb-1 block text-[1.5rem]">💬</span><strong class="block text-[#16352C]">Messenger</strong><span class="text-[.8rem] text-[#5F6F6A]">Share via WhatsApp or Signal</span>
+            <span class="mb-1 block text-[1.5rem]">💬</span><strong class="block text-[#16352C]">Messenger</strong><span class="hidden sm:flex text-[.8rem] text-[#5F6F6A]">Share via WhatsApp or Signal</span>
           </button>
-          <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE]" id="copyBtn">
-            <span class="mb-1 block text-[1.5rem]">🔗</span><strong class="block text-[#16352C]">Copy link</strong><span class="text-[.8rem] text-[#5F6F6A]">Paste it anywhere</span>
+          <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE] copyBtn" target="#copyMsg" rel="#agentUrl">
+            <span class="mb-1 block text-[1.5rem]">🔗</span><strong class="block text-[#16352C]">Copy link</strong><span class="hidden sm:flex text-[.8rem] text-[#5F6F6A]">Paste it anywhere</span>
           </button>
           <button class="rounded-[12px] border border-[#D9E2DF] bg-white p-4 text-center hover:border-[#2E7D6B] hover:bg-[#E7F1EE]" id="pngBtn">
-            <span class="mb-1 block text-[1.5rem]">⬇</span><strong class="block text-[#16352C]">Download QR</strong><span class="text-[.8rem] text-[#5F6F6A]">PNG for your own templates</span>
+            <span class="mb-1 block text-[1.5rem]">⬇</span><strong class="block text-[#16352C]">Download QR</strong><span class="hidden sm:flex text-[.8rem] text-[#5F6F6A]">PNG for your own templates</span>
           </button>
         </div>
         <div class="mt-3 min-h-[1.2em] text-[.85rem] font-semibold text-[#2E7D6B]" id="copyMsg"></div>
 
-        <div class="mt-6 rounded-[10px] border border-[#BFD9D1] bg-[#E7F1EE] px-4 py-3 text-[.88rem] text-[#16352C]">
-          <b>Summary:</b> <span id="summaryLine"></span>
-        </div>
-
         <div class="mt-6 flex flex-wrap justify-between gap-3">
-          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 font-semibold text-[#16352C] hover:bg-[#F4F6F5]" @click="resetAll()">← Back</button>
-          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-white hover:bg-[#256555]" @click="resetAll()">Create another agent</button>
+          <button class="rounded-[10px] border border-[#D9E2DF] bg-white px-6 py-3 font-semibold text-sm text-[#16352C] hover:bg-[#F4F6F5]" @click="resetAll()">← Back</button>
+          <button class="rounded-[10px] bg-[#2E7D6B] px-6 py-3 font-semibold text-sm text-white hover:bg-[#256555]" @click="resetAll()">
+            <span class="hidden sm:flex">Create another agent &#8635;</span>
+            <span class="flex sm:hidden">Restart &#8635;</span>
+          </button>
         </div>
       </div>
     </section>
@@ -278,7 +296,7 @@
     <p class="mt-5 text-[.85rem] text-[#555]">This service does not provide medical advice. Please consult a licensed healthcare professional. The code is blockchain secured and verified at every scan. ai.dhealth.com</p>
   </div>
 
-  <footer class="print:hidden bg-[#0F2620] px-7 py-[22px] text-center text-[.85rem] text-white/75">
+  <footer class="print:hidden bg-[#0F2620] px-7 py-[22px] text-center text-xs sm:text-[.85rem] text-white/75">
     <span class="font-semibold text-white">Workflow</span>: consultation → describe or dictate → tailored system prompt → QR code → <b class="text-white">attestation on Solana</b> → share by print, email, or messenger. &nbsp;|&nbsp; dHealth Intelligence · ai.dhealth.com
   </footer>
 
@@ -337,7 +355,7 @@ function hcpConsole() {
     selectToggle(el) {
       const buttons = el.parentElement.querySelectorAll('button');
       buttons.forEach(btn => {
-        btn.className = 'rounded-none border-0 px-5 py-2.5 text-sm font-semibold transition';
+        btn.className = 'rounded-none border-0 px-5 py-2.5 text-xs sm:text-sm font-semibold transition';
         if (btn === el) {
           el.classList.remove('bg-white');
           el.classList.remove('text-[#5F6F6A]');
@@ -567,18 +585,22 @@ ${purposes.map(p=>'- '+p).join('\n')}
         await this.blockingWait(600);
         this.agentUrl='https://ai.dhealth.com/a/'+this.promptHash;
         document.getElementById('agentId').textContent=this.promptHash;
-        document.getElementById('log1').classList.add('opacity-100');
+        document.getElementById('agentUrl').textContent=this.agentUrl;
+        document.getElementById('log1').classList.remove('border-[#D9E2DF]');
+        document.getElementById('log1').classList.add('opacity-100', 'border-[#2E7D6B]');
 
         await this.blockingWait(700);
         document.getElementById('promptHash').textContent=this.promptHash;
-        document.getElementById('log2').classList.add('opacity-100');
+        document.getElementById('log2').classList.remove('border-[#D9E2DF]');
+        document.getElementById('log2').classList.add('opacity-100', 'border-[#2E7D6B]');
 
         /// Create SAS Schema and Attestation
         await this.blockingWait(900);
         let sasError = false;
         try {
           await this.createSasSchemaAndAttestation();
-          document.getElementById('log3').classList.add('opacity-100');
+          document.getElementById('log3').classList.remove('border-[#D9E2DF]');
+          document.getElementById('log3').classList.add('opacity-100', 'border-[#2E7D6B]');
         } catch (error) {
           log.error('Error creating SAS schema/attestation', { error: error.message });
           document.getElementById('attPda').textContent='Error: '+error.message;
@@ -591,7 +613,8 @@ ${purposes.map(p=>'- '+p).join('\n')}
         if (sasError) {
           document.getElementById('log4').classList.add('text-red-600', 'opacity-100');
         } else {
-          document.getElementById('log4').classList.add('opacity-100');
+          document.getElementById('log3').classList.remove('border-[#D9E2DF]');
+          document.getElementById('log4').classList.add('opacity-100', 'border-[#2E7D6B]');
         }
 
         if (!sasError) {
