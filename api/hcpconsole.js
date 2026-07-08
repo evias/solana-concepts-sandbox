@@ -317,6 +317,67 @@ router.post('/build-attestation-tx', async (req, res) => {
   }
 });
 
+
+/**
+ * @swagger
+ * /api/v1/hcpconsole/prompts:
+ *   get:
+ *     tags:
+ *       - HCPConsole
+ *     summary: Retrieve hcp_prompts entries by sas_credential_id.
+ *     description: Retrieve hcp_prompts entries by sas_credential_id.
+ *     parameters:
+ *       - in: query
+ *         name: credential
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The SAS Credential ID associated with prompts.
+ *     responses:
+ *       200:
+ *         description: Prompts retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 prompts:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id: { type: string }
+ *                       wallet_address: { type: string }
+ *                       sas_credential_id: { type: string }
+ *                       case_ref: { type: string }
+ *                       prompt_hash: { type: string }
+ *                       transaction_signature: { type: string }
+ *                       lastread_at: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/prompts', (req, res) => {
+  try {
+    const { credential } = req.query;
+    if (!credential) {
+      return res.status(402).json({ error: 'Invalid Request' });
+    }
+
+    let prompts = hcpConsoleDb.getPromptsByCredential(credential, 5);
+    for (let i = 0; i < prompts.length; i++) {
+      delete prompts[i].prompt_cipher;
+      delete prompts[i].cipher_iv;
+    }
+
+    return res.json({ prompts: prompts });
+  } catch (error) {
+     log.error('Error listing prompts', { error });
+     return res.status(500).json({ error: 'Failed to list prompts' });
+   }
+});
+
 /**
  * @swagger
  * /api/v1/hcpconsole/prompt:

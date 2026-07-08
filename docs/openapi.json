@@ -2030,6 +2030,75 @@
         }
       }
     },
+    "/api/v1/hcpconsole/prompts": {
+      "get": {
+        "tags": [
+          "HCPConsole"
+        ],
+        "summary": "Retrieve hcp_prompts entries by sas_credential_id.",
+        "description": "Retrieve hcp_prompts entries by sas_credential_id.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "credential",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The SAS Credential ID associated with prompts."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prompts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "wallet_address": {
+                            "type": "string"
+                          },
+                          "sas_credential_id": {
+                            "type": "string"
+                          },
+                          "case_ref": {
+                            "type": "string"
+                          },
+                          "prompt_hash": {
+                            "type": "string"
+                          },
+                          "transaction_signature": {
+                            "type": "string"
+                          },
+                          "lastread_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
     "/api/v1/hcpconsole/prompt": {
       "get": {
         "tags": [
