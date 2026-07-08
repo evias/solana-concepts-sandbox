@@ -60,8 +60,7 @@
     </div>
   </nav>
 
-  <main class="print:hidden mx-auto max-w-[880px] px-4 py-7 pb-14 md:px-[18px]">
-
+  <main class="print:hidden mx-auto max-w-[880px] px-4 py-4 pb-14 md:px-[18px]">
     <section
       class="mb-8 rounded-[14px] border bg-white p-3 sm:p-7"
       :class="userAddress && selectedCredential ? 'border-green-700' : 'border-red-700'">
@@ -106,7 +105,7 @@
         <label for="credential" class="mt-[18px] mb-2 block text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
           Associated credential
         </label>
-        <select id="credential" @change="selectedCredential = $el.value" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+        <select id="credential" @change="useCredential($el)" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
           <option value="">Select a credential...</option>
           <template x-for="cred in credentials" :key="cred.id">
             <option :value="cred.sasCredentialId" x-text="cred.name"></option>
@@ -116,6 +115,19 @@
           You don't have any credentials yet.
           <a href="/healthcred" class="font-semibold underline">Create your first credential in HealthCred</a>.
         </div>
+        <p x-show="userAddress && selectedCredential" class="mt-[18px] text-xs sm:text-[.875rem] text-[#6b7280]">
+          <div x-show="latestPrompts && latestPrompts.length" class="items-center">
+            <label class="text-md sm:text-[1.25rem] font-semibold">
+              Latest journeys:
+            </label>
+            <template x-for="prompt in latestPrompts" :key="prompt.id">
+              <button type="button" @click="showPrompt(prompt.case_ref)"
+                class="block mx-auto mt-2 sm:inline sm:mt-0 sm:mr-2 rounded-[4px] border border-[#D9E2DF] bg-white p-2 text-xs sm:text-[.85rem] font-medium hover:bg-indigo-700 hover:text-white hover:cursor-pointer">
+                <span x-text="prompt.case_ref"></span>
+              </button>
+            </template>
+          </div>
+        </p>
       </div>
     </section>
 
@@ -319,8 +331,8 @@
     <span class="font-semibold text-white">Workflow</span>: consultation → describe or dictate → tailored system prompt → QR code → <b class="text-white">attestation on Solana</b> → share by print, email, or messenger. &nbsp;|&nbsp; dHealth Intelligence · ai.dhealth.com
   </footer>
 
-   <!-- Wallet Modal -->
-   <div x-show="showWalletModal" class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
+  <!-- Wallet Modal -->
+  <div x-show="showWalletModal" class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
     <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
       <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
         <h2 class="text-[1.25rem] font-bold text-[#111]">Connect Wallet</h2>
@@ -344,6 +356,47 @@
     </div>
   </div>
 
+  <!-- Prompt modal -->
+  <div x-show="showPromptModal"
+      class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      @click.self="showPromptModal = false">
+    <div class="w-full max-w-[420px] sm:max-w-[640px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+      <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+        <h2 class="text-md sm:text-[1.25rem] font-semibold text-[#111]">Prompt details for <span id="promptDetailsCaseRef" class="text-[#2E7D6B]"></span></h2>
+        <button @click="showPromptModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+      </div>
+      <div class="flex flex-col gap-2 px-6 py-4">
+        <label class="block text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+          Agent URL
+        </label>
+        <div class="flex flex-row gap-4">
+          <span class="hidden" id="promptDetailsFullUrl"></span>
+          <a id="promptDetailsUrl"
+            href="#"
+            target="_blank"
+            class="text-sm font-medium text-[#2E7D6B] hover:opacity-80 py-2">
+            Loading...
+          </a>
+          <span class="copyBtn hover:opacity-80 hover:cursor-pointer" rel="#promptDetailsFullUrl" target="#promptDetailsUrlCopyMsg">
+            <svg class="w-8 h-8 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+          </span>&nbsp;<span id="promptDetailsUrlCopyMsg"></span>
+        </div>
+        <label class="mb-2 block text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+          Generated system prompt
+        </label>
+        <div class="relative max-w-[100%] max-h-60 overflow-y-auto text-xs border border-[#D9E2DF] p-2">
+          <div class="absolute top-[2px] right-[2px] rounded rounded-md bg-gray-100 flex flex-row gap-2 border border-[#D9E2DF] text-xs hover:opacity-80 hover:cursor-pointer copyBtn"
+               rel="#promptPlainContent"
+               target="#promptDetailsUrlCopyMsg">
+            <svg class="pt-2 w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+            <span class="py-1 pr-2">Copy</span>
+          </div>
+          <p id="promptPlainContent">Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
 function hcpConsole() {
   const log = window.createLogger('concept/hcpconsole');
@@ -352,9 +405,11 @@ function hcpConsole() {
     userAddress: '',
     manualAddress: '',
     showWalletModal: false,
+    showPromptModal: false,
     showWalletDetails: true,
-    credentials: [],
     selectedCredential: '',
+    credentials: [],
+    latestPrompts: [],
 
     promptHash: '',
     agentUrl: '',
@@ -401,6 +456,12 @@ function hcpConsole() {
       }
 
       return '';
+    },
+
+    async useCredential($el) {
+      this.selectedCredential = $el.value;
+
+      await this.loadLatestPrompts();
     },
 
     async init() {
@@ -514,6 +575,42 @@ function hcpConsole() {
         }
       } catch (error) {
         log.error('Error loading credentials', { error: error.message });
+      }
+    },
+
+    async loadLatestPrompts() {
+      try {
+        if (!this.userAddress || !this.selectedCredential) return;
+        const response = await fetch(`/api/v1/hcpconsole/prompts?credential=${this.selectedCredential}`);
+        if (response.ok) {
+          const data = await response.json();
+          this.latestPrompts = data.prompts || [];
+          log.info('Loaded prompts', { count: this.latestPrompts.length });
+        }
+      } catch (error) {
+        log.error('Error loading prompts', { error: error.message });
+      }
+    },
+
+    async showPrompt(caseRef) {
+      try {
+        if (!this.userAddress || !this.selectedCredential) return;
+        const response = await fetch(`/api/v1/hcpconsole/prompt?caseRef=${caseRef}&enableMeta=1`);
+        if (response.ok) {
+          const data = await response.json();
+          const fullUrl = 'https://ai.dhealth.com/a/'+data.promptHash;
+          const shortUrl = 'https://ai.dhealth.com/a/'+this.shortenHash(data.promptHash);
+
+          document.getElementById('promptDetailsCaseRef').innerText = data.caseRef;
+          document.getElementById('promptPlainContent').innerText = data.prompt;
+          document.getElementById('promptDetailsUrl').innerText = shortUrl;
+          document.getElementById('promptDetailsUrl').setAttribute('href', fullUrl);
+          document.getElementById('promptDetailsFullUrl').innerText = fullUrl;
+
+          this.showPromptModal = true;
+        }
+      } catch (error) {
+        log.error('Error loading prompt details', { error: error.message });
       }
     },
 
