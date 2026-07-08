@@ -844,9 +844,9 @@ const hcpConsoleDb = {
   },
 
   // Get all prompts with wallet_address and with pagination
-  getPromptsByWallet(walletAddress, limit = 10, offset = 0) {
-    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE wallet_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
-    const rows = stmt.all(walletAddress, limit, offset);
+  getPromptsByCredential(sasCredId, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM hcp_prompts WHERE sas_credential_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(sasCredId, limit, offset);
     return rows;
   },
 
