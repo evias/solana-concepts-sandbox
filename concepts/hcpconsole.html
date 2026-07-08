@@ -116,6 +116,10 @@
           <a href="/healthcred" class="font-semibold underline">Create your first credential in HealthCred</a>.
         </div>
         <p x-show="userAddress && selectedCredential" class="mt-[18px] text-xs sm:text-[.875rem] text-[#6b7280]">
+          <p x-show="userAddress && selectedCredential && (!latestPrompts || !latestPrompts.length)"
+             class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
+            Fill the form below to create your first patient journey and QR Code.
+          </p>
           <div x-show="latestPrompts && latestPrompts.length" class="items-center">
             <label class="text-md sm:text-[1.25rem] font-semibold">
               Latest journeys:
