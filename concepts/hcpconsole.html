@@ -88,7 +88,7 @@
             class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
             :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
             <span x-show="!userAddress">Connect Wallet</span>
-            <span x-show="userAddress" x-text="'Connected: ' + userAddress.substring(0, 6) + '...' + userAddress.substring(userAddress.length - 4)"></span>
+            <span x-show="userAddress" x-text="'Connected: ' + shortenAddr(userAddress)"></span>
           </button>
           <button
             type="button"
@@ -147,7 +147,7 @@
         <label for="caseRef" class="block text-md font-semibold text-[#16352C]">
           Case reference <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(initials or number, never a full name)</em>
         </label>
-        <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="20" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+        <input type="text" id="caseRef" placeholder="e.g. M.K. or 2026-0411" maxlength="30" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
 
         <label for="diagnosis" class="mt-[18px] block text-md font-semibold text-[#16352C]">Health problem or diagnosis, and today's instructions</label>
         <div class="relative">
