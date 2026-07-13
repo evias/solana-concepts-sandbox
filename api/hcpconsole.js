@@ -239,7 +239,7 @@ router.post('/build-attestation-tx', async (req, res) => {
     let schemaTxSig = null;
     let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
     if (!schemaAccount || schemaAccount.exists === false) {
-      // promptHash is 32 bytes (SHA256)
+      // promptHash is 32 bytes (SHA256) string ("12") format.
       const layout = Buffer.from([12]);
       const schemaIx = lib.getCreateSchemaInstruction({
         payer: backendSigner,
