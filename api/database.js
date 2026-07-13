@@ -49,12 +49,12 @@ function initializeDatabase() {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
-    
+
     CREATE INDEX IF NOT EXISTS idx_owner ON pets(owner);
     CREATE INDEX IF NOT EXISTS idx_mandate ON pets(mandate_authority);
     CREATE INDEX IF NOT EXISTS idx_mint ON pets(mint_address);
   `);
-  
+
   // Create vaccinations table
   db.exec(`
     CREATE TABLE IF NOT EXISTS vaccinations (
@@ -72,14 +72,14 @@ function initializeDatabase() {
       updated_at TEXT NOT NULL,
       FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
     );
-    
+
     CREATE INDEX IF NOT EXISTS idx_pet_id ON vaccinations(pet_id);
     CREATE INDEX IF NOT EXISTS idx_vet ON vaccinations(vet_address);
     CREATE INDEX IF NOT EXISTS idx_vax_mint ON vaccinations(mint_address);
     CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);
     CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);
   `);
-  
+
   // Create nutrition_plans table
   db.exec(`
     CREATE TABLE IF NOT EXISTS nutrition_plans (
@@ -104,12 +104,12 @@ function initializeDatabase() {
       updated_at TEXT NOT NULL,
       FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
     );
-    
+
     CREATE INDEX IF NOT EXISTS idx_diet_pet_id ON nutrition_plans(pet_id);
     CREATE INDEX IF NOT EXISTS idx_diet_nutritioner ON nutrition_plans(authorized_nutritioner);
     CREATE INDEX IF NOT EXISTS idx_diet_mint ON nutrition_plans(mint_address);
   `);
-  
+
   // Create feeding_actions table
   db.exec(`
     CREATE TABLE IF NOT EXISTS feeding_actions (
@@ -125,12 +125,12 @@ function initializeDatabase() {
       FOREIGN KEY (nutrition_plan_id) REFERENCES nutrition_plans(id) ON DELETE CASCADE,
       FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
     );
-    
+
     CREATE INDEX IF NOT EXISTS idx_feeding_plan_id ON feeding_actions(nutrition_plan_id);
     CREATE INDEX IF NOT EXISTS idx_feeding_pet_id ON feeding_actions(pet_id);
     CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
   `);
-  
+
   log.info('Database schema created at:', { value: dbPath });
 
   // IMPORTANT
@@ -168,104 +168,104 @@ const petDb = {
   createPet(petData) {
     const { id, name, species, breed, age, owner, mandateAuthority, mintAddress, tokenAccount } = petData;
     const now = new Date().toISOString();
-    
+
     const stmt = db.prepare(`
       INSERT INTO pets (id, name, species, breed, age, owner, mandate_authority, mint_address, token_account, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(id, name, species, breed, age, owner, mandateAuthority || owner, mintAddress, tokenAccount, now, now);
-    
+
     return petDb.getPetById(id);
   },
-  
+
   // Get pet by ID
   getPetById(id) {
     const stmt = db.prepare('SELECT * FROM pets WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all pets
   getAllPets() {
     const stmt = db.prepare('SELECT * FROM pets ORDER BY created_at DESC');
     return stmt.all();
   },
-  
+
   // Get pets by owner
   getPetsByOwner(owner) {
     const stmt = db.prepare('SELECT * FROM pets WHERE owner = ? ORDER BY created_at DESC');
     return stmt.all(owner);
   },
-  
+
   // Update pet
   updatePet(id, updates) {
     const now = new Date().toISOString();
     const allowedFields = ['name', 'species', 'breed', 'age', 'mint_address', 'token_account', 'authorizedVets'];
-    
+
     const setClause = Object.keys(updates)
       .filter(key => allowedFields.includes(key))
       .map(key => `${key} = ?`)
       .join(', ');
-    
+
     if (!setClause) {
       return petDb.getPetById(id);
     }
-    
+
     const values = Object.keys(updates)
       .filter(key => allowedFields.includes(key))
       .map(key => updates[key]);
-    
+
     const stmt = db.prepare(`
       UPDATE pets 
       SET ${setClause}, updated_at = ?
       WHERE id = ?
     `);
-    
+
     stmt.run(...values, now, id);
-    
+
     return petDb.getPetById(id);
   },
-  
+
   // Delete pet
   deletePet(id) {
     const stmt = db.prepare('DELETE FROM pets WHERE id = ?');
     const result = stmt.run(id);
     return result.changes > 0;
   },
-  
+
   // Check if pet exists
   petExists(id) {
     const stmt = db.prepare('SELECT 1 FROM pets WHERE id = ? LIMIT 1');
     return stmt.get(id) !== undefined;
   },
-  
+
   // Get pet by mint address
   getPetByMint(mintAddress) {
     const stmt = db.prepare('SELECT * FROM pets WHERE mint_address = ?');
     return stmt.get(mintAddress);
   },
-  
+
   // Verify mandate authority for a pet
   verifyMandate(petId, authority) {
     const pet = petDb.getPetById(petId);
     if (!pet) {
       return { valid: false, reason: 'Pet not found' };
     }
-    
+
     if (pet.mandate_authority !== authority && pet.owner !== authority) {
       return { valid: false, reason: 'Not authorized to manage this pet', pet };
     }
-    
+
     return { valid: true, reason: 'Authorized', pet };
   },
-  
+
   // Get mandate info for a pet
   getMandateInfo(petId) {
     const pet = petDb.getPetById(petId);
     if (!pet) {
       return null;
     }
-    
+
     return {
       petId: pet.id,
       petName: pet.name,
@@ -274,33 +274,33 @@ const petDb = {
       createdAt: pet.created_at
     };
   },
-  
+
   // Get authorized vets for a pet
   getAuthorizedVets(petId) {
     const pet = petDb.getPetById(petId);
     if (!pet) {
       return [];
     }
-     try {
-       return JSON.parse(pet.authorizedVets || '[]');
-     } catch (error) {
-       log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
-       return [];
-     }
+    try {
+      return JSON.parse(pet.authorizedVets || '[]');
+    } catch (error) {
+      log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
+      return [];
+    }
   },
-  
+
   // Check if a vet address is authorized for a pet
   isVetAuthorizedForPet(petId, vetAddress) {
     const pet = petDb.getPetById(petId);
     if (!pet) {
       return false;
     }
-    
+
     // Vet is authorized if they are the owner or in the authorizedVets list
     if (pet.owner === vetAddress) {
       return true;
     }
-    
+
     try {
       const authorizedVets = JSON.parse(pet.authorizedVets || '[]');
       // Handle both string addresses and object format for vets
@@ -312,10 +312,10 @@ const petDb = {
         }
         return false;
       });
-     } catch (error) {
-       log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
-       return false;
-     }
+    } catch (error) {
+      log.error(`Failed to parse authorizedVets for pet ${petId}`, { error });
+      return false;
+    }
   }
 };
 
@@ -325,60 +325,60 @@ const vaccinationDb = {
   createVaccination(vaccinationData) {
     const { id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority, notes, mintAddress, transactionSignature, transactionHash } = vaccinationData;
     const now = new Date().toISOString();
-    
+
     // Verify pet exists
     const pet = petDb.getPetById(petId);
     if (!pet) {
       throw new Error(`Pet not found: ${petId}`);
     }
-    
+
     const stmt = db.prepare(`
       INSERT INTO vaccinations (id, pet_id, vaccine_name, vaccination_date, vet_address, vet_mandate_authority, notes, mint_address, transaction_signature, transaction_hash, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(id, petId, vaccineName, vaccinationDate, vetAddress, vetMandateAuthority || vetAddress, notes, mintAddress, transactionSignature || null, transactionHash || null, now, now);
-    
+
     return vaccinationDb.getVaccinationById(id);
   },
-  
+
   // Get vaccination by ID
   getVaccinationById(id) {
     const stmt = db.prepare('SELECT * FROM vaccinations WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all vaccinations for a pet
   getVaccinationsByPetId(petId) {
     const stmt = db.prepare('SELECT * FROM vaccinations WHERE pet_id = ? ORDER BY vaccination_date DESC');
     return stmt.all(petId);
   },
-  
+
   // Get all vaccinations by vet
   getVaccinationsByVet(vetAddress) {
     const stmt = db.prepare('SELECT * FROM vaccinations WHERE vet_address = ? ORDER BY vaccination_date DESC');
     return stmt.all(vetAddress);
   },
-  
+
   // Verify vaccination is linked to a valid pet
   verifyVaccinationPet(vaccinationId, expectedPetId) {
     const vaccination = vaccinationDb.getVaccinationById(vaccinationId);
     if (!vaccination) {
       return { valid: false, reason: 'Vaccination not found' };
     }
-    
+
     if (vaccination.pet_id !== expectedPetId) {
       return { valid: false, reason: 'Vaccination not linked to this pet' };
     }
-    
+
     const pet = petDb.getPetById(vaccination.pet_id);
     if (!pet) {
       return { valid: false, reason: 'Pet not found' };
     }
-    
+
     return { valid: true, reason: 'Vaccination verified', vaccination, pet };
   },
-  
+
   // Check if vet has authorization
   verifyVetAuthorization(vetAddress, expectedAuthority) {
     if (vetAddress !== expectedAuthority) {
@@ -386,7 +386,7 @@ const vaccinationDb = {
     }
     return { valid: true, reason: 'Vet authorized' };
   },
-  
+
   // Get vaccination by transaction hash (for Solscan lookup)
   getVaccinationByTransactionHash(transactionHash) {
     const stmt = db.prepare('SELECT * FROM vaccinations WHERE transaction_hash = ?');
@@ -418,13 +418,13 @@ const nutritionPlanDb = {
       transactionHash 
     } = planData;
     const now = new Date().toISOString();
-    
+
     // Verify pet exists
     const pet = petDb.getPetById(petId);
     if (!pet) {
       throw new Error(`Pet not found: ${petId}`);
     }
-    
+
     const stmt = db.prepare(`
       INSERT INTO nutrition_plans (
         id, pet_id, plan_name, start_date, ingredients_monday, ingredients_tuesday, 
@@ -433,40 +433,40 @@ const nutritionPlanDb = {
         mint_address, transaction_signature, transaction_hash, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id, petId, planName, startDate, ingredientsMonday, ingredientsTuesday, 
       ingredientsWednesday, ingredientsThursday, ingredientsFriday, ingredientsSaturday, 
       ingredientsSunday, duration, durationEndDate, authorizedNutritioner || null, 
       mintAddress, transactionSignature || null, transactionHash || null, now, now
     );
-    
+
     return nutritionPlanDb.getNutritionPlanById(id);
   },
-  
+
   // Get nutrition plan by ID
   getNutritionPlanById(id) {
     const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all nutrition plans for a pet
   getNutritionPlansByPetId(petId) {
     const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE pet_id = ? ORDER BY start_date DESC');
     return stmt.all(petId);
   },
-  
+
   // Get nutrition plans by authorized nutritioner
   getNutritionPlansByNutritioner(nutritionerAddress) {
     const stmt = db.prepare('SELECT * FROM nutrition_plans WHERE authorized_nutritioner = ? ORDER BY start_date DESC');
     return stmt.all(nutritionerAddress);
   },
-  
+
   // Get ingredients for a specific day (day: 0=Monday, 1=Tuesday, ..., 6=Sunday)
   getIngredientsForDay(planId, dayIndex) {
     const plan = nutritionPlanDb.getNutritionPlanById(planId);
     if (!plan) return null;
-    
+
     const dayColumns = [
       'ingredients_monday',
       'ingredients_tuesday',
@@ -476,15 +476,15 @@ const nutritionPlanDb = {
       'ingredients_saturday',
       'ingredients_sunday'
     ];
-    
+
     return plan[dayColumns[dayIndex]] || null;
   },
-  
+
   // Get all ingredients for a plan (as array)
   getAllIngredients(planId) {
     const plan = nutritionPlanDb.getNutritionPlanById(planId);
     if (!plan) return [];
-    
+
     return [
       plan.ingredients_monday,
       plan.ingredients_tuesday,
@@ -512,57 +512,57 @@ const feedingActionDb = {
       recordedBy
     } = feedingData;
     const now = new Date().toISOString();
-    
+
     // Verify nutrition plan exists
     const plan = nutritionPlanDb.getNutritionPlanById(nutritionPlanId);
     if (!plan) {
       throw new Error(`Nutrition plan not found: ${nutritionPlanId}`);
     }
-    
+
     // Verify pet exists
     const pet = petDb.getPetById(petId);
     if (!pet) {
       throw new Error(`Pet not found: ${petId}`);
     }
-    
+
     // Verify plan is linked to pet
     if (plan.pet_id !== petId) {
       throw new Error(`Nutrition plan ${nutritionPlanId} not linked to pet ${petId}`);
     }
-    
+
     const stmt = db.prepare(`
       INSERT INTO feeding_actions (
         id, nutrition_plan_id, pet_id, ingredients, pet_signature, 
         transaction_signature, transaction_hash, recorded_by, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id, nutritionPlanId, petId, ingredients, petSignature, 
       transactionSignature || null, transactionHash || null, recordedBy || null, now, now
     );
-    
+
     return feedingActionDb.getFeedingActionById(id);
   },
-  
+
   // Get feeding action by ID
   getFeedingActionById(id) {
     const stmt = db.prepare('SELECT * FROM feeding_actions WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all feeding actions for a nutrition plan
   getFeedingActionsByPlanId(nutritionPlanId) {
     const stmt = db.prepare('SELECT * FROM feeding_actions WHERE nutrition_plan_id = ? ORDER BY created_at DESC');
     return stmt.all(nutritionPlanId);
   },
-  
+
   // Get all feeding actions for a pet
   getFeedingActionsByPetId(petId) {
     const stmt = db.prepare('SELECT * FROM feeding_actions WHERE pet_id = ? ORDER BY created_at DESC');
     return stmt.all(petId);
   },
-  
+
   // Get feeding action by transaction hash
   getFeedingActionByTransactionHash(transactionHash) {
     const stmt = db.prepare('SELECT * FROM feeding_actions WHERE transaction_hash = ?');
@@ -590,7 +590,7 @@ const credentialDb = {
     transactionHash
   }) {
     const now = new Date().toISOString();
-    
+
     const stmt = db.prepare(`
       INSERT INTO credentials (
         id, wallet_address, full_name, date_of_birth, email, profession,
@@ -599,17 +599,17 @@ const credentialDb = {
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id, walletAddress, fullName, dateOfBirth, email, profession,
       didDocumentJson, didDocumentHash, didId, authenticationMethods || null,
       sasCredentialId || null, mintAddress || null,
       transactionSignature || null, transactionHash || null, now, now
     );
-    
+
     return credentialDb.getCredentialById(id);
   },
-  
+
   // Get credential by ID
   getCredentialById(id) {
     const stmt = db.prepare('SELECT * FROM credentials WHERE id = ?');
@@ -620,7 +620,7 @@ const credentialDb = {
     }
     return row;
   },
-  
+
   // Get credential by wallet address
   getCredentialByWallet(walletAddress) {
     const stmt = db.prepare('SELECT * FROM credentials WHERE wallet_address = ?');
@@ -631,7 +631,7 @@ const credentialDb = {
     }
     return row;
   },
-  
+
   // Get credential by DID ID
   getCredentialByDidId(didId) {
     const stmt = db.prepare('SELECT * FROM credentials WHERE did_id = ?');
@@ -655,7 +655,7 @@ const credentialDb = {
       return row;
     });
   },
-  
+
   // Get all credentials with pagination
   getAllCredentials(limit = 10, offset = 0) {
     const stmt = db.prepare('SELECT * FROM credentials ORDER BY created_at DESC LIMIT ? OFFSET ?');
@@ -668,7 +668,7 @@ const credentialDb = {
       return row;
     });
   },
-  
+
   // Get total credential count
   getCredentialCount() {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM credentials');
@@ -690,34 +690,34 @@ const badgeDb = {
     transactionHash
   }) {
     const now = new Date().toISOString();
-    
+
     const stmt = db.prepare(`
       INSERT INTO badges (
         id, credential_id, issuer_wallet, emoji, description,
         mint_address, transaction_signature, transaction_hash, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id, credentialId, issuerWallet, emoji, description,
       mintAddress || null, transactionSignature || null, transactionHash || null, now
     );
-    
+
     return badgeDb.getBadgeById(id);
   },
-  
+
   // Get badge by ID
   getBadgeById(id) {
     const stmt = db.prepare('SELECT * FROM badges WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all badges for a credential
   getBadgesByCredentialId(credentialId) {
     const stmt = db.prepare('SELECT * FROM badges WHERE credential_id = ? ORDER BY created_at DESC');
     return stmt.all(credentialId);
   },
-  
+
   // Get all badges by issuer wallet
   getBadgesByIssuer(issuerWallet) {
     const stmt = db.prepare('SELECT * FROM badges WHERE issuer_wallet = ? ORDER BY created_at DESC');
@@ -741,35 +741,35 @@ const certificationDb = {
     transactionHash
   }) {
     const now = new Date().toISOString();
-    
+
     const stmt = db.prepare(`
       INSERT INTO certifications (
         id, credential_id, issuer_wallet, certification_name, filename, file_hash,
         file_size, file_type, transaction_signature, transaction_hash, created_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     stmt.run(
       id, credentialId, issuerWallet, certificationName || null, filename, fileHash,
       fileSize || null, fileType || null,
       transactionSignature || null, transactionHash || null, now
     );
-    
+
     return certificationDb.getCertificationById(id);
   },
-  
+
   // Get certification by ID
   getCertificationById(id) {
     const stmt = db.prepare('SELECT * FROM certifications WHERE id = ?');
     return stmt.get(id);
   },
-  
+
   // Get all certifications for a credential
   getCertificationsByCredentialId(credentialId) {
     const stmt = db.prepare('SELECT * FROM certifications WHERE credential_id = ? ORDER BY created_at DESC');
     return stmt.all(credentialId);
   },
-  
+
   // Get all certifications by issuer wallet
   getCertificationsByIssuer(issuerWallet) {
     const stmt = db.prepare('SELECT * FROM certifications WHERE issuer_wallet = ? ORDER BY created_at DESC');
@@ -796,14 +796,14 @@ const hcpConsoleDb = {
       INSERT INTO hcp_prompts (
         id, wallet_address, sas_credential_id, case_ref,
         prompt_hash, prompt_cipher, cipher_iv,
-        transaction_signature, lastread_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        transaction_signature, num_reads, lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       id, walletAddress, sasCredentialId, caseRef, 
       promptHash, promptCipher, promptIV,
-      transactionSignature || null,
+      transactionSignature || null, 1,
       now, now, now
     );
 
@@ -814,7 +814,7 @@ const hcpConsoleDb = {
     const now = new Date().toISOString();
     const stmt = db.prepare(`
       UPDATE hcp_prompts
-      SET lastread_at = ?, updated_at = ?
+      SET lastread_at = ?, num_reads = (num_reads + 1), updated_at = ?
       WHERE id = ?
     `);
 
@@ -856,7 +856,7 @@ const hcpConsoleDb = {
     const rows = stmt.all(limit, offset);
     return rows;
   },
-  
+
   // Get total prompts count
   getPromptsCount(byAddress) {
     let stmt;
@@ -870,5 +870,126 @@ const hcpConsoleDb = {
   }
 };
 
+// CoinStats API database helpers
+const marketDataDb = {
+  // Create new tw_token_prices entry
+  createEntry({
+    tokenSymbol,
+    tokenPrice,
+  }) {
+    const now = new Date().toString();
+
+    const stmt = db.prepare(`
+      INSERT INTO tw_token_prices (
+        blockchain, token_symbol, token_price_eur,
+        requested_at
+      ) VALUES ('solana', ?, ?, ?)
+    `);
+
+    stmt.run(tokenSymbol, tokenPrice, now);
+
+    return marketDataDb.getPriceById(id);
+  },
+
+  // Get price entry by ID
+  getPriceById(id) {
+    const stmt = db.prepare('SELECT * FROM tw_token_prices WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get price entry by token symbol
+  getPriceBySymbol(tokenSymbol) {
+    const stmt = db.prepare('SELECT * FROM tw_token_prices WHERE token_symbol = ? ORDER BY requested_at DESC LIMIT 1');
+    const row = stmt.get(id);
+    return row;
+  }
+};
+
+// TokenWall database helpers
+const tokenWallDb = {
+  // Create new tw_invoices entry
+  createInvoice({
+    id,
+    issuerAddress,
+    paidtoAddress,
+    tokenAddress,
+    lamports,
+    invoiceRef,
+    scriptCipher,
+    scriptIV,
+  }) {
+    const now = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      INSERT INTO tw_invoices (
+        id, issuer_address, paidto_address, token_address,
+        invoice_ref, lamports, script_cipher, cipher_iv, num_reads,
+        lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id, issuerAddress, paidtoAddress, tokenAddress,
+      invoiceRef, lamports, scriptCipher, scriptIV, 1,
+      now, now, now
+    );
+
+    return tokenWallDb.getInvoiceById(id);
+  },
+
+  updateLastRead(invoiceId) {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE tw_invoices
+      SET lastread_at = ?, num_reads = (num_reads + 1), updated_at = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(now, now, invoiceId);
+    return tokenWallDb.getInvoiceById(invoiceId);
+  },
+
+  // Get invoice by ID
+  getInvoiceById(id) {
+    const stmt = db.prepare('SELECT * FROM tw_invoices WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get invoice by invoice_ref
+  getInvoiceByRef(ref) {
+    const stmt = db.prepare('SELECT * FROM tw_invoices WHERE invoice_ref = ?');
+    const row = stmt.get(ref);
+    return row;
+  },
+
+  // Get all invoices with wallet_address and with pagination
+  getInvoicesByIssuerAddress(issuerAddress, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM tw_invoices WHERE issuer_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(issuerAddress, limit, offset);
+    return rows;
+  },
+
+  // Get all invoices with pagination
+  getAllInvoices(limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM tw_invoices ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(limit, offset);
+    return rows;
+  },
+
+  // Get total invoices count
+  getInvoicesCount(byAddress) {
+    let stmt;
+    if (!!byAddress && byAddress.length) {
+      stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices WHERE wallet_address = ?');
+      return stmt.get(byAddress).count;
+    }
+
+    stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices');
+    return stmt.get().count;
+  }
+};
+
 // Export database and helper functions (do NOT initialize on require)
-module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, hcpConsoleDb, initializeDatabase, runMigrations };
+module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, hcpConsoleDb, marketDataDb, tokenWallDb, initializeDatabase, runMigrations };

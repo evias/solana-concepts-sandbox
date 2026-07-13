@@ -34,12 +34,12 @@ console.log('🔄 Checking for pending migrations...');
 try {
   const db = new Database(dbPath);
   db.pragma('foreign_keys = ON');
-  
+
   // Read current migration count from DBHEAD
   const currentMigrationCount = parseInt(fs.readFileSync(dbheadPath, 'utf-8').trim(), 10);
-  
+
   console.log(`   Current migration level: ${currentMigrationCount}`);
-  
+
   // Define all migrations (indexed by migration number)
   const migrations = [
     // Migration 1: Add mandate_authority to pets
@@ -64,7 +64,7 @@ try {
         }
       }
     },
-    
+
     // Migration 2: Add transaction_signature to vaccinations
     {
       name: 'Add transaction_signature column to vaccinations',
@@ -72,7 +72,6 @@ try {
         try {
           const vaxTableInfo = db.prepare("PRAGMA table_info(vaccinations)").all();
           const hasTxSig = vaxTableInfo.some(col => col.name === 'transaction_signature');
-          
           if (!hasTxSig) {
             db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_signature TEXT;`);
             db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_sig ON vaccinations(transaction_signature);`);
@@ -87,7 +86,7 @@ try {
         }
       }
     },
-    
+
     // Migration 3: Add transaction_hash to vaccinations
     {
       name: 'Add transaction_hash column to vaccinations',
@@ -95,7 +94,6 @@ try {
         try {
           const vaxTableInfo = db.prepare("PRAGMA table_info(vaccinations)").all();
           const hasTxHash = vaxTableInfo.some(col => col.name === 'transaction_hash');
-          
           if (!hasTxHash) {
             db.exec(`ALTER TABLE vaccinations ADD COLUMN transaction_hash TEXT;`);
             db.exec(`CREATE INDEX IF NOT EXISTS idx_tx_hash ON vaccinations(transaction_hash);`);
@@ -110,361 +108,396 @@ try {
         }
       }
     },
-    
-     // Migration 4: Update mint_address for existing vaccinations
-     {
-       name: 'Update mint_address for existing vaccinations from SPL token recording',
-       up: (db) => {
-         try {
-           // Update vaccination vax_1779533855468 with mint address
-           db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
-             '9XoXMYBMYZs51w9EpyQt9aELMAGReLHZiuo3KYbFvxj',
-             'vax_1779533855468'
-           );
-           
-           // Update vaccination vax_1779448067318 with mint address
-           db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
-             'CGNQGjhDyoSCsrv4RLbrVBdutHLX9xjqgzZsnEt1V1oa',
-             'vax_1779448067318'
-           );
-           
-           console.log('    ✓ Updated mint addresses for 2 vaccinations');
-           return true;
-         } catch (error) {
-           console.error('    Error updating mint addresses:', error.message);
-           throw error;
-         }
-       }
-     },
-     
-      // Migration 5: Create nutrition_plans and feeding_actions tables
-      {
-        name: 'Create nutrition_plans and feeding_actions tables for PetDiet',
-        up: (db) => {
-          try {
-            // Check if tables already exist
-            const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-            const tableNames = tables.map(t => t.name);
-            
-            let created = false;
-            
-            if (!tableNames.includes('nutrition_plans')) {
-              db.exec(`
-                CREATE TABLE nutrition_plans (
-                  id TEXT PRIMARY KEY,
-                  pet_id TEXT NOT NULL,
-                  plan_name TEXT NOT NULL,
-                  start_date TEXT NOT NULL,
-                  ingredients_monday TEXT NOT NULL,
-                  ingredients_tuesday TEXT NOT NULL,
-                  ingredients_wednesday TEXT NOT NULL,
-                  ingredients_thursday TEXT NOT NULL,
-                  ingredients_friday TEXT NOT NULL,
-                  ingredients_saturday TEXT NOT NULL,
-                  ingredients_sunday TEXT NOT NULL,
-                  duration TEXT NOT NULL,
-                  duration_end_date TEXT NOT NULL,
-                  authorized_nutritioner TEXT,
-                  mint_address TEXT,
-                  transaction_signature TEXT,
-                  transaction_hash TEXT,
-                  created_at TEXT NOT NULL,
-                  updated_at TEXT NOT NULL,
-                  FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
-                );
-                
-                CREATE INDEX IF NOT EXISTS idx_diet_pet_id ON nutrition_plans(pet_id);
-                CREATE INDEX IF NOT EXISTS idx_diet_nutritioner ON nutrition_plans(authorized_nutritioner);
-                CREATE INDEX IF NOT EXISTS idx_diet_mint ON nutrition_plans(mint_address);
-              `);
-              created = true;
-            }
-            
-            if (!tableNames.includes('feeding_actions')) {
-              db.exec(`
-                CREATE TABLE feeding_actions (
-                  id TEXT PRIMARY KEY,
-                  nutrition_plan_id TEXT NOT NULL,
-                  pet_id TEXT NOT NULL,
-                  ingredients TEXT NOT NULL,
-                  pet_signature TEXT NOT NULL,
-                  transaction_signature TEXT,
-                  transaction_hash TEXT,
-                  created_at TEXT NOT NULL,
-                  updated_at TEXT NOT NULL,
-                  FOREIGN KEY (nutrition_plan_id) REFERENCES nutrition_plans(id) ON DELETE CASCADE,
-                  FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
-                );
-                
-                CREATE INDEX IF NOT EXISTS idx_feeding_plan_id ON feeding_actions(nutrition_plan_id);
-                CREATE INDEX IF NOT EXISTS idx_feeding_pet_id ON feeding_actions(pet_id);
-                CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
-              `);
-              created = true;
-            }
-            
-            return created;
-          } catch (error) {
-            if (error.message.includes('already exists')) {
-              return false;
-            }
-            throw error;
-          }
+
+    // Migration 4: Update mint_address for existing vaccinations
+    {
+      name: 'Update mint_address for existing vaccinations from SPL token recording',
+      up: (db) => {
+        try {
+          // Update vaccination vax_1779533855468 with mint address
+          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+            '9XoXMYBMYZs51w9EpyQt9aELMAGReLHZiuo3KYbFvxj',
+            'vax_1779533855468'
+          );
+          // Update vaccination vax_1779448067318 with mint address
+          db.prepare(`UPDATE vaccinations SET mint_address = ? WHERE id = ?`).run(
+            'CGNQGjhDyoSCsrv4RLbrVBdutHLX9xjqgzZsnEt1V1oa',
+            'vax_1779448067318'
+          );
+          console.log('    ✓ Updated mint addresses for 2 vaccinations');
+          return true;
+        } catch (error) {
+          console.error('    Error updating mint addresses:', error.message);
+          throw error;
         }
-      },
-      
-       // Migration 6: Add recorded_by column to feeding_actions
-       {
-         name: 'Add recorded_by column to feeding_actions',
-         up: (db) => {
-           try {
-             const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
-             const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
-             
-             if (!hasRecordedBy) {
-               db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
-               return true;
-             }
-             return false;
-           } catch (error) {
-             if (error.message.includes('duplicate column')) {
-               return false;
-             }
-             throw error;
-           }
-         }
-       },
-       
-       // Migration 7: Create HealthCred tables (credentials, badges, certifications)
-       {
-         name: 'Create HealthCred credentials, badges, and certifications tables',
-         up: (db) => {
-           try {
-             const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-             const tableNames = tables.map(t => t.name);
-             
-             let created = false;
-             
-             if (!tableNames.includes('credentials')) {
-               db.exec(`
-                 CREATE TABLE credentials (
-                   id TEXT PRIMARY KEY,
-                   wallet_address TEXT NOT NULL UNIQUE,
-                   full_name TEXT NOT NULL,
-                   date_of_birth TEXT NOT NULL,
-                   email TEXT NOT NULL,
-                   profession TEXT NOT NULL,
-                   did_document_json TEXT NOT NULL,
-                   did_document_hash TEXT NOT NULL,
-                   did_id TEXT NOT NULL,
-                   authentication_methods TEXT,
-                   sas_credential_id TEXT,
-                   mint_address TEXT,
-                   transaction_signature TEXT,
-                   transaction_hash TEXT,
-                   created_at TEXT NOT NULL,
-                   updated_at TEXT NOT NULL
-                 );
-                 
-                 CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
-                 CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
-                 CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
-               `);
-               created = true;
-             }
-             
-             if (!tableNames.includes('badges')) {
-               db.exec(`
-                 CREATE TABLE badges (
-                   id TEXT PRIMARY KEY,
-                   credential_id TEXT NOT NULL,
-                   issuer_wallet TEXT NOT NULL,
-                   emoji TEXT NOT NULL,
-                   description TEXT NOT NULL,
-                   mint_address TEXT,
-                   transaction_signature TEXT,
-                   transaction_hash TEXT,
-                   created_at TEXT NOT NULL,
-                   FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
-                 );
-                 
-                 CREATE INDEX IF NOT EXISTS idx_badge_credential ON badges(credential_id);
-                 CREATE INDEX IF NOT EXISTS idx_badge_issuer ON badges(issuer_wallet);
-                 CREATE INDEX IF NOT EXISTS idx_badge_tx_sig ON badges(transaction_signature);
-               `);
-               created = true;
-             }
-             
-             if (!tableNames.includes('certifications')) {
-               db.exec(`
-                 CREATE TABLE certifications (
-                   id TEXT PRIMARY KEY,
-                   credential_id TEXT NOT NULL,
-                   issuer_wallet TEXT NOT NULL,
-                   filename TEXT NOT NULL,
-                   file_hash TEXT NOT NULL,
-                   file_size INTEGER,
-                   file_type TEXT,
-                   mint_address TEXT,
-                   transaction_signature TEXT,
-                   transaction_hash TEXT,
-                   created_at TEXT NOT NULL,
-                   FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
-                 );
-                 
-                 CREATE INDEX IF NOT EXISTS idx_cert_credential ON certifications(credential_id);
-                 CREATE INDEX IF NOT EXISTS idx_cert_issuer ON certifications(issuer_wallet);
-                 CREATE INDEX IF NOT EXISTS idx_cert_tx_sig ON certifications(transaction_signature);
-               `);
-               created = true;
-             }
-             
-             return created;
-           } catch (error) {
-             if (error.message.includes('already exists')) {
-               return false;
-             }
-              throw error;
-            }
+      }
+    },
+
+    // Migration 5: Create nutrition_plans and feeding_actions tables
+    {
+      name: 'Create nutrition_plans and feeding_actions tables for PetDiet',
+      up: (db) => {
+        try {
+          // Check if tables already exist
+          const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+          const tableNames = tables.map(t => t.name);
+          let created = false;
+          if (!tableNames.includes('nutrition_plans')) {
+            db.exec(`
+              CREATE TABLE nutrition_plans (
+                id TEXT PRIMARY KEY,
+                pet_id TEXT NOT NULL,
+                plan_name TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                ingredients_monday TEXT NOT NULL,
+                ingredients_tuesday TEXT NOT NULL,
+                ingredients_wednesday TEXT NOT NULL,
+                ingredients_thursday TEXT NOT NULL,
+                ingredients_friday TEXT NOT NULL,
+                ingredients_saturday TEXT NOT NULL,
+                ingredients_sunday TEXT NOT NULL,
+                duration TEXT NOT NULL,
+                duration_end_date TEXT NOT NULL,
+                authorized_nutritioner TEXT,
+                mint_address TEXT,
+                transaction_signature TEXT,
+                transaction_hash TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+              );
+              CREATE INDEX IF NOT EXISTS idx_diet_pet_id ON nutrition_plans(pet_id);
+              CREATE INDEX IF NOT EXISTS idx_diet_nutritioner ON nutrition_plans(authorized_nutritioner);
+              CREATE INDEX IF NOT EXISTS idx_diet_mint ON nutrition_plans(mint_address);
+            `);
+            created = true;
           }
-        },
+          if (!tableNames.includes('feeding_actions')) {
+            db.exec(`
+              CREATE TABLE feeding_actions (
+                id TEXT PRIMARY KEY,
+                nutrition_plan_id TEXT NOT NULL,
+                pet_id TEXT NOT NULL,
+                ingredients TEXT NOT NULL,
+                pet_signature TEXT NOT NULL,
+                transaction_signature TEXT,
+                transaction_hash TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (nutrition_plan_id) REFERENCES nutrition_plans(id) ON DELETE CASCADE,
+                FOREIGN KEY (pet_id) REFERENCES pets(id) ON DELETE CASCADE
+              );
+              CREATE INDEX IF NOT EXISTS idx_feeding_plan_id ON feeding_actions(nutrition_plan_id);
+              CREATE INDEX IF NOT EXISTS idx_feeding_pet_id ON feeding_actions(pet_id);
+              CREATE INDEX IF NOT EXISTS idx_feeding_tx_sig ON feeding_actions(transaction_signature);
+            `);
+            created = true;
+          }
+          return created;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
 
-         // Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
-         // Allow multiple credentials per wallet; uniqueness is on did_document_hash
-         {
-           name: 'Remove UNIQUE constraint on wallet_address in credentials table',
-           up: (db) => {
-             try {
-               // Check if the UNIQUE constraint still exists
-               const indexInfo = db.prepare("PRAGMA index_info(sqlite_autoindex_credentials_1)").all();
-               
-               // If we can't find the autoindex, the constraint might already be removed
-               if (indexInfo.length === 0) {
-                 return false; // Already removed or doesn't exist
-               }
-               
-               // Rebuild credentials table without UNIQUE on wallet_address
-               db.exec(`
-                 CREATE TABLE credentials_new (
-                   id TEXT PRIMARY KEY,
-                   wallet_address TEXT NOT NULL,
-                   full_name TEXT NOT NULL,
-                   date_of_birth TEXT NOT NULL,
-                   email TEXT NOT NULL,
-                   profession TEXT NOT NULL,
-                   did_document_json TEXT NOT NULL,
-                   did_document_hash TEXT NOT NULL UNIQUE,
-                   did_id TEXT NOT NULL,
-                   authentication_methods TEXT,
-                   sas_credential_id TEXT,
-                   mint_address TEXT,
-                   transaction_signature TEXT,
-                   transaction_hash TEXT,
-                   created_at TEXT NOT NULL,
-                   updated_at TEXT NOT NULL
-                 );
-                 
-                 INSERT INTO credentials_new SELECT * FROM credentials;
-                 DROP TABLE credentials;
-                 ALTER TABLE credentials_new RENAME TO credentials;
-                 
-                 CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
-                 CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
-                 CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
-               `);
-               
-               return true;
-             } catch (error) {
-               if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
-                 return false;
-               }
-               throw error;
-             }
-           }
-         },
-         
-          // Migration 9: Add certification_name column to certifications table
-          {
-            name: 'Add certification_name column to certifications table',
-            up: (db) => {
-              try {
-                const certTableInfo = db.prepare("PRAGMA table_info(certifications)").all();
-                const hasCertName = certTableInfo.some(col => col.name === 'certification_name');
-                
-                if (!hasCertName) {
-                  db.exec(`ALTER TABLE certifications ADD COLUMN certification_name TEXT;`);
-                  return true;
-                }
-                return false;
-              } catch (error) {
-                if (error.message.includes('duplicate column')) {
-                  return false;
-                }
-                throw error;
-              }
-            }
-          },
+    // Migration 6: Add recorded_by column to feeding_actions
+    {
+      name: 'Add recorded_by column to feeding_actions',
+      up: (db) => {
+        try {
+          const feedingTableInfo = db.prepare("PRAGMA table_info(feeding_actions)").all();
+          const hasRecordedBy = feedingTableInfo.some(col => col.name === 'recorded_by');
           
-          // Migration 10: Add sas_credential_address column to credentials table
-          {
-            name: 'Add sas_credential_address column to credentials table for backward compatibility',
-            up: (db) => {
-              try {
-                const credTableInfo = db.prepare("PRAGMA table_info(credentials)").all();
-                const hasSasAddress = credTableInfo.some(col => col.name === 'sas_credential_address');
-                
-                if (!hasSasAddress) {
-                  db.exec(`ALTER TABLE credentials ADD COLUMN sas_credential_address TEXT;`);
-                  return true;
-                }
-                return false;
-              } catch (error) {
-                if (error.message.includes('duplicate column')) {
-                  return false;
-                }
-                throw error;
-              }
-            }
-          },
+          if (!hasRecordedBy) {
+            db.exec(`ALTER TABLE feeding_actions ADD COLUMN recorded_by TEXT;`);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          if (error.message.includes('duplicate column')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
 
-         // Migration 11: Create hcp_prompts table
-         {
-           name: 'Create hcp_prompts table',
-           up: (db) => {
-             try {
-               // Rebuild credentials table without UNIQUE on wallet_address
-               db.exec(`
-                 CREATE TABLE hcp_prompts (
-                   id TEXT PRIMARY KEY,
-                   wallet_address TEXT NOT NULL,
-                   sas_credential_id TEXT,
-                   case_ref TEXT NOT NULL,
-                   prompt_hash TEXT NOT NULL,
-                   prompt_cipher TEXT NOT NULL,
-                   cipher_iv TEXT NOT NULL,
-                   transaction_signature TEXT,
-                   num_reads INTEGER,
-                   lastread_at TEXT NOT NULL,
-                   created_at TEXT NOT NULL,
-                   updated_at TEXT NOT NULL
-                 );
+    // Migration 7: Create HealthCred tables (credentials, badges, certifications)
+    {
+      name: 'Create HealthCred credentials, badges, and certifications tables',
+      up: (db) => {
+        try {
+          const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+          const tableNames = tables.map(t => t.name);
 
-                 CREATE INDEX IF NOT EXISTS idx_prompts_wallet ON hcp_prompts(wallet_address);
-                 CREATE INDEX IF NOT EXISTS idx_prompts_sas_id ON hcp_prompts(sas_credential_id);
-                 CREATE INDEX IF NOT EXISTS idx_prompts_case_ref ON hcp_prompts(case_ref);
-                 CREATE INDEX IF NOT EXISTS idx_prompts_prompt_hash ON hcp_prompts(prompt_hash);
-               `);
+          let created = false;
 
-               return true;
-             } catch (error) {
-               if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
-                 return false;
-               }
-               throw error;
-             }
-           }
-         },
-     ];
+          if (!tableNames.includes('credentials')) {
+            db.exec(`
+              CREATE TABLE credentials (
+                id TEXT PRIMARY KEY,
+                wallet_address TEXT NOT NULL UNIQUE,
+                full_name TEXT NOT NULL,
+                date_of_birth TEXT NOT NULL,
+                email TEXT NOT NULL,
+                profession TEXT NOT NULL,
+                did_document_json TEXT NOT NULL,
+                did_document_hash TEXT NOT NULL,
+                did_id TEXT NOT NULL,
+                authentication_methods TEXT,
+                sas_credential_id TEXT,
+                mint_address TEXT,
+                transaction_signature TEXT,
+                transaction_hash TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
+              CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
+              CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
+            `);
+            created = true;
+          }
+
+          if (!tableNames.includes('badges')) {
+            db.exec(`
+              CREATE TABLE badges (
+                id TEXT PRIMARY KEY,
+                credential_id TEXT NOT NULL,
+                issuer_wallet TEXT NOT NULL,
+                emoji TEXT NOT NULL,
+                description TEXT NOT NULL,
+                mint_address TEXT,
+                transaction_signature TEXT,
+                transaction_hash TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_badge_credential ON badges(credential_id);
+              CREATE INDEX IF NOT EXISTS idx_badge_issuer ON badges(issuer_wallet);
+              CREATE INDEX IF NOT EXISTS idx_badge_tx_sig ON badges(transaction_signature);
+            `);
+            created = true;
+          }
+
+          if (!tableNames.includes('certifications')) {
+            db.exec(`
+              CREATE TABLE certifications (
+                id TEXT PRIMARY KEY,
+                credential_id TEXT NOT NULL,
+                issuer_wallet TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                file_hash TEXT NOT NULL,
+                file_size INTEGER,
+                file_type TEXT,
+                mint_address TEXT,
+                transaction_signature TEXT,
+                transaction_hash TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (credential_id) REFERENCES credentials(id) ON DELETE CASCADE
+              );
+
+              CREATE INDEX IF NOT EXISTS idx_cert_credential ON certifications(credential_id);
+              CREATE INDEX IF NOT EXISTS idx_cert_issuer ON certifications(issuer_wallet);
+              CREATE INDEX IF NOT EXISTS idx_cert_tx_sig ON certifications(transaction_signature);
+            `);
+            created = true;
+          }
+
+          return created;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 8: Remove UNIQUE constraint on wallet_address in credentials table
+    // Allow multiple credentials per wallet; uniqueness is on did_document_hash
+    {
+      name: 'Remove UNIQUE constraint on wallet_address in credentials table',
+      up: (db) => {
+        try {
+          // Check if the UNIQUE constraint still exists
+          const indexInfo = db.prepare("PRAGMA index_info(sqlite_autoindex_credentials_1)").all();
+
+          // If we can't find the autoindex, the constraint might already be removed
+          if (indexInfo.length === 0) {
+            return false; // Already removed or doesn't exist
+          }
+
+          // Rebuild credentials table without UNIQUE on wallet_address
+          db.exec(`
+            CREATE TABLE credentials_new (
+              id TEXT PRIMARY KEY,
+              wallet_address TEXT NOT NULL,
+              full_name TEXT NOT NULL,
+              date_of_birth TEXT NOT NULL,
+              email TEXT NOT NULL,
+              profession TEXT NOT NULL,
+              did_document_json TEXT NOT NULL,
+              did_document_hash TEXT NOT NULL UNIQUE,
+              did_id TEXT NOT NULL,
+              authentication_methods TEXT,
+              sas_credential_id TEXT,
+              mint_address TEXT,
+              transaction_signature TEXT,
+              transaction_hash TEXT,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            INSERT INTO credentials_new SELECT * FROM credentials;
+            DROP TABLE credentials;
+            ALTER TABLE credentials_new RENAME TO credentials;
+
+            CREATE INDEX IF NOT EXISTS idx_cred_wallet ON credentials(wallet_address);
+            CREATE INDEX IF NOT EXISTS idx_cred_did_id ON credentials(did_id);
+            CREATE INDEX IF NOT EXISTS idx_cred_email ON credentials(email);
+          `);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists') || error.message.includes('column did_document_hash is not unique')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 9: Add certification_name column to certifications table
+    {
+      name: 'Add certification_name column to certifications table',
+      up: (db) => {
+        try {
+          const certTableInfo = db.prepare("PRAGMA table_info(certifications)").all();
+          const hasCertName = certTableInfo.some(col => col.name === 'certification_name');
+
+          if (!hasCertName) {
+            db.exec(`ALTER TABLE certifications ADD COLUMN certification_name TEXT;`);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          if (error.message.includes('duplicate column')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 10: Add sas_credential_address column to credentials table
+    {
+      name: 'Add sas_credential_address column to credentials table for backward compatibility',
+      up: (db) => {
+        try {
+          const credTableInfo = db.prepare("PRAGMA table_info(credentials)").all();
+          const hasSasAddress = credTableInfo.some(col => col.name === 'sas_credential_address');
+
+          if (!hasSasAddress) {
+            db.exec(`ALTER TABLE credentials ADD COLUMN sas_credential_address TEXT;`);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          if (error.message.includes('duplicate column')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 11: Create hcp_prompts table
+    {
+      name: 'Create hcp_prompts table',
+      up: (db) => {
+        try {
+          db.exec(`
+            CREATE TABLE hcp_prompts (
+              id TEXT PRIMARY KEY,
+              wallet_address TEXT NOT NULL,
+              sas_credential_id TEXT,
+              case_ref TEXT NOT NULL,
+              prompt_hash TEXT NOT NULL,
+              prompt_cipher TEXT NOT NULL,
+              cipher_iv TEXT NOT NULL,
+              transaction_signature TEXT,
+              num_reads INTEGER,
+              lastread_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_prompts_wallet ON hcp_prompts(wallet_address);
+            CREATE INDEX IF NOT EXISTS idx_prompts_sas_id ON hcp_prompts(sas_credential_id);
+            CREATE INDEX IF NOT EXISTS idx_prompts_case_ref ON hcp_prompts(case_ref);
+            CREATE INDEX IF NOT EXISTS idx_prompts_prompt_hash ON hcp_prompts(prompt_hash);
+          `);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 12: Create tw_invoices table
+    {
+      name: 'Create tw_invoices, tw_token_prices tables',
+      up: (db) => {
+        try {
+          db.exec(`
+            CREATE TABLE tw_invoices (
+              id TEXT PRIMARY KEY,
+              issuer_address TEXT NOT NULL,
+              paidto_address TEXT NOT NULL,
+              token_address TEXT NOT NULL,
+              invoice_ref TEXT NOT NULL UNIQUE,
+              script_cipher TEXT NOT NULL,
+              cipher_iv TEXT NOT NULL,
+              num_reads INTEGER,
+              lastread_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_invoices_wallet ON tw_invoices(issuer_address);
+            CREATE INDEX IF NOT EXISTS idx_invoices_ref ON tw_invoices(invoice_ref);
+
+            CREATE TABLE tw_token_prices (
+              id TEXT PRIMARY KEY,
+              blockchain TEXT NOT NULL,
+              token_symbol TEXT NOT NULL,
+              token_price_eur DECIMAL(9,2) NOT NULL,
+              requested_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_prices_symbol ON tw_token_prices(token_symbol);
+          `);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+  ];
 
   console.log(`   Total migrations defined: ${migrations.length}`);
 

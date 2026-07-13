@@ -12,6 +12,10 @@ module.exports = {
     bindPort: parseInt(process.env.SCS_BIND_PORT || '3000', 10)
   },
 
+  api: {
+    baseUrl: process.env.API_BASE_URL || 'localhost:3000/api/v1',
+  },
+
   uploads: {
     path: process.env.SCS_UPLOADS_PATH || 'uploads/'
   },
@@ -23,6 +27,11 @@ module.exports = {
   cipher: {
     keypairFile: process.env.SCS_CIPHER_KEYPAIR_FILE || '.cipher-keypair.json',
     algorithm: 'aes-256-cbc',
+  },
+
+  market: {
+    apiUrl: 'https://api.coinstats.app/v1',
+    apiKey: process.env.SCS_MARKET_DATA_APIKEY,
   },
 
   logging: {
