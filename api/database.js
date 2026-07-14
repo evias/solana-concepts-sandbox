@@ -901,7 +901,7 @@ const marketDataDb = {
   // Get price entry by token symbol
   getPriceBySymbol(tokenSymbol) {
     const stmt = db.prepare('SELECT * FROM tw_token_prices WHERE token_symbol = ? ORDER BY requested_at DESC LIMIT 1');
-    const row = stmt.get(id);
+    const row = stmt.get(tokenSymbol);
     return row;
   }
 };
