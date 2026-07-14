@@ -74,6 +74,10 @@ app.use('/api/v1/carecircle', carecircleApi);
 const hcpconsoleApi = require('./api/hcpconsole');
 app.use('/api/v1/hcpconsole', hcpconsoleApi);
 
+// TokenWall API routes
+const tokenwallApi = require('./api/tokenwall');
+app.use('/api/v1/tokenwall', tokenwallApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
@@ -92,6 +96,9 @@ app.get('/carecircle', (req, res) => {
 });
 app.get('/hcpconsole', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/hcpconsole.html'));
+});
+app.get('/tokenwall', (req, res) => {
+  res.sendFile(path.join(__dirname, 'concepts/tokenwall.html'));
 });
 
 // Serve assets

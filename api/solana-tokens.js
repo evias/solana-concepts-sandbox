@@ -2,7 +2,7 @@ const web3 = require('@solana/web3.js');
 const splToken = require('@solana/spl-token');
 const { payer } = require('./payer');
 const { createLogger } = require('./logger');
-const log = createLogger('solana-tokens');
+const log = createLogger('core/tokens');
 
 const connection = new web3.Connection(
   'https://api.devnet.solana.com',
@@ -178,11 +178,61 @@ async function getTokenAccountBalance(tokenAccountAddress) {
   }
 }
 
+/**
+ * Get all associated token accounts.
+ * 
+ * @param {string} accountAddress - The user account address
+ * @returns {Promise<Object>} Token accounts information
+ */
+async function getTokenAccounts(accountAddress, conn) {
+  try {
+    let useConn = typeof conn !== undefined ? conn : connection;
+
+    const balance = await useConn.getBalance(new web3.PublicKey(accountAddress), "confirmed");
+
+    const filters = [
+      { dataSize: 165, },
+      {
+        memcmp: {
+          offset: 32,     // location of our query in the account (bytes)
+          bytes: accountAddress,  // our search criteria, a base58 encoded string
+        }
+      }
+    ];
+
+    const accounts = await useConn.getParsedProgramAccounts(
+      splToken.TOKEN_PROGRAM_ID,
+      { filters: filters }
+    );
+
+    const tokenAccounts = [
+      {
+        mintAddress: 'So11111111111111111111111111111111111111112',
+        name: 'SOL',
+        tokenAmount: (balance / web3.LAMPORTS_PER_SOL).toFixed(9),
+      },
+    ];
+    accounts.forEach(acct => {
+      const { mint: mintAddress, tokenAmount } = acct.account.data["parsed"]["info"];
+      tokenAccounts.push({
+        mintAddress,
+        tokenAmount: tokenAmount.uiAmountString,
+      });
+    });
+
+    return tokenAccounts;
+  } catch(error) {
+    log.error('Error getting token accounts:', { error: error });
+    throw error;
+  }
+}
+
 module.exports = {
   createPetTokenMint,
   createAssociatedTokenAccount,
   mintPetToken,
   getTokenInfo,
   getTokenAccountBalance,
+  getTokenAccounts,
   connection
 };
