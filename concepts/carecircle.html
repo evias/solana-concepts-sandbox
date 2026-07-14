@@ -867,20 +867,17 @@
                 },
 
                 async openDocumentation() {
-                    const log = window.createLogger('concept/carecircle');
-                    try {
-                        const response = await fetch('/api/v1/carecircle/documentation');
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.documentationContent = marked.parse(data.content);
-                        } else {
-                            this.documentationContent = '<p>Documentation not available</p>';
-                        }
-                    } catch (error) {
-                        log.error('Error loading documentation', { error: error.message });
-                        this.documentationContent = '<p>Error loading documentation</p>';
+                  try {
+                    const response = await fetch('/concepts/docs/carecircle.md');
+                    if (response.ok) {
+                      const markdown = await response.text();
+                      this.documentationContent = marked.parse(markdown);
+                      this.showDocumentation = true;
                     }
-                    this.showDocumentation = true;
+                  } catch (error) {
+                    log.error('Error loading documentation', { error: error.message });
+                    alert('Failed to load documentation');
+                  }
                 }
             };
         }

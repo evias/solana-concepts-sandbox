@@ -116,6 +116,10 @@ const options = {
         description: 'Healthcare patient journeys with AI'
       },
       {
+        name: 'TokenWall',
+        description: 'Paid content with token invoices'
+      },
+      {
         name: 'Logs',
         description: 'Client-side logging'
       }
@@ -129,6 +133,7 @@ const options = {
     path.join(__dirname, '../api/healthcred.js'),
     path.join(__dirname, '../api/carecircle.js'),
     path.join(__dirname, '../api/hcpconsole.js'),
+    path.join(__dirname, '../api/tokenwall.js'),
     path.join(__dirname, '../api/logs.js')
   ]
 };
