@@ -200,6 +200,21 @@
       </div>
     </div>
 
+    <!-- Documentation Modal -->
+    <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+      <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold">TokenWall Documentation</h2>
+          <button
+            @click="showDocumentation = false"
+            class="text-gray-500 hover:text-gray-700 text-2xl">
+            ✕
+          </button>
+        </div>
+        <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- DEMO TOKENWALL CLI INTEGRATION >
@@ -341,18 +356,16 @@
 
         async openDocumentation() {
           try {
-            const response = await fetch('/api/v1/tokenwall/documentation');
+            const response = await fetch('/concepts/docs/tokenwall.md');
             if (response.ok) {
-              const data = await response.json();
-              this.documentationContent = marked.parse(data.content);
-            } else {
-              this.documentationContent = '<p>Documentation not available</p>';
+              const markdown = await response.text();
+              this.documentationContent = marked.parse(markdown);
+              this.showDocumentation = true;
             }
           } catch (error) {
             log.error('Error loading documentation', { error: error.message });
-            this.documentationContent = '<p>Error loading documentation</p>';
+            alert('Failed to load documentation');
           }
-          this.showDocumentation = true;
         },
 
         formatToken(token) {
