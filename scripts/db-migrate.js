@@ -456,7 +456,7 @@ try {
 
     // Migration 12: Create tw_invoices table
     {
-      name: 'Create tw_invoices, tw_token_prices tables',
+      name: 'Create tw_invoices table',
       up: (db) => {
         try {
           db.exec(`
@@ -476,7 +476,24 @@ try {
 
             CREATE INDEX IF NOT EXISTS idx_invoices_wallet ON tw_invoices(issuer_address);
             CREATE INDEX IF NOT EXISTS idx_invoices_ref ON tw_invoices(invoice_ref);
+          `);
 
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 13: Create tw_token_prices table
+    {
+      name: 'Create tw_token_prices table',
+      up: (db) => {
+        try {
+          db.exec(`
             CREATE TABLE tw_token_prices (
               id TEXT PRIMARY KEY,
               blockchain TEXT NOT NULL,
