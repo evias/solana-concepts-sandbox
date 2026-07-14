@@ -41,7 +41,10 @@
     --color-emerald-200: oklch(90.5% 0.093 164.15);
     --color-emerald-500: oklch(69.6% 0.17 162.48);
     --color-emerald-700: oklch(50.8% 0.118 165.612);
+    --color-teal-50: oklch(98.4% 0.014 180.72);
+    --color-teal-200: oklch(91% 0.096 180.426);
     --color-teal-500: oklch(70.4% 0.14 182.503);
+    --color-teal-700: oklch(51.1% 0.096 186.391);
     --color-sky-500: oklch(68.5% 0.169 237.323);
     --color-blue-50: oklch(97% 0.014 254.604);
     --color-blue-100: oklch(93.2% 0.032 255.585);
@@ -572,8 +575,8 @@
   .w-\[30px\] {
     width: 30px;
   }
-  .w-\[75\%\] {
-    width: 75%;
+  .w-\[50\%\] {
+    width: 50%;
   }
   .w-fit {
     width: fit-content;
@@ -1125,6 +1128,9 @@
   .bg-slate-100 {
     background-color: var(--color-slate-100);
   }
+  .bg-teal-50 {
+    background-color: var(--color-teal-50);
+  }
   .bg-teal-500 {
     background-color: var(--color-teal-500);
   }
@@ -1561,6 +1567,9 @@
   .text-slate-900 {
     color: var(--color-slate-900);
   }
+  .text-teal-700 {
+    color: var(--color-teal-700);
+  }
   .text-white {
     color: var(--color-white);
   }
@@ -1663,6 +1672,9 @@
   }
   .ring-slate-200 {
     --tw-ring-color: var(--color-slate-200);
+  }
+  .ring-teal-200 {
+    --tw-ring-color: var(--color-teal-200);
   }
   .blur {
     --tw-blur: blur(8px);

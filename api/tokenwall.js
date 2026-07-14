@@ -494,29 +494,34 @@ router.get('/tokens', async (req, res) => {
         mintAddress: 'So11111111111111111111111111111111111111112',
         name: 'SOL',
         tokenAmount: 0,
+        decimals: 9,
         priceEur: solanaPriceEur,
       },
       {
         mintAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
         name: 'USDC',
         tokenAmount: 0,
+        decimals: 6,
         priceEur: usdcPriceEur,
       },
       {
         mintAddress: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
         name: 'EURC',
         tokenAmount: 0,
+        decimals: 6,
         priceEur: eurcPriceEur,
       },
       {
         mintAddress: 'DHP1KmBeJePxh7EiptdpEt9E2G5cQRDTdkJooZMmDtKG',
         name: 'DHP',
         tokenAmount: 0,
+        decimals: 9,
       },
       {
         mintAddress: 'AidHczUkwDnW7c1Lc89tTiP71dTqeEa52LgV6GxsfwYd',
         name: 'AIDH',
         tokenAmount: 0,
+        decimals: 6,
       }
     ];
 
