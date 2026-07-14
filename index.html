@@ -22,9 +22,14 @@
           </div>
         </div>
 
-        <div class="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-          <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-          Solana Devnet Ready
+        <div class="flex flex-row gap-2">
+          <div class="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            Solana Devnet Ready
+          </div>
+          <div class="hidden sm:flex items-center gap-1 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 ring-1 ring-indigo-200">
+            <span>1 SOL &lt;&gt; </span><span id="solanaPriceEur">0</span>
+          </div>
         </div>
       </div>
     </header>
@@ -219,6 +224,7 @@
         showLicense: false,
         licenseMarkdown: '',
         loading: false,
+        knownTokens: [],
         concepts: [
           {
             id: 'pettracker',
@@ -286,7 +292,7 @@
             subtitle: 'Access by token',
             description: 'Create QRCode invoices to require token payments to unlock access. Lock your website/product/content with a token transfer (paywall), e.g. Gated content.',
             link: '/tokenwall',
-            enabled: false,
+            enabled: true,
             tags: ['SPL Token', 'QRCode', 'Payment', 'Invoice'],
             color: 'bg-teal-500'
           },
@@ -311,6 +317,7 @@
             color: 'bg-olive-500'
           }
         ],
+
         get availableTags() {
           const tags = new Set();
           this.concepts.forEach(concept => {
@@ -318,6 +325,7 @@
           });
           return Array.from(tags).sort();
         },
+
         get filteredConcepts() {
           let results = this.concepts;
 
@@ -337,6 +345,7 @@
 
           return results;
         },
+
         clearFilter() {
           this.searchQuery = '';
           this.selectedTag = '';
@@ -348,6 +357,7 @@
           }
 
           this.loadSystemInfo();
+          this.loadMarketData();
         },
 
         async loadSystemInfo() {
@@ -362,6 +372,26 @@
             } finally {
               this.loading = false;
             }
+        },
+
+        async loadMarketData() {
+          try {
+            const response = await fetch('/api/v1/tokenwall/tokens?cluster=mainnet');
+            if (response.ok) {
+              const data = await response.json();
+              this.knownTokens = data.tokens;
+              this.updateSolanaPrice();
+            }
+          } catch (error) {
+            log.error('Error loading market data', { error: error.message });
+          }
+        },
+
+        async updateSolanaPrice() {
+          const solPrice = this.knownTokens.find(t => t.name === 'SOL')?.priceEur;
+          if (typeof solPrice !== undefined) {
+            document.getElementById('solanaPriceEur').innerText = solPrice + ' EUR';
+          }
         },
 
         async openLicense() {

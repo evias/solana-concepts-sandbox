@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TokenWall - Paid Content: Token Invoices</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="/assets/base.min.css" rel="stylesheet">
+    <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Client-side logger -->
+    <script src="/assets/logger.js"></script>
+    <script defer src="/assets/marked.min.js"></script>
+    <!-- Solana Web3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="container mx-auto" x-data="tokenWall()" @load="init()" x-init="init()">
+    <header class="px-2 sm:px-6 pt-6">
+      <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+        <div class="flex items-center gap-3">
+          <div class="h-8 w-8 rounded-full bg-teal-500"></div>
+          <div>
+            <p class="text-sm font-semibold text-slate-900">TokenWall</p>
+            <p class="text-xs text-slate-500">Paid Content: Token Invoices</p>
+          </div>
+        </div>
+        <div class="inline sm:hidden text-xs -mt-4">
+          <a href="/">
+            <svg class="pl-4 pt-4 w-16 h-16" viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+              <rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/>
+              <g transform="matrix(0.04 0 0 0.04 12 12)" >
+                <g style="" >
+                  <g transform="matrix(1 0 0 1 0 0)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(224,79,95); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -256)" d="M 7.9 256 C 7.9 119 119 7.9 256 7.9 C 393 7.9 504.1 119 504.1 256 C 504.1 393 393 504.1 256 504.1 C 119 504.1 7.9 393 7.9 256 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 -0.05 -67.52)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-255.95, -188.48)" d="M 408.1 206.8 L 258 131.9 C 256.7 131.3 255.3 131.3 254 131.9 L 103.80000000000001 206.8 C 102.10000000000001 207.60000000000002 101.10000000000001 209.20000000000002 101.10000000000001 211.10000000000002 L 101.10000000000001 240.70000000000002 C 101.10000000000001 242.3 101.9 243.8 103.30000000000001 244.70000000000002 C 104.70000000000002 245.60000000000002 106.4 245.70000000000002 107.80000000000001 245.00000000000003 L 256 171.00000000000003 L 404.1 245.00000000000003 C 404.70000000000005 245.30000000000004 405.40000000000003 245.50000000000003 406.1 245.50000000000003 C 407 245.50000000000003 407.90000000000003 245.30000000000004 408.6 244.80000000000004 C 410 243.90000000000003 410.8 242.40000000000003 410.8 240.80000000000004 L 410.8 211 C 410.8 209.2 409.8 207.5 408.1 206.8 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 0 16.3)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -272.3)" d="M 380.5 245.8 L 256 183.8 L 131.5 245.8 L 131.5 360.8 L 200.5 360.8 L 200.5 272.6 L 248 272.6 L 248 360.8 L 380.5 360.8 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 23.7 32.6)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(234,73,73); fill-rule: nonzero; opacity: 1;" transform=" translate(-279.7, -288.6)" d="M 263.7 272.6 L 295.7 272.6 L 295.7 304.6 L 263.7 304.6 z" stroke-linecap="round" />
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </a>
+        </div>
+        <div class="hidden sm:flex text-sm text-slate-500">
+          <a href="/" class="px-2 transition hover:-translate-y-1">← Back</a>
+
+          <a href="#" @click="openDocumentation()" class="px-2 transition hover:-translate-y-1">📚 Documentation</button>
+
+          <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="px-2 transition hover:-translate-y-1">📖 API Documentation</a>
+
+          <div class="hidden sm:flex inline items-center gap-2 rounded-full bg-emerald-50 mx-4 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+            Solana Devnet Ready
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto min-w-screen max-w-screen sm:min-w-7xl sm:max-w-7xl px-2 sm:px-5 pb-16 pt-8">
+      <!-- Wallet connection -->
+      <section
+        class="mb-8 rounded-[14px] border bg-white p-3 sm:p-7"
+        :class="userAddress ? 'border-green-700' : 'border-red-700'">
+        <div class="flex justify-between items-center mb-2">
+          <h2
+            @click="if (userAddress) showWalletDetails = !showWalletDetails"
+            class="text-md sm:text-[1.25rem] font-bold">
+            <span x-show="!userAddress">Connect your Wallet</span>
+            <span x-show="userAddress" x-text="'Connected as ' + shortenAddr(userAddress)"></span>
+          </h2>
+          <button 
+            x-show="userAddress"
+            @click="showWalletDetails = !showWalletDetails"
+            class="text-gray-600 hover:text-gray-800 text-md sm:text-2xl font-bold"
+            :title="showWalletDetails ? 'Collapse' : 'Expand'">
+            <span x-show="showWalletDetails">▼</span>
+            <span x-show="!showWalletDetails">▶</span>
+          </button>
+        </div>
+        <div class="mt-2 flex flex-col" x-show="showWalletDetails" x-collapse>
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              @click="showWalletModal = true"
+              class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
+              :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
+              <span x-show="!userAddress">Connect Wallet</span>
+              <span x-show="userAddress" x-text="'Connected: ' + shortenAddr(userAddress)"></span>
+            </button>
+            <button
+              type="button"
+              x-show="userAddress"
+              @click="disconnectWallet"
+              class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white hover:bg-red-700">
+              Disconnect
+            </button>
+          </div>
+          <p x-show="!userAddress" class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
+            Connect your wallet to create an invoice
+          </p>
+        </div>
+      </section>
+
+      <!-- Create invoice form -->
+      <section class="animate-fade">
+        <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+          <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your invoice</h2>
+          <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to create a new invoice.</p>
+
+          <div class="my-2 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-4 py-3 text-xs sm:text-[.88rem] text-warn">
+            This form helps you generate a script that you can add to any webpage to require a payment before access is granted.<br />
+            Users are expected to pay for a given amount using Tokens on <b>Solana <span id="useClusterTxt" x-text="useCluster"></span></b>.
+          </div>
+
+          <div class="mt-0 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div class="flex flex-col">
+              <label for="useCluster" class="block text-md font-semibold text-[#16352C]">
+                <input type="checkbox" name="useCluster" :checked="useCluster === 'Mainnet'" @change="toggleCluster()" /> Use Mainnet
+              </label>
+              <em class="mt-3 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+                Select this checkbox to use Mainnet tokens for the invoice. Note that if you uncheck
+                it, the payments will be done on Devnet. Keep this box checked for real value invoices.
+              </em>
+            </div>
+            <div class="flex flex-col">
+              <label for="token" class="block text-md font-semibold text-[#16352C]">
+                Token <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which token to send)</em>
+              </label>
+              <select id="token" @change="useToken($el)" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                <option value="">Select a token...</option>
+                <template x-for="token in knownTokens" :key="token.mintAddress">
+                  <option :value="token.mintAddress" x-text="formatToken(token)"></option>
+                </template>
+              </select>
+              <div x-show="userAddress && knownTokens.length === 0" class="mt-3 rounded-[10px] border border-red-600 bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
+                You don't own any tokens yet, tokens are needed to determine an exact mint address.
+              </div>
+            </div>
+            <div class="flex flex-col">
+              <label for="lamports" class="block text-md font-semibold text-[#16352C]">
+                Amount (Lamports) <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(use smallest unit of token)</em>
+              </label>
+              <div class="flex flex-row gap-3">
+                <input
+                  @change="updateTotal($el)"
+                  type="number"
+                  step="0.10"
+                  id="lamports"
+                  class="w-[75%] rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                <em class="mt-5 block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">i.e. <span id="totalPriceAmount">0</span> <span id="totalPriceSymbol">DHP</span></em>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-2 sm:px-6 pb-8">
+      <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+        <div class="flex flex-col gap-3 sm:flex-row items-center sm:items-start sm:justify-between">
+          <p class="text-xs sm:text-sm text-slate-500">
+            <em x-text="appVersion"></em>
+          </p>
+          <p class="text-xs sm:text-sm text-center font-medium text-slate-600">
+            © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>,<br />All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Wallet Modal -->
+    <div x-show="showWalletModal" class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
+      <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-[1.25rem] font-bold text-[#111]">Connect Wallet</h2>
+          <button @click="showWalletModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="flex flex-col gap-4 p-6">
+          <button @click="connectPhantom()" class="w-full rounded-[8px] border border-[#7c3aed] bg-[#7c3aed] px-4 py-3 text-[.95rem] font-semibold text-white hover:bg-[#6d28d9]">
+            🌐 Connect Phantom Wallet
+          </button>
+          <div class="flex items-center gap-3">
+            <div class="h-px flex-1 bg-[#e5e7eb]"></div>
+            <span class="shrink-0 text-[.85rem] text-[#999]">or</span>
+            <div class="h-px flex-1 bg-[#e5e7eb]"></div>
+          </div>
+          <div>
+            <label class="mb-2 block text-[.9rem] font-semibold text-[#374151]">Enter Account Address Manually</label>
+            <input x-model="manualAddress" type="text" placeholder="Solana account address" class="mb-3 w-full rounded-[8px] border border-[#d1d5db] px-3 py-2 text-[.9rem] font-sans outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <button @click="connectManually()" class="w-full rounded-[8px] border border-[#666] bg-[#666] px-4 py-2.5 text-[.9rem] font-semibold text-white hover:bg-[#555]">Use This Address</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DEMO TOKENWALL CLI INTEGRATION >
+  <script>
+  (function (i, s, o, g, r, a, m) {
+    i['TokenWallObject'] = r; i[r] = i[r] || function () {
+      (i[r].q = i[r].q || []).push(arguments);
+    }; i[r].l = 1 * new Date();
+    a = s.createElement(o);
+    m = s.getElementsByTagName(o)[0];
+    a.async = 1;
+    a.src = g;
+    m.parentNode.insertBefore(a, m);
+  })(window, document, 'script', '//unrevised-framing-silo.ngrok-free.dev/api/v1/tokenwall/pay.js', '_twp');
+  _twp('init', '12345', 'body');
+  _twp('lock');
+  </script>
+  <!-- END DEMO TOKENWALL CLI INTEGRATION -->
+
+  <script>
+    function tokenWall() {
+      const log = window.createLogger('concept/tokenwall');
+      return {
+        appVersion: '@main/dev',
+        copyYear: '2026',
+        loadingInfo: false,
+        showDocumentation: false,
+        documentationContent: '',
+
+        userAddress: '',
+        manualAddress: '',
+        showWalletModal: false,
+        showWalletDetails: true,
+        knownTokens: [],
+        useCluster: 'Mainnet',
+
+        async init() {
+          this.showWalletDetails = !this.userAddress;
+
+          this.loadSystemInfo();
+
+          // On page load, if user already has a wallet connected (from localStorage or other source)
+          // Load their credentials list
+          log.info('TokenWall initialized', { userAddress: this.userAddress });
+        },
+
+        async loadSystemInfo() {
+          if ((new Date()).getFullYear() > 2026) {
+            this.copyYear = "2026-" + (new Date()).getFullYear();
+          }
+          const syslog = window.createLogger('core/system');
+          try {
+            const res = await fetch(`/api/v1/system/info`);
+            const data = await res.json();
+            this.appVersion = data.appVersion;
+          } catch (err) {
+            syslog.error('Error loading system information', { err });
+          }
+        },
+
+        async connectPhantom() {
+          try {
+            if (!window.solana) {
+              alert('Phantom wallet not installed. Please install it from https://phantom.app');
+              return;
+            }
+
+            const response = await window.solana.connect();
+
+            this.showWalletModal = false;
+            this.setConnectedWallet(response.publicKey.toString());
+          } catch (error) {
+            log.error('Error connecting Phantom', { error: error.message });
+            alert('Failed to connect Phantom wallet');
+          }
+        },
+
+        connectManually() {
+          if (!this.manualAddress.trim()) {
+            alert('Please enter a valid address');
+            return;
+          }
+
+          const addressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+          if (!addressRegex.test(this.manualAddress)) {
+            alert('Invalid Solana address format');
+            return;
+          }
+
+          this.manualAddress = '';
+          this.showWalletModal = false;
+          this.setConnectedWallet(this.manualAddress);
+        },
+
+        disconnectWallet() {
+          this.userAddress = '';
+          this.knownTokens = [];
+          this.selectedToken = '';
+        },
+
+        setConnectedWallet(addr) {
+          this.userAddress = addr;
+
+          //XXX loadLatestInvoices
+          this.loadTokens();
+        },
+
+        toggleCluster() {
+          if (this.useCluster === 'Mainnet') {
+            this.useCluster = 'Devnet';
+          } else {
+            this.useCluster = 'Mainnet';
+          }
+
+          document.getElementById('useClusterTxt').innerText = this.useCluster;
+          this.loadTokens(); // force reload tokens
+        },
+
+        async loadTokens() {
+          try {
+            const params = '?wallet_address=' + this.userAddress + '&cluster=' + this.useCluster.toLowerCase(); 
+            const response = await fetch('/api/v1/tokenwall/tokens' + params);
+            if (response.ok) {
+              const data = await response.json();
+              this.knownTokens = data.tokens;
+            }
+          } catch (error) {
+            log.error('Error loading tokens', { error: error.message });
+          }
+        },
+
+        useToken($el) {
+          this.selectedToken = $el.value;
+        },
+
+        async updateTotal($el) {
+
+        },
+
+        async openDocumentation() {
+          try {
+            const response = await fetch('/api/v1/tokenwall/documentation');
+            if (response.ok) {
+              const data = await response.json();
+              this.documentationContent = marked.parse(data.content);
+            } else {
+              this.documentationContent = '<p>Documentation not available</p>';
+            }
+          } catch (error) {
+            log.error('Error loading documentation', { error: error.message });
+            this.documentationContent = '<p>Error loading documentation</p>';
+          }
+          this.showDocumentation = true;
+        },
+
+        formatToken(token) {
+          let str = '';
+
+          if ('name' in token && typeof token.name !== undefined) {
+            str = token.name + ' (' + this.shortenAddr(token.mintAddress) + ')';
+          } else {
+            str = this.shortenAddr(token.mintAddress);
+          }
+
+          return str;
+        },
+
+        shortenAddr(addr) {
+          if (!addr || addr.length < 10) return addr;
+          return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
+        } 
+      };
+    }
+  </script>
+</body>
+</html>

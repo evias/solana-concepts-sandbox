@@ -11,6 +11,7 @@
     --color-red-100: oklch(93.6% 0.032 17.717);
     --color-red-200: oklch(88.5% 0.062 18.334);
     --color-red-400: oklch(70.4% 0.191 22.216);
+    --color-red-500: oklch(63.7% 0.237 25.331);
     --color-red-600: oklch(57.7% 0.245 27.325);
     --color-red-700: oklch(50.5% 0.213 27.518);
     --color-red-800: oklch(44.4% 0.177 26.899);
@@ -379,6 +380,9 @@
   .-mt-6 {
     margin-top: calc(var(--spacing) * -6);
   }
+  .mt-0 {
+    margin-top: calc(var(--spacing) * 0);
+  }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
   }
@@ -567,6 +571,9 @@
   }
   .w-\[30px\] {
     width: 30px;
+  }
+  .w-\[75\%\] {
+    width: 75%;
   }
   .w-fit {
     width: fit-content;
@@ -1097,6 +1104,9 @@
   .bg-red-100 {
     background-color: var(--color-red-100);
   }
+  .bg-red-500 {
+    background-color: var(--color-red-500);
+  }
   .bg-red-600 {
     background-color: var(--color-red-600);
   }
@@ -1248,6 +1258,9 @@
   }
   .py-\[8px\] {
     padding-block: 8px;
+  }
+  .py-\[10px\] {
+    padding-block: 10px;
   }
   .py-\[11px\] {
     padding-block: 11px;
@@ -1642,6 +1655,9 @@
   .ring-indigo-100 {
     --tw-ring-color: var(--color-indigo-100);
   }
+  .ring-indigo-200 {
+    --tw-ring-color: var(--color-indigo-200);
+  }
   .ring-rose-200 {
     --tw-ring-color: var(--color-rose-200);
   }
@@ -1687,6 +1703,10 @@
   .outline-none {
     --tw-outline-style: none;
     outline-style: none;
+  }
+  .select-none {
+    -webkit-user-select: none;
+    user-select: none;
   }
   .group-hover\:text-indigo-600 {
     &:is(:where(.group):hover *) {
@@ -2116,6 +2136,11 @@
       margin-top: calc(var(--spacing) * 0);
     }
   }
+  .sm\:mt-4 {
+    @media (width >= 40rem) {
+      margin-top: calc(var(--spacing) * 4);
+    }
+  }
   .sm\:mr-2 {
     @media (width >= 40rem) {
       margin-right: calc(var(--spacing) * 2);
@@ -2174,6 +2199,11 @@
   .sm\:min-w-7xl {
     @media (width >= 40rem) {
       min-width: var(--container-7xl);
+    }
+  }
+  .sm\:grid-cols-3 {
+    @media (width >= 40rem) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
   .sm\:flex-row {

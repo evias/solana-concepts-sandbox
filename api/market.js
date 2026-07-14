@@ -12,11 +12,13 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
 
   // Get price from DB if it is not older than 8 hours.
   const lastPrice = marketDataDb.getPriceBySymbol(coinstatsSymbol);
-  const lastPriceAt = new Date(lastPrice.requested_at).valueOf(); 
-  const eightHrsAgo = (new Date().valueOf()) - (8 * 60 * 60 * 1000);
+  if (lastPrice) {
+    const lastPriceAt = new Date(lastPrice.requested_at).valueOf(); 
+    const eightHrsAgo = (new Date().valueOf()) - (8 * 60 * 60 * 1000);
 
-  if (lastPrice && lastPriceAt >= eightHrsAgo) {
-    return parseFloat(lastPrice.token_price_eur);
+    if (lastPriceAt >= eightHrsAgo) {
+      return parseFloat(lastPrice.token_price_eur);
+    }
   }
 
   try {
