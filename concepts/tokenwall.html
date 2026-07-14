@@ -54,9 +54,14 @@
 
           <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="px-2 transition hover:-translate-y-1">📖 API Documentation</a>
 
-          <div class="hidden sm:flex inline items-center gap-2 rounded-full bg-emerald-50 mx-4 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
-            <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-            Solana Devnet Ready
+          <div class="flex flex-row gap-2">
+            <div class="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Solana Devnet Ready
+            </div>
+            <div class="hidden sm:flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700 ring-1 ring-teal-200">
+              <span>1 SOL &lt;&gt; </span><span id="solanaPriceEur">0</span>
+            </div>
           </div>
         </div>
       </div>
@@ -148,12 +153,17 @@
               </label>
               <div class="flex flex-row gap-3">
                 <input
-                  @change="updateTotal($el)"
+                  @blur="updateTotal($el)"
+                  @keyup="updateTotal($el)"
                   type="number"
                   step="0.10"
                   id="lamports"
-                  class="w-[75%] rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-                <em class="mt-5 block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">i.e. <span id="totalPriceAmount">0</span> <span id="totalPriceSymbol">DHP</span></em>
+                  :value="invoiceLamports"
+                  class="w-[50%] rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                <div class="mt-2 flex flex-col gap-0">
+                  <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">i.e. <span id="totalPriceAmount">0</span> <span id="totalPriceSymbol">DHP</span></em>
+                  <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">approx. <span id="approxPriceEur">0</span> EUR</em>
+                </div>
               </div>
             </div>
           </div>
@@ -250,11 +260,13 @@
         showWalletDetails: true,
         knownTokens: [],
         useCluster: 'Mainnet',
+        invoiceLamports: 1,
 
         async init() {
           this.showWalletDetails = !this.userAddress;
 
           this.loadSystemInfo();
+          this.loadMarketData();
 
           // On page load, if user already has a wallet connected (from localStorage or other source)
           // Load their credentials list
@@ -272,6 +284,19 @@
             this.appVersion = data.appVersion;
           } catch (err) {
             syslog.error('Error loading system information', { err });
+          }
+        },
+
+        async loadMarketData() {
+          try {
+            const response = await fetch('/api/v1/tokenwall/tokens?cluster=mainnet');
+            if (response.ok) {
+              const data = await response.json();
+              this.knownTokens = data.tokens;
+              this.updateSolanaPrice();
+            }
+          } catch (error) {
+            log.error('Error loading market data', { error: error.message });
           }
         },
 
@@ -348,10 +373,35 @@
 
         useToken($el) {
           this.selectedToken = $el.value;
+          document.getElementById('totalPriceSymbol').innerText = this.getTokenSymbol(this.selectedToken);
+          this.updateTotal(document.getElementById('lamports'));
         },
 
         async updateTotal($el) {
+          this.invoiceLamports = $el.value;
+          const currentToken = this.getToken(this.selectedToken);
+          const decimals = currentToken.decimals;
+          const totalAmt = $el.value / (Math.pow(10, decimals));
+          const totalFmt = totalAmt.toFixed(decimals);
+          document.getElementById('totalPriceAmount').innerText = totalFmt;
 
+          if (currentToken.priceEur !== undefined && currentToken.priceEur > 0) {
+            const approxPriceEur = (totalAmt * currentToken.priceEur);
+            if (approxPriceEur >= 0.01) {
+              document.getElementById('approxPriceEur').innerText = approxPriceEur.toFixed(2);
+            } else {
+              document.getElementById('approxPriceEur').innerText = '0.01';
+            }
+          } else {
+            document.getElementById('approxPriceEur').innerText = '0.00';
+          }
+        },
+
+        async updateSolanaPrice() {
+          const solPrice = this.getToken(null, 'SOL')?.priceEur;
+          if (typeof solPrice !== undefined) {
+            document.getElementById('solanaPriceEur').innerText = solPrice + ' EUR';
+          }
         },
 
         async openDocumentation() {
@@ -378,6 +428,18 @@
           }
 
           return str;
+        },
+
+        getToken(byMint, byName) {
+          if (byName !== undefined && byName.length) {
+            return this.knownTokens.find(t => t.name === byName);
+          }
+
+          return this.knownTokens.find(t => t.mintAddress === byMint);
+        },
+
+        getTokenSymbol(mint) {
+          return this.getToken(mint).name;
         },
 
         shortenAddr(addr) {
