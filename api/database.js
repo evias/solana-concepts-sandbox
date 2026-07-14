@@ -878,15 +878,16 @@ const marketDataDb = {
     tokenPrice,
   }) {
     const now = new Date().toString();
+    const id = (new Date()).toJSON() + tokenSymbol;
 
     const stmt = db.prepare(`
       INSERT INTO tw_token_prices (
-        blockchain, token_symbol, token_price_eur,
+        id, blockchain, token_symbol, token_price_eur,
         requested_at
-      ) VALUES ('solana', ?, ?, ?)
+      ) VALUES (?, 'solana', ?, ?, ?)
     `);
 
-    stmt.run(tokenSymbol, tokenPrice, now);
+    stmt.run(id, tokenSymbol, tokenPrice, now);
 
     return marketDataDb.getPriceById(id);
   },
