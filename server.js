@@ -4,6 +4,7 @@ const fs = require('fs');
 const swaggerUi = require('swagger-ui-express');
 const config = require('./api/config');
 const { createLogger } = require('./api/logger');
+const { getTokenPrice } = require('./api/market');
 
 const app = express();
 const bindHost = config.server.bindHost;
@@ -107,7 +108,20 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 // Serve documentation files
 app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
 
-app.listen(bindPort, bindHost, () => {
+app.listen(bindPort, bindHost, async () => {
+  await getTokenPrice('wrapped-solana', 'SOL');
+  await debounceNext(500);
+
+  await getTokenPrice('usd-coin', 'USDC');
+  await debounceNext(500);
+
+  await getTokenPrice('euro-coin', 'EURC');
+  await debounceNext(500);
+
   log.info(`Server started in ${buildType} mode`);
   log.info(`Server listening at http://${bindHost}:${bindPort}`);
 });
+
+function debounceNext(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
