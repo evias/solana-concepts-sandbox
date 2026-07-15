@@ -30,25 +30,27 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
       'coinIds=' + coinstatsId,
     ];
 
+    log.info("Requesting price info from CoinStats API: ", {params});
+
     const response = await fetch(endpointUrl + '?' + params.join('&'), {
       headers: { 'X-API-KEY': config.market.apiKey },
     });
 
     if (!response.ok) {
-      throw new Error('Error requesting market data');
+      throw new Error(`Error requesting market data: ${response.text()}`);
     }
 
     const data = await response.json();
     const row = data.result[0];
 
-    marketDataDb.createEntry({
+    const insertedRow = marketDataDb.createEntry({
       tokenSymbol: row.symbol,
       tokenPrice: row.price.toFixed(2),
     });
 
     return parseFloat(row.price.toFixed(2));
   } catch(error) {
-    log.error('Error getting market data:', { error: error });
+    log.error('Error getting market data:', { error });
     throw error;
   }
 }

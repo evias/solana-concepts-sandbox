@@ -14,6 +14,8 @@
     "db:seed": "node scripts/db-seed.js",
     "db:migrate": "node scripts/db-migrate.js",
     "db:fresh": "npm run db:init && npm run db:seed && npm run db:migrate",
+    "db:reset": "node scripts/db-reset.js -- $SCS_DB_TABLE",
+    "db:query": "node scripts/db-query.js -- $SCS_DB_QUERY",
     "docs:generate": "node scripts/generate-docs.js"
   },
   "dependencies": {

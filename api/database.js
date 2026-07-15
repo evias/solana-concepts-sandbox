@@ -877,8 +877,8 @@ const marketDataDb = {
     tokenSymbol,
     tokenPrice,
   }) {
-    const now = new Date().toString();
-    const id = (new Date()).toJSON() + tokenSymbol;
+    const now = new Date().toISOString();
+    const id = new Date().toJSON() + tokenSymbol;
 
     const stmt = db.prepare(`
       INSERT INTO tw_token_prices (
