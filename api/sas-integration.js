@@ -292,6 +292,7 @@ module.exports = {
   ensureSasCredential,
   addAuthorizedSigner,
   getAuthorizedSigners,
+  roleToWeb3Account,
   kitInstructionToWeb3,
   sendTransaction
 };
