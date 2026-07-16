@@ -1141,7 +1141,7 @@ router.post('/certifications', async (req, res) => {
     }
     const base64Tx = serializedTx.toString('base64');
     
-    log.info('Unsigned certification transaction prepared, size:', { base64Tx });
+    log.info('Unsigned certification transaction prepared, size:', base64Tx.length);
     
     // Store temporary certification data (expires in 15 minutes)
     // NOTE: No SPL token creation - only memo-based transaction
@@ -1223,7 +1223,6 @@ router.post('/submit-signed-certification-transaction', async (req, res) => {
     }
     
      const certData = global.healthCredCertifications[certificationRegistrationId];
-     log.info('Found certification registration for credential:', { certData });
      
      // Deserialize and send transaction
      let transactionSignature = '';
