@@ -1,15 +1,18 @@
 const express = require('express');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
+const { v5: uuidv5 } = require('uuid');
 const config = require('./config');
 const { createLogger } = require('./logger');
-const { encrypt, decrypt } = require('./hcpconsole'); 
+const { encrypt, decrypt } = require('./aes-integration'); 
 const { getTokenAccounts } = require('./solana-tokens'); 
 const log = createLogger('concept/tokenwall');
 const router = express.Router();
 const { tokenWallDb } = require('./database');
 const { getTokenPrice } = require('./market');
 const { fstat } = require('fs');
+
+// uuidv5("SCS (Solana Concepts Sandbox) by Grégory Saive for re:Software S.L.", "d9e6d386-7fa4-11f1-9690-325096b39f47")
+const SCS_UUID_NAMESPACE = "e399d4c4-afd2-558f-bfcc-b938393c33ee";
 
 /**
  * @swagger
@@ -70,57 +73,35 @@ router.post('/create-invoice-tx', async (req, res) => {
       return res.status(402).json({ error: 'Invalid Request' });
     }
 
-    // Import modules (same pattern as carecircle)
     const lib = require('sas-lib');
     const web3 = require('@solana/web3.js');
-    const { createKeyPairSignerFromPrivateKeyBytes, createSolanaRpc } = require('@solana/kit');
-    const payer = require('./payer').getPayerKeypair();
+    const { createSolanaRpc } = require('@solana/kit');
     const sasIntegration = require('./sas-integration');
 
     // Initialize RPC connection ("fetchMaybeX").
     const rpc = createSolanaRpc('https://api.devnet.solana.com');
     const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
 
-    log.info('Creating invoice', { 
-      issuerAddress: issuerAddress,
-      tokenAddress: tokenAddress,
-      lamports: lamports,
-      feePayer: payer.publicKey.toBase58(),
-    });
-
-    // 1: Create payer signer first (needed for all operations).
-    const backendSigner = await createKeyPairSignerFromPrivateKeyBytes(
-      new Uint8Array(payer.secretKey.slice(0, 32))
-    );
-
     // 2: Create payout details (unique).
-    // CAUTION: Every call to this method generates a different uuidv4.
-    const payoutData = [issuerAddress, tokenAddress, lamports.toString(), uuidv4()];
+    // CAUTION: Every call to this method generates a different uuidv5.
+    const payoutData = [issuerAddress, tokenAddress, lamports.toString(), new Date().toJSON()];
     const payoutSeed = payoutData.join('-');
-    const invoiceRef = uuidv4.fromString(payoutSeed);
-    const scriptHtml = `
-<!-- TokenWall Code -->
-<script>
-(function (i, s, o, g, r, a, m) {
-  i['TokenWallObject'] = r; i[r] = i[r] || function () {
-    (i[r].q = i[r].q || []).push(arguments);
-  }; i[r].l = 1 * new Date();
-  a = s.createElement(o);
-  m = s.getElementsByTagName(o)[0];
-  a.async = 1;
-  a.src = g;
-  m.parentNode.insertBefore(a, m);
-})(window, document, 'script', '//${config.api.baseUrl}/tokenwall/pay.js', '_twp');
-_twp('init', '${invoiceRef}', '${contentSelector}');
-_twp('lock');
-</script>
-<!-- End TokenWall Code -->
-    `;
+    const invoiceRef = uuidv5(payoutSeed, SCS_UUID_NAMESPACE);
+
+    log.info('Creating invoice', { 
+      issuerAddress,
+      tokenAddress,
+      lamports: lamports,
+      feePayer: issuerAddress,
+      contentSelector,
+      invoiceRef,
+      payoutSeed,
+    });
 
     // 3. Create unique payment credential PDA per invoice. Each invoice has
     // exactly 1 credential PDA and schema, and each "payment" of the invoice
     // is done via sending tokens to the credential PDA.
-    const issuerPubKey = web3.PublicKey(issuerAddress);
+    const issuerPubKey = new web3.PublicKey(issuerAddress);
     const credentialName = crypto.createHash('sha256').update(
       payoutSeed
     ).digest().toString('hex').substring(0, 32);
@@ -142,37 +123,48 @@ _twp('lock');
     });
     log.info('Schema PDA derived', { schemaPda });
 
-    // const nonceInput = [credentialPda, payoutSeed].join(':');
-    // const nonceHash = crypto.createHash('sha256').update(nonceInput).digest();
-    // const nonceKeypair = web3.Keypair.fromSeed(new Uint8Array(nonceHash.slice(0, 32)));
-    // const nonce = nonceKeypair.publicKey.toString();
-
-    // const [attestationPda] = await lib.deriveAttestationPda({
-    //   credential: credentialPda,
-    //   schema: schemaPda,
-    //   nonce: nonce
-    // });
-    // log.info('Attestation PDA derived', { attestationPda });
-
-
     const transaction = new web3.Transaction();
+
+    // Add compute budget instruction for max. 50k
+    const computeBudgetInstruction = new web3.TransactionInstruction({
+      programId: COMPUTE_BUDGET_PROGRAM,
+      keys: [],
+      data: Buffer.concat([
+        Buffer.from([0x02]), // SetComputeUnitLimit instruction discriminator
+        Buffer.alloc(4) // 4 bytes buffer for compute units
+      ])
+    });
+    computeBudgetInstruction.data.writeUInt32LE(50000, 1); // after discriminator
+    transaction.add(computeBudgetInstruction);
 
     let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialPda);
     if (!credentialAccount || credentialAccount.exists === false) {
-      const createCredentialIx = lib.getCreateCredentialInstruction({
+      const kitIx = lib.getCreateCredentialInstruction({
         payer: issuerAddress,
         authority: issuerAddress,
         credential: credentialPda,
         name: credentialName,
         signers: [issuerAddress],
       });
+
+      const createCredentialIx = new web3.TransactionInstruction({
+        programId: lib.SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
+        keys: [
+          sasIntegration.roleToWeb3Account(issuerAddress, 3),
+          sasIntegration.roleToWeb3Account(credentialPda, 1),
+          sasIntegration.roleToWeb3Account(issuerAddress, 0),
+          sasIntegration.roleToWeb3Account(web3.SystemProgram.programId, 0),
+        ],
+        data: Buffer.from(kitIx.data)
+      });
+
       transaction.add(createCredentialIx);
     }
 
     let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
     if (!schemaAccount || schemaAccount.exists === false) {
       const layout = Buffer.from([12, 12]); // payerAddress, paymentTxSig in string format.
-      const createSchemaIx = lib.getCreateSchemaInstruction({
+      const kitIx = lib.getCreateSchemaInstruction({
         payer: issuerAddress,
         authority: issuerAddress,
         credential: credentialPda,
@@ -182,6 +174,19 @@ _twp('lock');
         name: schemaName,
         description: 'TokenWall Payment baskets schema',
       });
+
+      const createSchemaIx = new web3.TransactionInstruction({
+        programId: lib.SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
+        keys: [
+          sasIntegration.roleToWeb3Account(issuerAddress, 3),
+          sasIntegration.roleToWeb3Account(issuerAddress, 0),
+          sasIntegration.roleToWeb3Account(credentialPda, 0),
+          sasIntegration.roleToWeb3Account(schemaPda, 1),
+          sasIntegration.roleToWeb3Account(web3.SystemProgram.programId, 0),
+        ],
+        data: Buffer.from(kitIx.data)
+      });
+
       transaction.add(createSchemaIx);
     }
 
@@ -189,6 +194,7 @@ _twp('lock');
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
     const blockhash = await connection.getLatestBlockhash();
     transaction.recentBlockhash = blockhash.blockhash;
+    transaction.version = "legacy";
     log.info('Recent blockhash:', { blockhash });
 
     // Set user wallet as fee payer (user pays for transaction)
@@ -203,35 +209,17 @@ _twp('lock');
         requireAllSignatures: false,
         verifySignatures: false
       });
-      log.info('Unsigned transaction serialized, size:', { serializedTx });
+      log.info(`Unsigned transaction serialized, size: ${serializedTx.length}`);
     } catch (err) {
-      log.error('Error serializing transaction:', { error: err });
-      log.error('Error stack:', { error: err });
+      log.error('Error serializing transaction:', { error: err.message });
+      log.error('Error stack:', { error: err.stack });
       return res.status(500).json({ error: 'Failed to prepare transaction for signing', details: err.message });
     }
     const base64Tx = serializedTx.toString('base64');
 
-    // log.info('Payment PDA derived', { paymentPda });
-
-    // // Create tw_invoices record in database
-    // log.info('Creating tw_invoices record', {wallet: issuerAddress});
-    // let tw_invoices_row;
-    // const invoiceId = `twpay_${invoiceRef}`;
-    // scriptPayload = encrypt(scriptHtml); // encrypt using AES
-
-    // tw_invoices_row = tokenWallDb.createInvoice({
-    //   id: invoiceId,
-    //   invoiceRef,
-    //   issuerAddress,
-    //   tokenAddress,
-    //   lamports,
-    //   paidtoAddress: paymentPda,
-    //   scriptCipher: scriptPayload.ciphertext,
-    //   scriptIV: scriptPayload.iv,
-    // });
-
     return res.status(200).json({
       success: true,
+      blockhash,
       invoiceRef,
       paymentPda: credentialPda,
       transaction: base64Tx,
@@ -239,7 +227,7 @@ _twp('lock');
     });
   } catch (error) {
     if ("getLogs" in error && typeof error.getLogs !== undefined) {
-      log.error('Error creating invoice', { error: error, logs: error.getLogs() });
+      log.error('Error creating invoice', { error: error.message, logs: error.getLogs() });
     } else {
       log.error('Error creating invoice', { error: error.message, stack: error.stack });
     }
@@ -249,7 +237,7 @@ _twp('lock');
 
 /**
  * @swagger
- * /api/v1/tokenwall/submit-signed-tx:
+ * /api/v1/tokenwall/submit-signed-transaction:
  *   post:
  *     tags:
  *       - TokenWall
@@ -264,19 +252,41 @@ _twp('lock');
  *             required:
  *               - invoiceRef
  *               - signedTransaction
+ *               - paymentPda
+ *               - blockHash
+ *               - maxBlockHeight
+ *               - issuerAddress
+ *               - tokenAddress
+ *               - lamports
+ *               - contentSelector
  *             properties:
  *               invoiceRef:
  *                 type: string
  *                 description: The invoice reference.
  *               signedTransaction:
  *                 type: string
- *                 description: Base64 signed transaction from user's wallet
+ *                 description: Base64 signed transaction from user's wallet.
+ *               paymentPda:
+ *                 type: string
+ *                 description: The payment PDA for this invoice.
  *               blockHash:
  *                 type: string
  *                 description: The block hash.
- *               blockHeight:
+ *               maxBlockHeight:
  *                 type: number
  *                 description: The last valid block height.
+ *               issuerAddress:
+ *                 type: string
+ *                 description: Solana issuer wallet address
+ *               tokenAddress:
+ *                 type: string
+ *                 description: Solana token mint address
+ *               lamports:
+ *                 type: number
+ *                 description: Solana token amount, in lamports (smallest unit).
+ *               contentSelector:
+ *                 type: string
+ *                 description: Query selector to find content element(s).
  *     responses:
  *       200:
  *         description: Invoice created successfully
@@ -286,15 +296,22 @@ _twp('lock');
  *               type: object
  *               properties:
  *                 success: { type: boolean }
- *                 txSig: { type: string } 
+ *                 invoiceId: { type: string }
+ *                 invoiceRef: { type: string }
+ *                 paymentPda: { type: string }
+ *                 txSig: { type: string }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
  *         $ref: '#/components/schemas/Error'
  */
-router.post('/submit-signed-tx', async (req, res) => {
+router.post('/submit-signed-transaction', async (req, res) => {
   try {
-    const { blockHash, blockHeight, invoiceRef, signedTransaction } = req.body;
+    const {
+      blockHash, maxBlockHeight,
+      paymentPda, invoiceRef, signedTransaction,
+      issuerAddress, tokenAddress, lamports, contentSelector,
+    } = req.body;
 
     log.info('Received signed transaction submission');
     log.info('invoiceRef:', { invoiceRef });
@@ -303,12 +320,14 @@ router.post('/submit-signed-tx', async (req, res) => {
       return res.status(400).json({ error: 'Invalid Request' });
     }
 
+    const web3 = require('@solana/web3.js');
+
     // Deserialize and send transaction
     let transactionSignature = '';
     const txBuffer = Buffer.from(signedTransaction, 'base64');
     const transaction = web3.Transaction.from(txBuffer);
 
-    log.info('Deserialized signed transaction');
+    log.info(`Deserialized signed transaction, size: ${txBuffer.length}`);
     log.info('Sending transaction...');
 
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
@@ -319,17 +338,67 @@ router.post('/submit-signed-tx', async (req, res) => {
     await connection.confirmTransaction({
       signature: transactionSignature,
       blockhash: blockHash,
-      lastValidBlockHeight: blockHeight,
+      lastValidBlockHeight: maxBlockHeight,
     });
     log.info('Transaction confirmed');
 
+    // const nonceInput = [paymentPda, invoiceRef].join(':');
+    // const nonceHash = crypto.createHash('sha256').update(nonceInput).digest();
+    // const nonceKeypair = web3.Keypair.fromSeed(new Uint8Array(nonceHash.slice(0, 32)));
+    // const nonce = nonceKeypair.publicKey.toString();
+
+    // const [attestationPda] = await lib.deriveAttestationPda({
+    //   credential: credentialPda,
+    //   schema: schemaPda,
+    //   nonce: nonce
+    // });
+    // log.info('Attestation PDA derived', { attestationPda });
+
+    const scriptHtml = `
+<!-- TokenWall Code -->
+<script>
+(function (i, s, o, g, r, a, m) {
+  i['TokenWallObject'] = r; i[r] = i[r] || function () {
+    (i[r].q = i[r].q || []).push(arguments);
+  }; i[r].l = 1 * new Date();
+  a = s.createElement(o);
+  m = s.getElementsByTagName(o)[0];
+  a.async = 1;
+  a.src = g;
+  m.parentNode.insertBefore(a, m);
+})(window, document, 'script', '//${config.api.baseUrl}/tokenwall/pay.js', '_twp');
+_twp('init', '${invoiceRef}', '${contentSelector}');
+_twp('lock');
+</script>
+<!-- End TokenWall Code -->
+    `;
+
+    // Create tw_invoices record in database
+    log.info('Creating tw_invoices record', {wallet: issuerAddress});
+    let tw_invoices_row;
+    const invoiceId = `twpay_${invoiceRef}`;
+    scriptPayload = encrypt(scriptHtml); // encrypt using AES
+
+    tw_invoices_row = tokenWallDb.createInvoice({
+      id: invoiceId,
+      invoiceRef,
+      issuerAddress,
+      tokenAddress,
+      lamports,
+      paidtoAddress: paymentPda,
+      scriptCipher: scriptPayload.ciphertext,
+      scriptIV: scriptPayload.iv,
+    });
+
     return res.status(200).json({
       success: true,
+      invoiceId,
       invoiceRef,
+      paymentPda,
       txSig: transactionSignature,
     });
   } catch (error) {
-    log.error('Signed transaction submission error:', { error: error });
+    log.error('Signed transaction submission error:', { error: error.message, stack: error.stack });
     res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
