@@ -123,50 +123,71 @@
             Users are expected to pay for a given amount using Tokens on <b>Solana <span id="useClusterTxt" x-text="useCluster"></span></b>.
           </div>
 
-          <div class="mt-0 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
-            <div class="flex flex-col">
-              <label for="useCluster" class="block text-md font-semibold text-[#16352C]">
-                <input type="checkbox" name="useCluster" :checked="useCluster === 'Mainnet'" @change="toggleCluster()" /> Use Mainnet
-              </label>
-              <em class="mt-3 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
-                Select this checkbox to use Mainnet tokens for the invoice. Note that if you uncheck
-                it, the payments will be done on Devnet. Keep this box checked for real value invoices.
-              </em>
-            </div>
-            <div class="flex flex-col">
-              <label for="token" class="block text-md font-semibold text-[#16352C]">
-                Token <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which token to send)</em>
-              </label>
-              <select id="token" @change="useToken($el)" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-                <option value="">Select a token...</option>
-                <template x-for="token in knownTokens" :key="token.mintAddress">
-                  <option :value="token.mintAddress" x-text="formatToken(token)"></option>
-                </template>
-              </select>
-              <div x-show="userAddress && knownTokens.length === 0" class="mt-3 rounded-[10px] border border-red-600 bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
-                You don't own any tokens yet, tokens are needed to determine an exact mint address.
+          <form @submit.prevent="submitCreateInvoice()" class="space-y-4">
+            <div class="mt-0 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div class="flex flex-col">
+                <label for="useCluster" class="block text-md font-semibold text-[#16352C]">
+                  <input type="checkbox" name="useCluster" :checked="useCluster === 'Mainnet'" @change="toggleCluster()" /> Use Mainnet
+                </label>
+                <em class="mt-3 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+                  Select this checkbox to use Mainnet tokens for the invoice. Note that if you uncheck
+                  it, the payments will be done on Devnet. Keep this box checked for real value invoices.
+                </em>
               </div>
-            </div>
-            <div class="flex flex-col">
-              <label for="lamports" class="block text-md font-semibold text-[#16352C]">
-                Amount (Lamports) <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(use smallest unit of token)</em>
-              </label>
-              <div class="flex flex-row gap-3">
-                <input
-                  @blur="updateTotal($el)"
-                  @keyup="updateTotal($el)"
-                  type="number"
-                  step="0.10"
-                  id="lamports"
-                  :value="invoiceLamports"
-                  class="w-[50%] rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
-                <div class="mt-2 flex flex-col gap-0">
-                  <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">i.e. <span id="totalPriceAmount">0</span> <span id="totalPriceSymbol">DHP</span></em>
-                  <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">approx. <span id="approxPriceEur">0</span> EUR</em>
+              <div class="flex flex-col">
+                <label for="token" class="block text-md font-semibold text-[#16352C]">
+                  Token <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which token to send)</em>
+                </label>
+                <select id="token" @change="useToken($el)" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <option value="">Select a token...</option>
+                  <template x-for="token in knownTokens" :key="token.mintAddress">
+                    <option :value="token.mintAddress" x-text="formatToken(token)"></option>
+                  </template>
+                </select>
+                <div x-show="userAddress && knownTokens.length === 0" class="mt-3 rounded-[10px] border border-red-600 bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
+                  You don't own any tokens yet, tokens are needed to determine an exact mint address.
+                </div>
+              </div>
+              <div class="flex flex-col">
+                <label for="lamports" class="block text-md font-semibold text-[#16352C]">
+                  Amount (Lamports) <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(use smallest unit of token)</em>
+                </label>
+                <div class="flex flex-row gap-3">
+                  <input
+                    @blur="updateTotal($el)"
+                    @keyup="updateTotal($el)"
+                    type="number"
+                    step="0.10"
+                    id="lamports"
+                    :value="invoiceLamports"
+                    class="w-[50%] rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <div class="mt-2 flex flex-col gap-0">
+                    <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">i.e. <span id="totalPriceAmount">0</span> <span id="totalPriceSymbol">DHP</span></em>
+                    <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">approx. <span id="approxPriceEur">0</span> EUR</em>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+            <div>
+              <div class="flex gap-2">
+                <button 
+                  type="submit"
+                  :disabled="!userAddress || !selectedToken || !invoiceLamports || creatingInvoice"
+                  class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span x-show="!creatingInvoice">Create Invoice</span>
+                  <span x-show="creatingInvoice">Creating...</span>
+                </button>
+              </div>
+
+              <div x-show="formProgress" class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+                  <span x-text="formProgress"></span>
+              </div>
+
+              <div x-show="formError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                  <span x-text="formError"></span>
+              </div>
+            </div>
+          </form>
         </div>
       </section>
     </main>
@@ -260,7 +281,11 @@
         showWalletDetails: true,
         knownTokens: [],
         useCluster: 'Mainnet',
+        selectedToken: '',
         invoiceLamports: 1,
+        formError: '',
+        formProgress: '',
+        creatingInvoice: false,
 
         async init() {
           this.showWalletDetails = !this.userAddress;
@@ -401,6 +426,91 @@
           const solPrice = this.getToken(null, 'SOL')?.priceEur;
           if (typeof solPrice !== undefined) {
             document.getElementById('solanaPriceEur').innerText = solPrice + ' EUR';
+          }
+        },
+
+        async submitCreateInvoice() {
+          if (!this.userAddress || !this.selectedToken || !this.invoiceLamports) {
+            this.formError = 'Please connect your wallet and select a token';
+            return;
+          }
+
+          this.creatingInvoice = true;
+          this.formError = '';
+          this.formProgress = '';
+
+          try {
+            const response = await fetch('/api/v1/tokenwall/create-invoice-tx', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                issuerAddress: this.userAddress,
+                tokenAddress: this.selectedToken,
+                lamports: this.invoiceLamports,
+                contentSelector: 'body',
+              })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Authorization failed');
+            }
+
+            const result = await response.json();
+            const { blockhash, invoiceRef, paymentPda, transaction: base64Tx } = result;
+
+            this.formProgress = '🔑 Waiting for Phantom signature...';
+            let transaction;
+            try {
+              const txBuffer = new Uint8Array(Uint8Array.fromBase64(base64Tx));
+              transaction = window.solanaWeb3.Transaction.from(txBuffer);
+            } catch (txErr) {
+              log.error('[TokenWall] Failed to deserialize registration transaction', { txErr });
+              throw new Error('Failed to deserialize transaction: ' + txErr.message);
+            }
+
+            const signedTx = await window.solana.signTransaction(transaction);
+            const signedTxBuffer = signedTx.serialize();
+            const signedBase64 = signedTxBuffer.toString('base64');
+
+            this.formProgress = '📡 Broadcasting transaction...';
+            const submitRes = await fetch('/api/v1/tokenwall/submit-signed-transaction', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                blockHash: blockhash.blockhash,
+                maxBlockHeight: blockhash.lastValidBlockHeight,
+                paymentPda,
+                invoiceRef,
+                signedTransaction: signedBase64,
+                issuerAddress: this.userAddress,
+                tokenAddress: this.selectedToken,
+                lamports: this.invoiceLamports,
+                contentSelector: 'body',
+              })
+            });
+
+            if (!submitRes.ok) {
+              const error = await submitRes.json();
+              log.error('[TokenWall] Submission error', { error });
+              throw new Error(error.error || 'Transaction submission failed');
+            }
+
+            const submitResult = await submitRes.json();
+
+            this.formProgress = '✅ Invoice created successfully!';
+            log.info('[TokenWall] Invoice creation successful!', { invoiceRef: submitResult.invoiceRef });
+            log.info('[TokenWall] Transaction', { txSignature: submitResult.transactionSignature });
+
+            setTimeout(() => {
+              alert('✅ Invoice created successfully!\n\nView it in the "My invoices" section below.');
+              this.formProgress = '';
+            }, 1500);
+          } catch (error) {
+            log.error('Error creating invoice', { error: error.message });
+            this.formError = error.message || 'Failed to create invoice';
+          } finally {
+            this.creatingInvoice = false;
           }
         },
 
