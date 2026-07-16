@@ -514,6 +514,28 @@ try {
         }
       }
     },
+
+    // Migration 14: Update tw_invoices table
+    {
+      name: 'Update tw_invoices table',
+      up: (db) => {
+        try {
+          const tableInfo = db.prepare("PRAGMA table_info(tw_invoices)").all();
+          const hasLamports = tableInfo.some(col => col.name === 'lamports');
+
+          if (!hasLamports) {
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN lamports INTEGER NOT NULL DEFAULT 1;`);
+            return true;
+          }
+          return false;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
   ];
 
   console.log(`   Total migrations defined: ${migrations.length}`);
