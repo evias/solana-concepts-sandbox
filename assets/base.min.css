@@ -2238,6 +2238,11 @@
       margin-right: calc(var(--spacing) * 2);
     }
   }
+  .sm\:block {
+    @media (width >= 40rem) {
+      display: block;
+    }
+  }
   .sm\:flex {
     @media (width >= 40rem) {
       display: flex;

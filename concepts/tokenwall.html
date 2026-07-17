@@ -124,7 +124,7 @@
           </div>
 
           <form @submit.prevent="submitCreateInvoice()" class="space-y-4">
-            <div class="mt-0 sm:mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div class="mt-0 sm:mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div class="flex flex-col">
                 <label for="useCluster" class="block text-md font-semibold text-[#16352C]">
                   <input type="checkbox" name="useCluster" :checked="useCluster === 'Mainnet'" @change="toggleCluster()" /> Use Mainnet
@@ -331,12 +331,12 @@
         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         @click.self="showInvoiceModal = false">
       <div class="w-full max-w-[420px] sm:max-w-[640px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
-        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+        <div class="hidden sm:block flex items-center justify-between border-b border-[#e5e7eb] p-5">
           <h2 class="text-md sm:text-[1.15rem] font-semibold text-[#111]">Invoice details for <span id="invoiceDetailsRef" class="text-[#2E7D6B]"></span></h2>
           <button @click="showInvoiceModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
         </div>
         <div class="flex flex-col gap-1 px-6 py-4">
-          <em class="mt-1 mb-2 text-sm font-normal text-[#5F6F6A]" id="invoiceDetailsStory"></em>
+          <em class="hidden sm:block mt-1 mb-2 text-sm font-normal text-[#5F6F6A]" id="invoiceDetailsStory"></em>
           <div class="mx-auto">
             <a id="invoiceDetailsPayNowLink"
                href="#"
@@ -365,14 +365,12 @@
               <svg class="w-8 h-8 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
             </span>&nbsp;<span id="invoiceDetailsUrlCopyMsg"></span>
           </div>
-          <em class="mt-1 mb-2 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
-            You may share the above URL with any customer willing to pay this invoice.
-            This URL uses the <b>solana:</b> protocol handler such that if your device
-            has a Solana wallet, it will automatically open with the form pre-filled.
-          </em>
           <label class="mb-2 block text-md font-semibold text-[#16352C]">
             Invoice Script
           </label>
+          <em class="hidden sm:block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+            Add this source code in the footer of your website or on any page.
+          </em>
           <div class="relative max-w-[100%] max-h-60 overflow-y-auto text-xs border border-[#D9E2DF] p-2">
             <div class="absolute top-[2px] right-[2px] rounded rounded-md bg-gray-100 flex flex-row gap-2 border border-[#D9E2DF] text-xs hover:opacity-80 hover:cursor-pointer copyBtn"
                 rel="#invoiceScriptPlain"
