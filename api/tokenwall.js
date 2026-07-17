@@ -10,9 +10,16 @@ const router = express.Router();
 const { tokenWallDb } = require('./database');
 const { getTokenPrice } = require('./market');
 const { fstat } = require('fs');
+const solanaPay = require('@solana-commerce/solana-pay');
 
 // uuidv5("SCS (Solana Concepts Sandbox) by Grégory Saive for re:Software S.L.", "d9e6d386-7fa4-11f1-9690-325096b39f47")
 const SCS_UUID_NAMESPACE = "e399d4c4-afd2-558f-bfcc-b938393c33ee";
+
+const SCS_SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
+const SCS_USDC_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
+const SCS_EURC_MINT_ADDRESS = 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr';
+const SCS_DHP_MINT_ADDRESS = 'DHP1KmBeJePxh7EiptdpEt9E2G5cQRDTdkJooZMmDtKG';
+const SCS_AIDH_MINT_ADDRESS = 'AidHczUkwDnW7c1Lc89tTiP71dTqeEa52LgV6GxsfwYd';
 
 /**
  * @swagger
@@ -357,15 +364,12 @@ router.post('/submit-signed-transaction', async (req, res) => {
     const scriptHtml = `
 <!-- TokenWall Code -->
 <script>
-(function (i, s, o, g, r, a, m) {
-  i['TokenWallObject'] = r; i[r] = i[r] || function () {
+(function (i, s, o, g, r, a, m) { i['TokenWallObject'] = r; i[r] = i[r] ||
+  function () {
     (i[r].q = i[r].q || []).push(arguments);
-  }; i[r].l = 1 * new Date();
-  a = s.createElement(o);
-  m = s.getElementsByTagName(o)[0];
-  a.async = 1;
-  a.src = g;
-  m.parentNode.insertBefore(a, m);
+  }; i[r].l = 1 * new Date(); a = s.createElement(o);
+  m = s.getElementsByTagName(o)[0]; a.async = 1;
+  a.src = g; m.parentNode.insertBefore(a, m);
 })(window, document, 'script', '//${config.api.baseUrl}/tokenwall/pay.js', '_twp');
 _twp('init', '${invoiceRef}', '${contentSelector}');
 _twp('lock');
@@ -465,6 +469,113 @@ router.get('/invoices', (req, res) => {
 
 /**
  * @swagger
+ * /api/v1/tokenwall/invoice:
+ *   get:
+ *     tags:
+ *       - TokenWall
+ *     summary: Retrieve tw_invoices.script_cipher in plaintext by invoice_ref
+ *     description: Retrieves tw_invoices.script_cipher in plaintext by invoice_ref.
+ *     parameters:
+ *       - in: query
+ *         name: invoiceRef
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: The invoice reference field.
+ *       - in: query
+ *         name: enableMeta
+ *         required: false
+ *         schema:
+ *           type: boolean
+ *         description: Whether to include metadata.
+ *     responses:
+ *       200:
+ *         description: Invoice retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 script:
+ *                   type: string
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/invoice', (req, res) => {
+  const { invoiceRef, enableMeta } = req.query;
+  if (!invoiceRef) {
+    return res.status(402).json({ error: 'Invalid Request' });
+  }
+
+  let invoice;
+  invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
+
+  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  const cleartextScript = decrypt({
+    iv: invoice.cipher_iv,
+    ciphertext: invoice.script_cipher
+  });
+
+  if (!cleartextScript) {
+    return res.status(500).json({ error: 'Decryption failed: unknown error' });
+  }
+
+  // UPDATE tw_invoices.lastread_at
+  invoice = tokenWallDb.updateLastRead(invoice.id);
+
+  // CAUTION: // FIXME:
+  // solana-pay assumes 9 decimals for SPL Tokens, so for any token
+  // where we know that there is less decimals, we need to adapt the amount.
+  let invoiceAmount = invoice.lamports;
+  switch (invoice.token_address) {
+    default: break;
+    case SCS_AIDH_MINT_ADDRESS: // 6 decimals
+    case SCS_USDC_MINT_ADDRESS: // 6 decimals
+    case SCS_EURC_MINT_ADDRESS: // 6 decimals
+      invoiceAmount = invoiceAmount * 1000;
+    break;
+  }
+  // END CAUTION
+
+  // SOL payment (no "splToken").
+  let payParams = {
+    recipient: invoice.paidto_address,
+    amount: BigInt(invoiceAmount),
+    label: `TokenWall Invoice`, // XXX invoice label
+    message: `Payment for invoice ${invoice.invoice_ref}` // XXX invoice message
+  };
+  if (invoice.token_address !== SCS_SOL_MINT_ADDRESS) {
+    payParams.splToken = invoice.token_address;
+  }
+
+  const paymentUrl = solanaPay.encodeURL(payParams);
+
+  let response = {
+    script: cleartextScript,
+  };
+  if (!!enableMeta) {
+    response = {
+      paymentUrl,
+      issuerAddress: invoice.issuer_address,
+      tokenAddress: invoice.token_address,
+      paymentAddress: invoice.paidto_address,
+      invoiceRef: invoice.invoice_ref,
+      amountLamports: invoice.lamports,
+      lastRead: invoice.lastread_at,
+      script: cleartextScript
+    };
+  }
+
+  return res.status(200).json(response);
+});
+
+/**
+ * @swagger
  * /api/v1/tokenwall/pay.js:
  *   get:
  *     tags:
@@ -560,34 +671,34 @@ router.get('/tokens', async (req, res) => {
     //XXX extract known tokens
     const knownTokens = [
       {
-        mintAddress: 'So11111111111111111111111111111111111111112',
+        mintAddress: SCS_SOL_MINT_ADDRESS,
         name: 'SOL',
         tokenAmount: 0,
         decimals: 9,
         priceEur: solanaPriceEur,
       },
       {
-        mintAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        mintAddress: SCS_USDC_MINT_ADDRESS,
         name: 'USDC',
         tokenAmount: 0,
         decimals: 6,
         priceEur: usdcPriceEur,
       },
       {
-        mintAddress: 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr',
+        mintAddress: SCS_EURC_MINT_ADDRESS,
         name: 'EURC',
         tokenAmount: 0,
         decimals: 6,
         priceEur: eurcPriceEur,
       },
       {
-        mintAddress: 'DHP1KmBeJePxh7EiptdpEt9E2G5cQRDTdkJooZMmDtKG',
+        mintAddress: SCS_DHP_MINT_ADDRESS,
         name: 'DHP',
         tokenAmount: 0,
         decimals: 9,
       },
       {
-        mintAddress: 'AidHczUkwDnW7c1Lc89tTiP71dTqeEa52LgV6GxsfwYd',
+        mintAddress: SCS_AIDH_MINT_ADDRESS,
         name: 'AIDH',
         tokenAmount: 0,
         decimals: 6,
