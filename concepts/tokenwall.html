@@ -190,6 +190,84 @@
           </form>
         </div>
       </section>
+
+      <section x-show="userAddress">
+        <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Your latest invoices</h2>
+            <button 
+              @click="showLatestInvoices = !showLatestInvoices"
+              class="text-gray-600 hover:text-gray-800 text-md sm:text-2xl font-bold"
+              :title="showLatestInvoices ? 'Collapse' : 'Expand'">
+              <span x-show="showLatestInvoices">▼</span>
+              <span x-show="!showLatestInvoices">▶</span>
+            </button>
+          </div>
+          <div class="space-y-4" x-show="showLatestInvoices" x-collapse>
+            <p x-show="!latestInvoices || !latestInvoices.length">No invoices found</p>
+            <div x-show="latestInvoices && latestInvoices.length" class="overflow-x-auto">
+              <table class="min-w-full border-collapse">
+                <thead class="bg-gray-100 border-b border-b-gray-300">
+                  <tr>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Invoice Ref.&nbsp;<span id="refCopyMsg"></span></th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Destination&nbsp;<span id="destinationCopyMsg"></span></th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Token&nbsp;<span id="mintAddressCopyMsg"></span></th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Amount</th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Creation date</th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template x-for="invoice in latestInvoices" :key="invoice.id">
+                    <tr class="border-b border-b-gray-300 hover:bg-gray-50 transition-colors">
+                      <td class="px-4 py-3">
+                        <span class="text-sm text-gray-600" x-text="shortenRef(invoice.invoice_ref)"></span>
+                        <span class="hidden" :id="`invoice-ref-${invoice.invoice_ref}`" x-text="invoice.invoice_ref"></span>
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-ref-${invoice.invoice_ref}`" target="#refCopyMsg">
+                          <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+                        </span>
+                      </td>
+
+                      <td class="px-4 py-3">
+                        <span class="text-sm font-mono text-gray-600" x-text="shortenAddr(invoice.paidto_address)"></span>
+                        <span class="hidden" :id="`invoice-destination-${invoice.invoice_ref}`" x-text="invoice.paidto_address"></span>
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-destination-${invoice.invoice_ref}`" target="#destinationCopyMsg">
+                          <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+                        </span>
+                      </td>
+
+                      <td class="px-4 py-3">
+                        <span class="text-sm font-mono text-gray-600" x-text="shortenAddr(invoice.token_address)"></span>
+                        <span class="hidden" :id="`invoice-mintaddress-${invoice.invoice_ref}`" x-text="invoice.token_address"></span>
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-mintaddress-${invoice.invoice_ref}`" target="#mintAddressCopyMsg">
+                          <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+                        </span>
+                      </td>
+
+                      <td class="px-4 py-3">
+                        <span class="text-sm font-medium" x-text="actualTokenAmount(getToken(invoice.token_address), invoice.lamports)"></span>
+                      </td>
+
+                      <td class="px-4 py-3">
+                        <span class="text-sm text-gray-600" x-text="new Date(invoice.created_at).toLocaleString()"></span>
+                      </td>
+
+                      <!-- Actions -->
+                      <td class="px-4 py-3">
+                        <div class="flex gap-2 flex-wrap">
+                          <button @click="showInvoice(invoice.invoice_ref)" class="text-sm text-indigo-600 hover:text-indigo-800 hover:cursor-pointer font-semibold">
+                            📋 View
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->
@@ -207,7 +285,8 @@
     </footer>
 
     <!-- Wallet Modal -->
-    <div x-show="showWalletModal" class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
+    <div x-show="showWalletModal"
+         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
       <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
         <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
           <h2 class="text-[1.25rem] font-bold text-[#111]">Connect Wallet</h2>
@@ -232,7 +311,8 @@
     </div>
 
     <!-- Documentation Modal -->
-    <div x-show="showDocumentation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+    <div x-show="showDocumentation"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
       <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
           <h2 class="text-2xl font-bold">TokenWall Documentation</h2>
@@ -243,6 +323,66 @@
           </button>
         </div>
         <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+      </div>
+    </div>
+
+    <!-- Prompt modal -->
+    <div x-show="showInvoiceModal"
+        class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        @click.self="showInvoiceModal = false">
+      <div class="w-full max-w-[420px] sm:max-w-[640px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-md sm:text-[1.15rem] font-semibold text-[#111]">Invoice details for <span id="invoiceDetailsRef" class="text-[#2E7D6B]"></span></h2>
+          <button @click="showInvoiceModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="flex flex-col gap-1 px-6 py-4">
+          <em class="mt-1 mb-2 text-sm font-normal text-[#5F6F6A]" id="invoiceDetailsStory"></em>
+          <div class="mx-auto">
+            <a id="invoiceDetailsPayNowLink"
+               href="#"
+               class="group relative flex w-[200px] justify-center rounded-md bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-75 disabled:cursor-not-allowed">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                <!-- Heroicon: lock-closed -->
+                <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" />
+                </svg>
+              </span>
+              Pay Now
+            </a>
+          </div>
+          <label class="block text-md font-semibold text-[#16352C]">
+            Invoice URL
+          </label>
+          <div class="flex flex-row gap-4">
+            <span class="hidden" id="invoiceDetailsFullUrl"></span>
+            <a id="invoiceDetailsUrl"
+              href="#"
+              target="_blank"
+              class="text-sm font-medium text-[#2E7D6B] hover:opacity-80 py-2">
+              Loading...
+            </a>
+            <span class="copyBtn hover:opacity-80 hover:cursor-pointer" rel="#invoiceDetailsFullUrl" target="#invoiceDetailsUrlCopyMsg">
+              <svg class="w-8 h-8 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+            </span>&nbsp;<span id="invoiceDetailsUrlCopyMsg"></span>
+          </div>
+          <em class="mt-1 mb-2 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+            You may share the above URL with any customer willing to pay this invoice.
+            This URL uses the <b>solana:</b> protocol handler such that if your device
+            has a Solana wallet, it will automatically open with the form pre-filled.
+          </em>
+          <label class="mb-2 block text-md font-semibold text-[#16352C]">
+            Invoice Script
+          </label>
+          <div class="relative max-w-[100%] max-h-60 overflow-y-auto text-xs border border-[#D9E2DF] p-2">
+            <div class="absolute top-[2px] right-[2px] rounded rounded-md bg-gray-100 flex flex-row gap-2 border border-[#D9E2DF] text-xs hover:opacity-80 hover:cursor-pointer copyBtn"
+                rel="#invoiceScriptPlain"
+                target="#invoiceDetailsUrlCopyMsg">
+              <svg class="pt-2 w-4 h-4 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
+              <span class="py-1 pr-2">Copy</span>
+            </div>
+            <pre id="invoiceScriptPlain">Loading...</pre>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -286,16 +426,49 @@
         formError: '',
         formProgress: '',
         creatingInvoice: false,
+        showLatestInvoices: true, // Note: only shown after userAddress is set.
+        latestInvoices: [],
+        showInvoiceModal: false,
+
+        resetForm(){
+          this.selectedToken = '';
+          this.invoiceLamports = 1;
+          this.useCluster = 'Mainnet';
+        },
 
         async init() {
           this.showWalletDetails = !this.userAddress;
 
+          this.initCopyButtons();
           this.loadSystemInfo();
           this.loadMarketData();
 
-          // On page load, if user already has a wallet connected (from localStorage or other source)
-          // Load their credentials list
           log.info('TokenWall initialized', { userAddress: this.userAddress });
+        },
+
+        initCopyButtons() {
+          const copyBtns = document.querySelectorAll('.copyBtn');
+          console.log("initCopyButtons", copyBtns);
+          for (let i = 0; i < copyBtns.length; i++) {
+            let elm = copyBtns[i];
+            elm.addEventListener('click', async() => {
+              const valueElm = document.querySelector(elm.getAttribute('rel'))
+              const statusElm = document.querySelector(elm.getAttribute('target'));
+
+              const textToCopy = valueElm.textContent;
+              await this.copyToClipboard(textToCopy, statusElm);
+            });
+          }
+        },
+
+        async copyToClipboard(message, statusElm) {
+          try {
+            await navigator.clipboard.writeText(message);
+            if (!!statusElm) {
+              statusElm.textContent = '✓';
+              setTimeout(()=>statusElm.textContent='', 2500);
+            }
+          } catch(e) {}
         },
 
         async loadSystemInfo() {
@@ -368,8 +541,8 @@
         setConnectedWallet(addr) {
           this.userAddress = addr;
 
-          //XXX loadLatestInvoices
           this.loadTokens();
+          this.loadLatestInvoices();
         },
 
         toggleCluster() {
@@ -396,10 +569,32 @@
           }
         },
 
+        async loadLatestInvoices() {
+          try {
+            const params = '?issuer=' + this.userAddress; 
+            const response = await fetch('/api/v1/tokenwall/invoices' + params);
+            if (response.ok) {
+              const data = await response.json();
+              this.latestInvoices = data.invoices;
+
+              // Wait for DOM updates
+              this.$nextTick(() => { this.initCopyButtons(); });
+            }
+          } catch (error) {
+            log.error('Error loading invoices', { error: error.message });
+          }
+        },
+
         useToken($el) {
           this.selectedToken = $el.value;
-          document.getElementById('totalPriceSymbol').innerText = this.getTokenSymbol(this.selectedToken);
+          document.getElementById('totalPriceSymbol').innerText = this.getToken(this.selectedToken).name;
           this.updateTotal(document.getElementById('lamports'));
+        },
+
+        actualTokenAmount(token, amt) {
+          const decimals = token.decimals;
+          const totalAmt = amt / (Math.pow(10, decimals));
+          return totalAmt.toFixed(decimals) + ' ' + token.name;
         },
 
         async updateTotal($el) {
@@ -500,18 +695,57 @@
 
             this.formProgress = '✅ Invoice created successfully!';
             log.info('[TokenWall] Invoice creation successful!', { invoiceRef: submitResult.invoiceRef });
-            log.info('[TokenWall] Transaction', { txSignature: submitResult.transactionSignature });
+            log.info('[TokenWall] Payment PDA credential address', { txSignature: submitResult.paymentPda });
+            log.info('[TokenWall] Transaction signature', { txSignature: submitResult.txSig });
 
             setTimeout(() => {
               alert('✅ Invoice created successfully!\n\nView it in the "My invoices" section below.');
               this.formProgress = '';
             }, 1500);
+
+            this.resetForm();
+            this.loadLatestInvoices();
           } catch (error) {
             log.error('Error creating invoice', { error: error.message });
             this.formError = error.message || 'Failed to create invoice';
           } finally {
             this.creatingInvoice = false;
           }
+        },
+
+        async showInvoice(invoiceRef) {
+          try {
+            if (!this.userAddress) return;
+            const response = await fetch(`/api/v1/tokenwall/invoice?invoiceRef=${invoiceRef}&enableMeta=1`);
+            if (response.ok) {
+              const data = await response.json();
+              const fullUrl = data.paymentUrl;
+              const shortUrl = this.shortenUrl(fullUrl);
+
+              document.getElementById('invoiceDetailsRef').innerText = this.shortenRef(data.invoiceRef);
+              document.getElementById('invoiceScriptPlain').innerText = data.script;
+              document.getElementById('invoiceDetailsUrl').innerText = shortUrl;
+              document.getElementById('invoiceDetailsUrl').setAttribute('href', fullUrl);
+              document.getElementById('invoiceDetailsFullUrl').innerText = fullUrl;
+              document.getElementById('invoiceDetailsStory').innerHTML = this.getPaymentStory(data);
+              document.getElementById('invoiceDetailsPayNowLink').setAttribute('href', fullUrl);
+
+              this.showInvoiceModal = true;
+            }
+          } catch (error) {
+            log.error('Error loading invoice details', { error: error.message });
+          }
+        },
+
+        // data is from /api/v1/tokenwall/invoice?...&enableMeta=1
+        getPaymentStory(data) {
+          const tokenAmt = this.actualTokenAmount(
+            this.getToken(data.tokenAddress),
+            data.amountLamports
+          );
+          return `This invoice prepares a payment of <b>${tokenAmt}</b> to ${this.shortenAddr(data.paymentAddress)}.<br />`
+            + `Click <a class="font-semibold text-indigo-500 hover:text-indigo-600" href="${data.paymentUrl}" target="_blank" rel="noopener nofollow">here</a> `
+            + `or on the button below to create a payment for this invoice.`;
         },
 
         async openDocumentation() {
@@ -548,14 +782,25 @@
           return this.knownTokens.find(t => t.mintAddress === byMint);
         },
 
-        getTokenSymbol(mint) {
-          return this.getToken(mint).name;
-        },
-
         shortenAddr(addr) {
           if (!addr || addr.length < 10) return addr;
           return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
-        } 
+        },
+
+        shortenRef(ref) {
+          if (!ref || ref.length < 10) return ref;
+          return ref.substring(0, 8) + '-...-' + ref.substring(ref.length - 4)
+        },
+
+        shortenUrl(url) {
+          if (!url || url.length < 20) return url;
+
+          if (url.substring(0, 6) === 'solana') {
+            return url.substring(0, 6+1+44+8) + '...';
+          }
+
+          return url.substring(0, 20) + '-...-' + url.substring(url.length - 4)
+        }
       };
     }
   </script>
