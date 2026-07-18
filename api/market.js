@@ -51,6 +51,13 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
     return parseFloat(row.price.toFixed(2));
   } catch(error) {
     log.error('Error getting market data:', { error });
+
+    // fallback to DB price if API errored and we have DB data.
+    if (lastPrice) {
+      log.info("Fallback to lastPrice from DB: ", {time: new Date(lastPrice.requested_at).toISOString()});
+      return parseFloat(lastPrice.token_price_eur);
+    }
+
     throw error;
   }
 }
