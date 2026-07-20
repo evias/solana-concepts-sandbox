@@ -34,7 +34,14 @@ try {
 
   // Empty database table
   const stmt = db.prepare(`${rawQuery}`);
-  const result = stmt.all();
+
+  let result;
+  if (rawQuery.toLowerCase().indexOf('select') === 0) {
+    result = stmt.all();
+  } else {
+    result = stmt.run();
+  }
+
   console.log("Result: ", result);
 } catch (error) {
   console.error('❌ Reset failed:', error.message);
