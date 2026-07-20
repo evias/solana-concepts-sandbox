@@ -387,20 +387,7 @@
   </div>
 
   <!-- DEMO TOKENWALL CLI INTEGRATION >
-  <script>
-  (function (i, s, o, g, r, a, m) {
-    i['TokenWallObject'] = r; i[r] = i[r] || function () {
-      (i[r].q = i[r].q || []).push(arguments);
-    }; i[r].l = 1 * new Date();
-    a = s.createElement(o);
-    m = s.getElementsByTagName(o)[0];
-    a.async = 1;
-    a.src = g;
-    m.parentNode.insertBefore(a, m);
-  })(window, document, 'script', '//unrevised-framing-silo.ngrok-free.dev/api/v1/tokenwall/pay.js', '_twp');
-  _twp('init', '12345', 'body');
-  _twp('lock');
-  </script>
+  <!-- TokenWall Code --><script>(function (i, s, o, g, r, a, m) { i['TokenWallObject'] = r; i[r] = i[r] ||  function () {    (i[r].q = i[r].q || []).push(arguments);  }; i[r].l = 1 * new Date(); a = s.createElement(o);  m = s.getElementsByTagName(o)[0]; a.async = 1;  a.src = g; m.parentNode.insertBefore(a, m);})(window, document, 'script', '//unrevised-framing-silo.ngrok-free.dev/api/v1/tokenwall/pay.js', '_twp');_twp('init', '5b970e58-29e4-55e2-9fd2-28a364f7d628', 'body');_twp('lock', 'unrevised-framing-silo.ngrok-free.dev/api/v1');</script><!-- End TokenWall Code -->
   <!-- END DEMO TOKENWALL CLI INTEGRATION -->
 
   <script>
@@ -680,6 +667,7 @@
                 tokenAddress: this.selectedToken,
                 lamports: this.invoiceLamports,
                 contentSelector: 'body',
+                useCluster: this.useCluster.toLowerCase(),
               })
             });
 
