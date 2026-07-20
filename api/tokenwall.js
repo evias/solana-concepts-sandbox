@@ -15,11 +15,59 @@ const solanaPay = require('@solana-commerce/solana-pay');
 // uuidv5("SCS (Solana Concepts Sandbox) by Grégory Saive for re:Software S.L.", "d9e6d386-7fa4-11f1-9690-325096b39f47")
 const SCS_UUID_NAMESPACE = "e399d4c4-afd2-558f-bfcc-b938393c33ee";
 
+//XXX refactor known token mint addresses.
 const SCS_SOL_MINT_ADDRESS = 'So11111111111111111111111111111111111111112';
 const SCS_USDC_MINT_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 const SCS_EURC_MINT_ADDRESS = 'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr';
 const SCS_DHP_MINT_ADDRESS = 'DHP1KmBeJePxh7EiptdpEt9E2G5cQRDTdkJooZMmDtKG';
 const SCS_AIDH_MINT_ADDRESS = 'AidHczUkwDnW7c1Lc89tTiP71dTqeEa52LgV6GxsfwYd';
+
+const knownTokens = [
+  {
+    mintAddress: SCS_SOL_MINT_ADDRESS,
+    name: 'SOL',
+    tokenAmount: 0,
+    decimals: 9,
+    priceEur: 0,
+  },
+  {
+    mintAddress: SCS_USDC_MINT_ADDRESS,
+    name: 'USDC',
+    tokenAmount: 0,
+    decimals: 6,
+    priceEur: 0,
+  },
+  {
+    mintAddress: SCS_EURC_MINT_ADDRESS,
+    name: 'EURC',
+    tokenAmount: 0,
+    decimals: 6,
+    priceEur: 0,
+  },
+  {
+    mintAddress: SCS_DHP_MINT_ADDRESS,
+    name: 'DHP',
+    tokenAmount: 0,
+    decimals: 9,
+  },
+  {
+    mintAddress: SCS_AIDH_MINT_ADDRESS,
+    name: 'AIDH',
+    tokenAmount: 0,
+    decimals: 6,
+  }
+];
+
+const shortenAddr = (addr) => {
+  if (!addr || addr.length < 10) return addr;
+  return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
+};
+
+const actualTokenAmount = (token, amt) => {
+  const decimals = token.decimals;
+  const totalAmt = amt / (Math.pow(10, decimals));
+  return totalAmt.toFixed(decimals) + ' ' + token.name;
+};
 
 /**
  * @swagger
@@ -266,6 +314,7 @@ router.post('/create-invoice-tx', async (req, res) => {
  *               - tokenAddress
  *               - lamports
  *               - contentSelector
+ *               - useCluster
  *             properties:
  *               invoiceRef:
  *                 type: string
@@ -294,6 +343,9 @@ router.post('/create-invoice-tx', async (req, res) => {
  *               contentSelector:
  *                 type: string
  *                 description: Query selector to find content element(s).
+ *               useCluster:
+ *                 type: string
+ *                 description: A solana cluster in lowercase.
  *     responses:
  *       200:
  *         description: Invoice created successfully
@@ -318,6 +370,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
       blockHash, maxBlockHeight,
       paymentPda, invoiceRef, signedTransaction,
       issuerAddress, tokenAddress, lamports, contentSelector,
+      useCluster,
     } = req.body;
 
     log.info('Received signed transaction submission');
@@ -372,7 +425,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
   a.src = g; m.parentNode.insertBefore(a, m);
 })(window, document, 'script', '//${config.api.baseUrl}/tokenwall/pay.js', '_twp');
 _twp('init', '${invoiceRef}', '${contentSelector}');
-_twp('lock');
+_twp('lock', '${config.api.baseUrl}');
 </script>
 <!-- End TokenWall Code -->
     `;
@@ -389,6 +442,7 @@ _twp('lock');
       issuerAddress,
       tokenAddress,
       lamports,
+      useCluster,
       paidtoAddress: paymentPda,
       scriptCipher: scriptPayload.ciphertext,
       scriptIV: scriptPayload.iv,
@@ -478,10 +532,16 @@ router.get('/invoices', (req, res) => {
  *     parameters:
  *       - in: query
  *         name: invoiceRef
- *         required: false
+ *         required: true
  *         schema:
  *           type: string
  *         description: The invoice reference field.
+ *       - in: query
+ *         name: paymentRef
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: A unique payment reference.
  *       - in: query
  *         name: enableMeta
  *         required: false
@@ -496,15 +556,24 @@ router.get('/invoices', (req, res) => {
  *             schema:
  *               type: object
  *               properties:
- *                 script:
- *                   type: string
+ *                 script: { type: string }
+ *                 paymentUrl: { type: string }
+ *                 qrCode: { type: string }
+ *                 issuerAddress: { type: string }
+ *                 tokenAddress: { type: string }
+ *                 paymentAddress: { type: string }
+ *                 invoiceRef: { type: string }
+ *                 amountLamports: { type: number }
+ *                 tokenSymbol: { type: string }
+ *                 uiTokenAmount: { type: string }
+ *                 lastRead: { type: string }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
  *         $ref: '#/components/schemas/Error'
  */
-router.get('/invoice', (req, res) => {
-  const { invoiceRef, enableMeta } = req.query;
+router.get('/invoice', async (req, res) => {
+  const { invoiceRef, paymentRef, enableMeta } = req.query;
   if (!invoiceRef) {
     return res.status(402).json({ error: 'Invalid Request' });
   }
@@ -546,32 +615,218 @@ router.get('/invoice', (req, res) => {
   let payParams = {
     recipient: invoice.paidto_address,
     amount: BigInt(invoiceAmount),
-    label: `TokenWall Invoice`, // XXX invoice label
-    message: `Payment for invoice ${invoice.invoice_ref}` // XXX invoice message
+    label: `TokenWall Invoice`,
+    message: `Payment for invoice ${invoice.invoice_ref}`
   };
   if (invoice.token_address !== SCS_SOL_MINT_ADDRESS) {
     payParams.splToken = invoice.token_address;
   }
+  if (!!paymentRef && paymentRef.length) {
+    payParams.memo = paymentRef;
+  }
 
   const paymentUrl = solanaPay.encodeURL(payParams);
+  const payQrCode = await solanaPay.createStyledQRCode(paymentUrl.toString(), {
+    width: 200,
+    color: {
+      dark: "#9945FF", // Solana purple
+      light: "#FFFFFF"
+    },
+    errorCorrectionLevel: "M",
+  });
 
   let response = {
     script: cleartextScript,
   };
   if (!!enableMeta) {
+    const knownToken = knownTokens.find(
+      t => t.mintAddress === invoice.token_address
+    );
+    const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
+
+    let uiTokenAmount;
+    if (!!knownToken) {
+      uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
+    } else {
+      let kt = { name: tokenSymbol, decimals: 9 };
+      uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
+    }
+
     response = {
       paymentUrl,
+      qrCode: payQrCode,
       issuerAddress: invoice.issuer_address,
       tokenAddress: invoice.token_address,
       paymentAddress: invoice.paidto_address,
       invoiceRef: invoice.invoice_ref,
       amountLamports: invoice.lamports,
+      tokenSymbol: tokenSymbol,
+      uiTokenAmount: uiTokenAmount,
       lastRead: invoice.lastread_at,
       script: cleartextScript
     };
   }
 
   return res.status(200).json(response);
+});
+
+/**
+ * @swagger
+ * /api/v1/tokenwall/status:
+ *   get:
+ *     tags:
+ *       - TokenWall
+ *     summary: Retrieve payment statuses for an invoiceRef and paymentRef.
+ *     description: Retrieves payment statuses for an invoiceRef and paymentRef.
+ *     parameters:
+ *       - in: query
+ *         name: invoiceRef
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The invoice reference field.
+ *       - in: query
+ *         name: paymentRef
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: A unique payment reference.
+ *     responses:
+ *       200:
+ *         description: Status retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 amountPaid:
+ *                   type: number
+ *                 tokenSymbol:
+ *                   type: string
+ *       402:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/status', async (req, res) => {
+  const { invoiceRef, paymentRef } = req.query;
+  if (!invoiceRef || !paymentRef) {
+    return res.status(402).json({ error: 'Invalid Request' });
+  }
+
+  // 1. Retrieve invoice details from DB
+  let invoice;
+  invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
+
+  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  let rpcUrl;
+  if (invoice.sol_cluster.toLowerCase() === "devnet") {
+    rpcUrl = 'https://api.devnet.solana.com';
+  } else {
+    rpcUrl = 'https://api.mainnet.solana.com';
+  }
+
+  const paymentAddress = invoice.paidto_address;
+  const tokenAddress = invoice.token_address;
+  const amountExpected = BigInt(invoice.lamports);
+  const knownToken = knownTokens.find(
+    t => t.mintAddress === invoice.token_address
+  );
+  const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
+
+  const web3 = require('@solana/web3.js');
+  const connection = new web3.Connection(rpcUrl, 'confirmed');
+
+  // Manual verification for received amounts.
+  // NOTE: The returned amount will be positive.
+  const extractTransactionAmount = (tx, addr, mint) => {
+    const pre = tx.meta.preTokenBalances.find(
+      (b) => b.owner === addr && b.mint === mint
+    );
+    const post = tx.meta.postTokenBalances.find(
+      (b) => b.owner === addr && b.mint === mint
+    );
+
+    const preAmount = BigInt(pre?.uiTokenAmount.amount ?? "0");
+    const postAmount = BigInt(post?.uiTokenAmount.amount ?? "0");
+    const diff = postAmount - preAmount;
+    return diff;
+  };
+
+  try {
+    // 2. Get latest signatures from destination address.
+    // NOTE: signatures also return memo, but do not contain amount information.
+    const signatures = await connection.getSignaturesForAddress(
+      new web3.PublicKey(paymentAddress), {}, 'confirmed',
+    );
+    if (!signatures.length) {
+      //XXX do we want status 404, etc. here?
+      return res.status(200).json({
+        status: 'pending',
+        amountPaid: 0,
+        uiTokenAmount: `0 ${tokenSymbol}`,
+        tokenSymbol,
+      });
+    }
+
+    let totalReceived = BigInt(0);
+    for (let i = 0; i < signatures.length; i++) {
+      const signature = signatures[i];
+
+      // 3. Get parsed transaction details.
+      const transaction = await connection.getParsedTransaction(signature.signature);
+      if (!transaction || !transaction.slot) {
+        return res.status(200).json({
+          status: 'pending',
+          amountPaid: 0,
+          uiTokenAmount: `0 ${tokenSymbol}`,
+          tokenSymbol,
+        });
+      }
+
+      // 4. Extract the received amount from transaction for token mint address.
+      const amountRcvd = extractTransactionAmount(transaction, paymentAddress, tokenAddress);
+      if (amountRcvd <= 0n) { // NOTE: we don't want to return negative amounts from API.
+        continue;
+      }
+
+      totalReceived = totalReceived + amountRcvd;
+    }
+
+    let uiTokenAmount;
+    if (!!knownToken) {
+      uiTokenAmount = actualTokenAmount(knownToken, Number(totalReceived));
+    } else {
+      let kt = { name: tokenSymbol, decimals: 9 };
+      uiTokenAmount = actualTokenAmount(kt, Number(totalReceived));
+    }
+
+    if (totalReceived < amountExpected) {
+      return res.status(200).json({
+        status: totalReceived > 0n ? 'partial' : 'pending',
+        amountPaid: Number(totalReceived),
+        uiTokenAmount,
+        tokenSymbol,
+      });
+    }
+
+    return res.status(200).json({
+      status: 'accepted',
+      amountPaid: Number(totalReceived),
+      uiTokenAmount,
+      tokenSymbol,
+    });
+  } catch (error) {
+    log.error('Error fetching invoice status', { error });
+    return res.status(500).json({ error: 'Failed to fetch status' });
+  }
 });
 
 /**
@@ -665,45 +920,16 @@ router.get('/tokens', async (req, res) => {
     const connection = new web3.Connection(rpcUrl, 'confirmed');
 
     const solanaPriceEur = await getTokenPrice('wrapped-solana', 'SOL');
-    const usdcPriceEur = await getTokenPrice('usd-coin', 'USDC');
-    const eurcPriceEur = await getTokenPrice('euro-coin', 'EURC');
+    const solTokenIndex = knownTokens.findIndex(t => t.name === 'SOL');
+    knownTokens[solTokenIndex].priceEur = solanaPriceEur;
 
-    //XXX extract known tokens
-    const knownTokens = [
-      {
-        mintAddress: SCS_SOL_MINT_ADDRESS,
-        name: 'SOL',
-        tokenAmount: 0,
-        decimals: 9,
-        priceEur: solanaPriceEur,
-      },
-      {
-        mintAddress: SCS_USDC_MINT_ADDRESS,
-        name: 'USDC',
-        tokenAmount: 0,
-        decimals: 6,
-        priceEur: usdcPriceEur,
-      },
-      {
-        mintAddress: SCS_EURC_MINT_ADDRESS,
-        name: 'EURC',
-        tokenAmount: 0,
-        decimals: 6,
-        priceEur: eurcPriceEur,
-      },
-      {
-        mintAddress: SCS_DHP_MINT_ADDRESS,
-        name: 'DHP',
-        tokenAmount: 0,
-        decimals: 9,
-      },
-      {
-        mintAddress: SCS_AIDH_MINT_ADDRESS,
-        name: 'AIDH',
-        tokenAmount: 0,
-        decimals: 6,
-      }
-    ];
+    const usdcPriceEur = await getTokenPrice('usd-coin', 'USDC');
+    const usdcTokenIndex = knownTokens.findIndex(t => t.name === 'USDC');
+    knownTokens[usdcTokenIndex].priceEur = usdcPriceEur;
+
+    const eurcPriceEur = await getTokenPrice('euro-coin', 'EURC');
+    const eurcTokenIndex = knownTokens.findIndex(t => t.name === 'EURC');
+    knownTokens[eurcTokenIndex].priceEur = eurcPriceEur;
 
     if (wallet_address && wallet_address.length) {
       const ownedTokens = await getTokenAccounts(wallet_address, connection);
