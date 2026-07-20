@@ -2265,7 +2265,8 @@
                   "issuerAddress",
                   "tokenAddress",
                   "lamports",
-                  "contentSelector"
+                  "contentSelector",
+                  "useCluster"
                 ],
                 "properties": {
                   "invoiceRef": {
@@ -2303,6 +2304,10 @@
                   "contentSelector": {
                     "type": "string",
                     "description": "Query selector to find content element(s)."
+                  },
+                  "useCluster": {
+                    "type": "string",
+                    "description": "A solana cluster in lowercase."
                   }
                 }
               }
@@ -2426,11 +2431,20 @@
           {
             "in": "query",
             "name": "invoiceRef",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             },
             "description": "The invoice reference field."
+          },
+          {
+            "in": "query",
+            "name": "paymentRef",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A unique payment reference."
           },
           {
             "in": "query",
@@ -2452,6 +2466,36 @@
                   "properties": {
                     "script": {
                       "type": "string"
+                    },
+                    "paymentUrl": {
+                      "type": "string"
+                    },
+                    "qrCode": {
+                      "type": "string"
+                    },
+                    "issuerAddress": {
+                      "type": "string"
+                    },
+                    "tokenAddress": {
+                      "type": "string"
+                    },
+                    "paymentAddress": {
+                      "type": "string"
+                    },
+                    "invoiceRef": {
+                      "type": "string"
+                    },
+                    "amountLamports": {
+                      "type": "number"
+                    },
+                    "tokenSymbol": {
+                      "type": "string"
+                    },
+                    "uiTokenAmount": {
+                      "type": "string"
+                    },
+                    "lastRead": {
+                      "type": "string"
                     }
                   }
                 }
@@ -2459,6 +2503,67 @@
             }
           },
           "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenwall/status": {
+      "get": {
+        "tags": [
+          "TokenWall"
+        ],
+        "summary": "Retrieve payment statuses for an invoiceRef and paymentRef.",
+        "description": "Retrieves payment statuses for an invoiceRef and paymentRef.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "invoiceRef",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The invoice reference field."
+          },
+          {
+            "in": "query",
+            "name": "paymentRef",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A unique payment reference."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "amountPaid": {
+                      "type": "number"
+                    },
+                    "tokenSymbol": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
             "$ref": "#/components/schemas/Error"
           },
           "500": {
