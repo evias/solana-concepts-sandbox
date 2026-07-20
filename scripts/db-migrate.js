@@ -522,9 +522,14 @@ try {
         try {
           const tableInfo = db.prepare("PRAGMA table_info(tw_invoices)").all();
           const hasLamports = tableInfo.some(col => col.name === 'lamports');
+          const hasCluster = tableInfo.some(col => col.name === 'sol_cluster');
 
           if (!hasLamports) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN lamports INTEGER NOT NULL DEFAULT 1;`);
+            return true;
+          }
+          if (!hasCluster) {
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN sol_cluster TEXT NOT NULL DEFAULT 'mainnet';`);
             return true;
           }
           return false;

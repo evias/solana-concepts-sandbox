@@ -919,6 +919,7 @@ const tokenWallDb = {
     invoiceRef,
     scriptCipher,
     scriptIV,
+    useCluster,
   }) {
     const now = new Date().toISOString();
 
@@ -926,13 +927,13 @@ const tokenWallDb = {
       INSERT INTO tw_invoices (
         id, issuer_address, paidto_address, token_address,
         invoice_ref, lamports, script_cipher, cipher_iv, num_reads,
-        lastread_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        sol_cluster, lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       id, issuerAddress, paidtoAddress, tokenAddress,
-      invoiceRef, lamports, scriptCipher, scriptIV, 1,
+      invoiceRef, lamports, scriptCipher, scriptIV, 1, useCluster,
       now, now, now
     );
 
