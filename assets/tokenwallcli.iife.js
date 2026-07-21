@@ -6,7 +6,8 @@ var i18n_en = {
   'status_accepted': 'Payment completed',
   'button_pay_now': 'Pay now (%AMOUNT%)',
   'explain_qrcode': 'Use the QRCode below to pay with your Solana Wallet.',
-  'partial_explain': '(*) Received a partial payment for %AMOUNT%.'
+  'partial_explain': '(*) Received a partial payment for %AMOUNT%.',
+  'accepted_explain': 'This window will automatically close in 3 seconds.'
 };
 function cmb(r, s) {
   let texts = i18n_en;
@@ -105,6 +106,7 @@ function uag() {
     i[r].elm = null;
     i[r].sib = null;
     i[r].err = null;
+    i[r].mod = null;
     i[r].qlm = null;
     i[r].clm = null;
     i[r].slm = null;
@@ -121,7 +123,8 @@ function uag() {
   };
   i[r].lock = async function(api) {
     if (this.elm !== null) tc(this.elm);
-    this.dom.appendChild(cmb(this.ref, 'pending'));
+    this.mod = cmb(this.ref, 'pending');
+    this.dom.appendChild(this.mod);
 
     this.qlm = document.querySelector(`#twpay-${this.ref}-qrCode`);
     this.clm = document.querySelector(`#twpay-${this.ref}-qrCaption`);
@@ -136,7 +139,7 @@ function uag() {
       this.qlm.innerHTML = data.qrCode;
       this.clm.innerHTML = `
 <a href="${data.paymentUrl}"
-   class="group relative flex w-[200px] justify-center rounded-md bg-indigo-600 pl-5 py-3 text-xs sm:text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-75 disabled:cursor-not-allowed">
+   class="group relative flex w-[200px] justify-center rounded-md bg-indigo-600 pl-5 py-3 text-xs font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-75 disabled:cursor-not-allowed">
   <span class="absolute inset-y-0 left-0 flex items-center pl-3">
     <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
       <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" />
@@ -162,9 +165,14 @@ function uag() {
       if (data.status === 'accepted') {
         divStatusChip.classList.remove('bg-red-500', 'bg-yellow-500');
         divStatusChip.classList.add('bg-[#5BD6B5]');
+        emAsterisk.classList.remove('hidden');
+        emAsterisk.innerText = texts['accepted_explain'];
 
-        //XXX unlock/clear after 3 status confirmations.
         clearInterval(intervalStatusPoll);
+        setTimeout(() => {
+          this.mod.remove();
+          tc(this.elm);
+        }, 3000);
       } else if (data.status === 'partial') {
         divStatusChip.classList.remove('bg-red-500');
         divStatusChip.classList.add('bg-yellow-500');
