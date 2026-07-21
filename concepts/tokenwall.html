@@ -223,7 +223,10 @@
                       <td class="px-4 py-3">
                         <span class="text-sm text-gray-600" x-text="shortenRef(invoice.invoice_ref)"></span>
                         <span class="hidden" :id="`invoice-ref-${invoice.invoice_ref}`" x-text="invoice.invoice_ref"></span>
-                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-ref-${invoice.invoice_ref}`" target="#refCopyMsg">
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" 
+                              :rel="'#'+`invoice-ref-${invoice.invoice_ref}`"
+                              target="#refCopyMsg"
+                              title="Copy invoice reference">
                           <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
                         </span>
                       </td>
@@ -231,17 +234,33 @@
                       <td class="px-4 py-3">
                         <span class="text-sm font-mono text-gray-600" x-text="shortenAddr(invoice.paidto_address)"></span>
                         <span class="hidden" :id="`invoice-destination-${invoice.invoice_ref}`" x-text="invoice.paidto_address"></span>
-                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-destination-${invoice.invoice_ref}`" target="#destinationCopyMsg">
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer"
+                              :rel="'#'+`invoice-destination-${invoice.invoice_ref}`"
+                              target="#destinationCopyMsg"
+                              title="Copy destination address">
                           <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
                         </span>
+                        <a class="-mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer"
+                          target="_blank" rel="noopener nofollow"
+                          :href="getSolscanLink('account', invoice.paidto_address, invoice.sol_cluster.toLowerCase())">
+                          <svg class="w-5 h-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                        </a>
                       </td>
 
                       <td class="px-4 py-3">
                         <span class="text-sm font-mono text-gray-600" x-text="shortenAddr(invoice.token_address)"></span>
                         <span class="hidden" :id="`invoice-mintaddress-${invoice.invoice_ref}`" x-text="invoice.token_address"></span>
-                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer" :rel="'#'+`invoice-mintaddress-${invoice.invoice_ref}`" target="#mintAddressCopyMsg">
+                        <span class="copyBtn -mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer"
+                              :rel="'#'+`invoice-mintaddress-${invoice.invoice_ref}`"
+                              target="#mintAddressCopyMsg"
+                              title="Copy mint address">
                           <svg class="w-5 h-5 inline copy-icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linejoin="round" stroke-width="2" d="M9 8v3a1 1 0 0 1-1 1H5m11 4h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1v1m4 3v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7.13a1 1 0 0 1 .24-.65L7.7 8.35A1 1 0 0 1 8.46 8H13a1 1 0 0 1 1 1Z"></path></svg>
                         </span>
+                        <a class="-mt-1 text-gray-400 hover:text-gray-600 hover:cursor-pointer"
+                          target="_blank" rel="noopener nofollow"
+                          :href="getSolscanLink('token', invoice.token_address, invoice.sol_cluster.toLowerCase())">
+                          <svg class="w-5 h-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+                        </a>
                       </td>
 
                       <td class="px-4 py-3">
@@ -766,6 +785,10 @@
           }
 
           return this.knownTokens.find(t => t.mintAddress === byMint);
+        },
+
+        getSolscanLink(t, v, c) {
+          return `https://solscan.io/${t}/${v}?cluster=${c}`;
         },
 
         shortenAddr(addr) {
