@@ -520,6 +520,9 @@
   .h-24 {
     height: calc(var(--spacing) * 24);
   }
+  .h-32 {
+    height: calc(var(--spacing) * 32);
+  }
   .h-\[22px\] {
     height: 22px;
   }
@@ -565,6 +568,9 @@
   .min-h-\[300px\] {
     min-height: 300px;
   }
+  .min-h-\[400px\] {
+    min-height: 400px;
+  }
   .min-h-screen {
     min-height: 100vh;
   }
@@ -594,6 +600,9 @@
   }
   .w-20 {
     width: calc(var(--spacing) * 20);
+  }
+  .w-32 {
+    width: calc(var(--spacing) * 32);
   }
   .w-\[22px\] {
     width: 22px;
@@ -1556,6 +1565,9 @@
   }
   .text-gray-900 {
     color: var(--color-gray-900);
+  }
+  .text-green-400 {
+    color: var(--color-green-400);
   }
   .text-green-500 {
     color: var(--color-green-500);

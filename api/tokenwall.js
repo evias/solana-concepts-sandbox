@@ -973,6 +973,60 @@ router.get('/pay.js', (req, res) => {
 
 /**
  * @swagger
+ * /api/v1/tokenwall/asset/redirect:
+ *   get:
+ *     tags:
+ *       - TokenWall
+ *     summary: Redirects to the asset (invoice object) download link.
+ *     description: Redirects to the asset (invoice object) download link.
+ *     responses:
+ *       301:
+ *         description: Redirected successfully.
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       402:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/asset/redirect', (req, res) => {
+  const { objectId } = req.query;
+  if (!objectId) {
+    return res.status(400).json({ error: 'Invalid Request' });
+  }
+
+  // NOTE: We first retrieve the object from DB to avoid SQL injections.
+  const invoiceObject = tokenWallDb.getObjectById(objectId);
+  if (!invoiceObject || !invoiceObject.invoice_id) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  // NOTE: Fetches the invoice from the object db fields.
+  const invoice = tokenWallDb.getInvoiceById(invoiceObject.invoice_id);
+  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher || !invoice.status) {
+    return res.status(404).json({ error: 'Not Found' });
+  }
+
+  if (invoice.status !== 'accepted') {
+    return res.status(402).json({ error: 'Payment Required' });
+  }
+
+  const cleartextUrl = decrypt({
+    iv: invoiceObject.url_iv,
+    ciphertext: invoiceObject.url_cipher
+  });
+
+  if (!cleartextUrl) {
+    return res.status(500).json({ error: 'Decryption failed: unknown error' });
+  }
+
+  return res.redirect(301, cleartextUrl);
+});
+
+/**
+ * @swagger
  * /api/v1/tokenwall/tokens:
  *   get:
  *     tags:
