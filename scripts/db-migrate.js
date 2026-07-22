@@ -523,6 +523,8 @@ try {
           const tableInfo = db.prepare("PRAGMA table_info(tw_invoices)").all();
           const hasLamports = tableInfo.some(col => col.name === 'lamports');
           const hasCluster = tableInfo.some(col => col.name === 'sol_cluster');
+          const hasStatus = tableInfo.some(col => col.name === 'status');
+          const hasAmountPaid = tableInfo.some(col => col.name === 'amount_paid');
 
           if (!hasLamports) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN lamports INTEGER NOT NULL DEFAULT 1;`);
@@ -532,7 +534,50 @@ try {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN sol_cluster TEXT NOT NULL DEFAULT 'mainnet';`);
             return true;
           }
+          if (!hasStatus) {
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN status TEXT NOT NULL DEFAULT 'pending';`);
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN signatures TEXT NOT NULL DEFAULT '';`);
+            return true;
+          }
+
+          if (!hasAmountPaid) {
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN amount_paid INTEGER NOT NULL DEFAULT 0;`);
+            return true;
+          }
           return false;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 15: Create tw_invoice_objects table
+    {
+      name: 'Create tw_invoice_objects table',
+      up: (db) => {
+        try {
+          db.exec(`
+            CREATE TABLE tw_invoice_objects (
+              id TEXT PRIMARY KEY,
+              invoice_id TEXT NOT NULL,
+              mime_cipher TEXT NOT NULL,
+              mime_iv TEXT NOT NULL,
+              url_cipher TEXT NOT NULL,
+              url_iv TEXT NOT NULL,
+              max_downloads INTEGER NOT NULL DEFAULT 0,
+              num_downloads INTEGER NOT NULL DEFAULT 0,
+              lastdownload_at TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_invoice_objs_id ON tw_invoice_objects(invoice_id);
+          `);
+
+          return true;
         } catch (error) {
           if (error.message.includes('already exists')) {
             return false;

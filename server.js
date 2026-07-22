@@ -101,6 +101,25 @@ app.get('/hcpconsole', (req, res) => {
 app.get('/tokenwall', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/tokenwall.html'));
 });
+app.get('/demo/:concept/:param', (req, res) => {
+  const { concept, param } = req.params;
+
+  const demoFile = path.join(__dirname, 'concepts', 'demo', concept + '.html');
+  if (!fs.existsSync(demoFile)) {
+    return res.redirect('/');
+  }
+
+  const demoHtml = fs.readFileSync(demoFile).toString('utf8');
+
+  // Replace template arguments for demo purpose.
+  let finalHtml = demoHtml;
+  if (!!param && param.length) {
+    finalHtml = finalHtml.replaceAll('%%%%SCS_API_DEMO_PARAM%%%%', param);
+  }
+
+  finalHtml = finalHtml.replaceAll('%%%%SCS_API_BASE_URL%%%%', config.api.baseUrl)
+  res.send(finalHtml);
+});
 
 // Serve assets
 app.use('/assets', express.static(path.join(__dirname, 'assets')));

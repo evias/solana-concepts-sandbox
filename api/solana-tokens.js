@@ -215,6 +215,7 @@ async function getTokenAccounts(accountAddress, conn) {
     accounts.forEach(acct => {
       const { mint: mintAddress, tokenAmount } = acct.account.data["parsed"]["info"];
       tokenAccounts.push({
+        pubKey: acct.pubkey,
         mintAddress,
         tokenAmount: tokenAmount.uiAmountString,
       });

@@ -177,7 +177,7 @@ function uag() {
         divStatusChip.classList.remove('bg-red-500');
         divStatusChip.classList.add('bg-yellow-500');
         emAsterisk.classList.remove('hidden');
-        emAsterisk.innerText = texts['partial_explain'].replace('%AMOUNT%', data.uiTokenAmount);
+        emAsterisk.innerText = texts['partial_explain'].replace('%AMOUNT%', data.uiPaidAmount);
       }
     };
 

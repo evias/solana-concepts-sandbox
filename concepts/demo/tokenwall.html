@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>[DEMO] TokenWall - Paid Content: Token Invoices</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="/assets/base.min.css" rel="stylesheet">
+    <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Client-side logger -->
+    <script src="/assets/logger.js"></script>
+    <script defer src="/assets/marked.min.js"></script>
+    <!-- Solana Web3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="container mx-auto" x-data="tokenWallDemoPage()" @load="init()" x-init="init()">
+    <header class="px-2 sm:px-6 pt-6">
+      <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+        <div class="flex items-center gap-3">
+          <div class="h-8 w-8 rounded-full bg-teal-500"></div>
+          <div>
+            <p class="text-sm font-semibold text-slate-900">TokenWall (DEMO)</p>
+            <p class="text-xs text-slate-500">Paid Content: Token Invoices</p>
+          </div>
+        </div>
+        <div class="inline sm:hidden text-xs -mt-4">
+          <a href="/">
+            <!-- home button for mobile -->
+            <svg class="pl-4 pt-4 w-16 h-16" viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+              <rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/>
+              <g transform="matrix(0.04 0 0 0.04 12 12)" >
+                <g style="" >
+                  <g transform="matrix(1 0 0 1 0 0)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(224,79,95); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -256)" d="M 7.9 256 C 7.9 119 119 7.9 256 7.9 C 393 7.9 504.1 119 504.1 256 C 504.1 393 393 504.1 256 504.1 C 119 504.1 7.9 393 7.9 256 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 -0.05 -67.52)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-255.95, -188.48)" d="M 408.1 206.8 L 258 131.9 C 256.7 131.3 255.3 131.3 254 131.9 L 103.80000000000001 206.8 C 102.10000000000001 207.60000000000002 101.10000000000001 209.20000000000002 101.10000000000001 211.10000000000002 L 101.10000000000001 240.70000000000002 C 101.10000000000001 242.3 101.9 243.8 103.30000000000001 244.70000000000002 C 104.70000000000002 245.60000000000002 106.4 245.70000000000002 107.80000000000001 245.00000000000003 L 256 171.00000000000003 L 404.1 245.00000000000003 C 404.70000000000005 245.30000000000004 405.40000000000003 245.50000000000003 406.1 245.50000000000003 C 407 245.50000000000003 407.90000000000003 245.30000000000004 408.6 244.80000000000004 C 410 243.90000000000003 410.8 242.40000000000003 410.8 240.80000000000004 L 410.8 211 C 410.8 209.2 409.8 207.5 408.1 206.8 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 0 16.3)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -272.3)" d="M 380.5 245.8 L 256 183.8 L 131.5 245.8 L 131.5 360.8 L 200.5 360.8 L 200.5 272.6 L 248 272.6 L 248 360.8 L 380.5 360.8 z" stroke-linecap="round" />
+                  </g>
+                  <g transform="matrix(1 0 0 1 23.7 32.6)" >
+                    <path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(234,73,73); fill-rule: nonzero; opacity: 1;" transform=" translate(-279.7, -288.6)" d="M 263.7 272.6 L 295.7 272.6 L 295.7 304.6 L 263.7 304.6 z" stroke-linecap="round" />
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </a>
+        </div>
+        <div class="hidden sm:flex text-sm text-slate-500">
+          <div class="flex flex-row gap-2">
+            <div class="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Solana Mainnet Ready
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto min-w-screen max-w-screen sm:min-w-7xl sm:max-w-7xl px-2 sm:px-5 pb-16 pt-8">
+      <section
+        class="mb-8 rounded-[14px] border border-[#D9E2DF] bg-white py-3 sm:py-7">
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="mx-auto font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">Marley's Playface 2023</h2>
+        </div>
+        <div class="w-full space-y-4 text-center">
+          <div class="w-full min-h-[50px] bg-green-100 border-t border-b border-b-[#e5e7eb] border-t-[#e5e7eb] p-3 sm:p-6 flex flex-row gap-2 sm:gap-4 items-center justify-center">
+            <!-- currency-euro -->
+            <svg class="w-8 h-8 inline hover:cursor-pointer"
+                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 7.756a4.5 4.5 0 1 0 0 8.488M7.5 10.5h5.25m-5.25 3h5.25M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /><title>Invoice paid</title></svg>
+            <p class="text-sm">
+              Payment(s) for this invoice have been <b>accepted</b>. Thank you.<br />
+              A total of <span x-text="invoice.uiPaidAmount"></span> has been processed.
+            </p>
+            <!-- shield-check -->
+            <svg class="w-8 h-8 inline hover:cursor-pointer"
+                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /><title>Blockchain secured</title></svg>
+          </div>
+          <p class="mx-auto w-full sm:w-[70%] text-sm">
+            <b>Thank you for purchasing this item</b>.
+            You'll find attached, a picture of my dog <b>Marley</b>.
+          </p>
+          <p class="mx-auto w-full sm:w-[70%] text-sm">
+            You may also <a class="font-semibold text-indigo-500 hover:text-indigo-600" :href="assetDownloadLink">download a ZIP file</a> that contains Marley's avatar, and the displayed picture.
+          </p>
+          <div class="mx-auto w-full sm:w-[70%] mt-4">
+            <img class="mx-auto w-[400px] rounded-md opacity-80 hover:opacity-100 hover:cursor-pointer"
+                 src="/assets/Marley.jpeg"
+                 title="Marley sits for a reward, after a playful session. Thankful for you to pay this invoice!" />
+          </div>
+          <p class="mx-auto mt-4 w-full sm:w-[70%]">
+            <em class="mt-1 mb-2 text-sm font-normal text-[#5F6F6A]">
+              All income collected using this page will go into buying food and/or toys for Marley and his friends!
+              Note that, because Marley does not <i>currently</i> manage his own Solana Wallet, tokens will be processed
+              by a human and collections will be redirected to our in-house food budget for the ongoing year.
+            </em>
+            <em class="block mt-1 mb-2 text-sm font-semibold text-[#5F6F6A]">
+              We'd like to <b>Thank you</b> with all our purrness!
+              Marley, Neo &amp; Ronni.
+            </em>
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-2 sm:px-6 pb-8">
+      <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+        <div class="flex flex-col gap-3 sm:flex-row items-center sm:items-start sm:justify-between">
+          <p class="text-xs sm:text-sm text-slate-500">
+            <em x-text="appVersion"></em>
+          </p>
+          <p class="text-xs sm:text-sm text-center font-medium text-slate-600">
+            © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>,<br />All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- DEMO TOKENWALL CLI INTEGRATION -->
+  <!-- TokenWall Code --><script>(function (i, s, o, g, r, a, m) { i['TokenWallObject'] = r; i[r] = i[r] ||  function () {    (i[r].q = i[r].q || []).push(arguments);  }; i[r].l = 1 * new Date(); a = s.createElement(o);  m = s.getElementsByTagName(o)[0]; a.async = 1;  a.src = g; m.parentNode.insertBefore(a, m);})(window, document, 'script', '//%%%%SCS_API_BASE_URL%%%%/tokenwall/pay.js', '_twp');_twp('init', '%%%%SCS_API_DEMO_PARAM%%%%', 'body');_twp('lock', '%%%%SCS_API_BASE_URL%%%%');</script><!-- End TokenWall Code -->
+  <!-- END DEMO TOKENWALL CLI INTEGRATION -->
+
+  <script>
+    function tokenWallDemoPage() {
+      return {
+        appVersion: '@main/dev',
+        copyYear: '2026',
+
+        invoiceRef: '%%%%SCS_API_DEMO_PARAM%%%%',
+        invoice: null,
+        assetDownloadLink: '#',
+
+        async init() {
+          try {
+            const dataUrl = `//%%%%SCS_API_BASE_URL%%%%/tokenwall/invoice`;
+            const dataParams = `invoiceRef=${this.invoiceRef}&enableMeta=1`;
+            const response = await fetch(`${dataUrl}?${dataParams}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.status === 'accepted') {
+                this.invoice = data;
+                this.assetDownloadLink = '#download';
+              }
+            }
+          } catch(error) {}
+        }
+      };
+    }
+  </script>
+</body>
+</html>
