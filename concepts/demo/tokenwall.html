@@ -65,14 +65,19 @@
         <div class="flex justify-between items-center mb-2">
           <h2 class="mx-auto font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">Marley's Playface 2023</h2>
         </div>
-        <div class="w-full space-y-4 text-center">
+        <div x-show="!isPaid()"
+             class="w-full space-y-4 text-center min-h-[400px]">
+          <p>PAYMENT REQUIRED</p>
+        </div>
+        <div x-show="isPaid()"
+             class="w-full space-y-4 text-center">
           <div class="w-full min-h-[50px] bg-green-100 border-t border-b border-b-[#e5e7eb] border-t-[#e5e7eb] p-3 sm:p-6 flex flex-row gap-2 sm:gap-4 items-center justify-center">
             <!-- currency-euro -->
             <svg class="w-8 h-8 inline hover:cursor-pointer"
                  xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 7.756a4.5 4.5 0 1 0 0 8.488M7.5 10.5h5.25m-5.25 3h5.25M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /><title>Invoice paid</title></svg>
             <p class="text-sm">
               Payment(s) for this invoice have been <b>accepted</b>. Thank you.<br />
-              A total of <span x-text="invoice.uiPaidAmount"></span> has been processed.
+              A total of <span x-text="!!invoice ? invoice.uiPaidAmount : ''"></span> has been processed.
             </p>
             <!-- shield-check -->
             <svg class="w-8 h-8 inline hover:cursor-pointer"
@@ -148,6 +153,10 @@
               }
             }
           } catch(error) {}
+        },
+
+        isPaid() {
+          return !!this.invoice && this.invoice.status === 'accepted';
         }
       };
     }

@@ -93,12 +93,19 @@ function uag() {
   return array.toHex();
 };
 
+function ul(self) {
+  if (self.sch) clearInterval(self.sch);
+  if (self.mod) self.mod.remove();
+  if (self.elm) tc(self.elm);
+}
+
 // IIFE
 (function (i, r) {
   i['TokenWallPayObject'] = r;
   i[r] = i[r] || function () {
     (i[r].q = i[r].q || []).push(arguments);
 
+    i[r].mut = null;
     i[r].uag = null;
     i[r].ref = null;
     i[r].sel = null;
@@ -110,6 +117,7 @@ function uag() {
     i[r].qlm = null;
     i[r].clm = null;
     i[r].slm = null;
+    i[r].sch = null;
   };
   i[r].init = function(ref, sel) {
     this.uag = uag();
@@ -130,12 +138,30 @@ function uag() {
     this.clm = document.querySelector(`#twpay-${this.ref}-qrCaption`);
     this.slm = document.querySelector(`#twpay-${this.ref}-payStatus`);
 
+    const spanStatusElm = document.querySelector(`#twpay-${this.ref}-payStatus`);
+    const divStatusChip = document.querySelector(`#twpay-${this.ref}-statusChip`);
+    const emAsterisk = document.querySelector(`#twpay-${this.ref}-partialExplain`);
+
     const texts = i18n_en;
     const dataUrl = `//${api}/tokenwall/invoice`;
     const dataParams = `invoiceRef=${this.ref}&paymentRef=${this.pref}&enableMeta=1`;
     const response = await fetch(`${dataUrl}?${dataParams}`);
     if (response.ok) {
       const data = await response.json();
+      if (data.status === 'accepted') {
+        this.qlm.innerHTML = `
+<!-- shield-check -->
+<svg class="w-32 h-32 inline text-green-400"
+      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /><title>Invoice paid</title></svg>
+        `;
+
+        setTimeout(() => ul(this), 1500);
+        spanStatusElm.innerText = texts['status_' + data.status];
+        divStatusChip.classList.remove('bg-red-500', 'bg-yellow-500');
+        divStatusChip.classList.add('bg-[#5BD6B5]');
+        return;
+      }
+
       this.qlm.innerHTML = data.qrCode;
       this.clm.innerHTML = `
 <a href="${data.paymentUrl}"
@@ -150,11 +176,6 @@ function uag() {
       `;
     }
 
-    const spanStatusElm = document.querySelector(`#twpay-${this.ref}-payStatus`);
-    const divStatusChip = document.querySelector(`#twpay-${this.ref}-statusChip`);
-    const emAsterisk = document.querySelector(`#twpay-${this.ref}-partialExplain`);
-
-    let intervalStatusPoll = undefined;
     const pollInvoiceStatusFn = async () => {
       const pollUrl = `//${api}/tokenwall/status`;
       const pollParams = `invoiceRef=${this.ref}&paymentRef=${this.pref}`;
@@ -168,11 +189,13 @@ function uag() {
         emAsterisk.classList.remove('hidden');
         emAsterisk.innerText = texts['accepted_explain'];
 
-        clearInterval(intervalStatusPoll);
-        setTimeout(() => {
-          this.mod.remove();
-          tc(this.elm);
-        }, 3000);
+        if (this.sch) {
+          clearInterval(this.sch);
+          setTimeout(() => {
+            this.mod.remove();
+            tc(this.elm);
+          }, 3000);
+        }
       } else if (data.status === 'partial') {
         divStatusChip.classList.remove('bg-red-500');
         divStatusChip.classList.add('bg-yellow-500');
@@ -182,10 +205,12 @@ function uag() {
     };
 
     // Poll for payment updates every 5 seconds during 30 minutes.
-    intervalStatusPoll = setInterval(pollInvoiceStatusFn, 5 * 1000);
+    this.sch = setInterval(pollInvoiceStatusFn, 5 * 1000);
     pollInvoiceStatusFn(); // poll on-load as well.
     setTimeout(() => {
-      clearInterval(intervalStatusPoll)
+      if (this.sch) {
+        clearInterval(this.sch);
+      }
     }, 30 * 60 * 1000);
   };
 

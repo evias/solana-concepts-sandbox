@@ -2266,7 +2266,8 @@
                   "tokenAddress",
                   "lamports",
                   "contentSelector",
-                  "useCluster"
+                  "useCluster",
+                  "invoiceObjects"
                 ],
                 "properties": {
                   "invoiceRef": {
@@ -2308,6 +2309,10 @@
                   "useCluster": {
                     "type": "string",
                     "description": "A solana cluster in lowercase."
+                  },
+                  "invoiceObjects": {
+                    "type": "array",
+                    "description": "An array of paid asset objects."
                   }
                 }
               }
@@ -2400,6 +2405,9 @@
                           "amount": {
                             "type": "number"
                           },
+                          "cnt_assets": {
+                            "type": "number"
+                          },
                           "lastread_at": {
                             "type": "string"
                           }
@@ -2473,6 +2481,9 @@
                     "qrCode": {
                       "type": "string"
                     },
+                    "status": {
+                      "type": "string"
+                    },
                     "issuerAddress": {
                       "type": "string"
                     },
@@ -2488,7 +2499,13 @@
                     "amountLamports": {
                       "type": "number"
                     },
+                    "amountPaid": {
+                      "type": "number"
+                    },
                     "tokenSymbol": {
+                      "type": "string"
+                    },
+                    "uiPaidAmount": {
                       "type": "string"
                     },
                     "uiTokenAmount": {
@@ -2591,6 +2608,32 @@
             }
           },
           "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenwall/asset/redirect": {
+      "get": {
+        "tags": [
+          "TokenWall"
+        ],
+        "summary": "Redirects to the asset (invoice object) download link.",
+        "description": "Redirects to the asset (invoice object) download link.",
+        "responses": {
+          "301": {
+            "description": "Redirected successfully."
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "402": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
             "$ref": "#/components/schemas/Error"
           },
           "500": {
