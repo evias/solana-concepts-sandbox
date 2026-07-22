@@ -926,18 +926,45 @@ const tokenWallDb = {
     const stmt = db.prepare(`
       INSERT INTO tw_invoices (
         id, issuer_address, paidto_address, token_address,
-        invoice_ref, lamports, script_cipher, cipher_iv, num_reads,
-        sol_cluster, lastread_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        invoice_ref, lamports, amount_paid, script_cipher, cipher_iv, num_reads,
+        sol_cluster, status, signatures, lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '', ?, ?, ?)
     `);
 
     stmt.run(
       id, issuerAddress, paidtoAddress, tokenAddress,
-      invoiceRef, lamports, scriptCipher, scriptIV, 1, useCluster,
+      invoiceRef, lamports, 0, scriptCipher, scriptIV, 1, useCluster,
       now, now, now
     );
 
     return tokenWallDb.getInvoiceById(id);
+  },
+
+  // Create new tw_invoice_objects entry
+  addObject({
+    id,
+    invoiceId,
+    mimeEncrypted,
+    mimeIV,
+    urlEncrypted,
+    urlIV,
+    maxDownloads,
+  }) {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      INSERT INTO tw_invoice_objects (
+        id, invoice_id, mime_cipher, url_cipher,
+        mime_iv, url_iv, max_downloads, num_downloads,
+        lastdownload_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id, invoiceId, mimeEncrypted, urlEncrypted,
+      mimeIV, urlIV, maxDownloads, '', now, now
+    );
+
+    return tokenWallDb.getObjectById(id);
   },
 
   updateLastRead(invoiceId) {
@@ -949,6 +976,36 @@ const tokenWallDb = {
     `);
 
     stmt.run(now, now, invoiceId);
+    return tokenWallDb.getInvoiceById(invoiceId);
+  },
+
+  updateLastDownload(objectId) {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE tw_invoice_objects
+      SET lastdownload_at = ?, num_downloads = (num_downloads + 1), updated_at = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(now, now, objectId);
+    return tokenWallDb.getObjectById(objectId);
+  },
+
+  addProcessedSignatures(newStatus, invoiceId, processedSigs, amountPaid) {
+    // query previously processed signatures
+    const stmt_sigs = db.prepare('SELECT signatures FROM tw_invoices WHERE id = ?');
+    const row = stmt_sigs.get(invoiceId);
+    const signatures = row.signatures;
+    const nextSignatures = !!signatures && signatures.length > 0 ? signatures + ',' + processedSigs : processedSigs;
+
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      UPDATE tw_invoices
+      SET status = ?, amount_paid = ?, signatures = ?, updated_at = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(newStatus, amountPaid, nextSignatures, now, invoiceId);
     return tokenWallDb.getInvoiceById(invoiceId);
   },
 
@@ -990,6 +1047,25 @@ const tokenWallDb = {
 
     stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices');
     return stmt.get().count;
+  },
+
+  // Get invoice object by ID
+  getObjectById(id) {
+    const stmt = db.prepare('SELECT * FROM tw_invoice_objects WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get all objects for invoice with pagination
+  getObjectsByInvoiceId(invoiceId, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM tw_invoice_objects WHERE invoice_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(invoiceId, limit, offset);
+    return rows;
+  },
+
+  getObjectsCountByInvoiceId(invoiceId) {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoice_objects WHERE invoice_id = ?');
+    return stmt.get(invoiceId).count ?? 0;
   }
 };
 

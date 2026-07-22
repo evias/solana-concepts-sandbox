@@ -315,6 +315,7 @@ router.post('/create-invoice-tx', async (req, res) => {
  *               - lamports
  *               - contentSelector
  *               - useCluster
+ *               - invoiceObjects
  *             properties:
  *               invoiceRef:
  *                 type: string
@@ -346,6 +347,9 @@ router.post('/create-invoice-tx', async (req, res) => {
  *               useCluster:
  *                 type: string
  *                 description: A solana cluster in lowercase.
+ *               invoiceObjects:
+ *                 type: array
+ *                 description: An array of paid asset objects.
  *     responses:
  *       200:
  *         description: Invoice created successfully
@@ -370,7 +374,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
       blockHash, maxBlockHeight,
       paymentPda, invoiceRef, signedTransaction,
       issuerAddress, tokenAddress, lamports, contentSelector,
-      useCluster,
+      useCluster, invoiceObjects,
     } = req.body;
 
     log.info('Received signed transaction submission');
@@ -402,18 +406,6 @@ router.post('/submit-signed-transaction', async (req, res) => {
     });
     log.info('Transaction confirmed');
 
-    // const nonceInput = [paymentPda, invoiceRef].join(':');
-    // const nonceHash = crypto.createHash('sha256').update(nonceInput).digest();
-    // const nonceKeypair = web3.Keypair.fromSeed(new Uint8Array(nonceHash.slice(0, 32)));
-    // const nonce = nonceKeypair.publicKey.toString();
-
-    // const [attestationPda] = await lib.deriveAttestationPda({
-    //   credential: credentialPda,
-    //   schema: schemaPda,
-    //   nonce: nonce
-    // });
-    // log.info('Attestation PDA derived', { attestationPda });
-
     const scriptHtml = `
 <!-- TokenWall Code -->
 <script>
@@ -434,7 +426,7 @@ _twp('lock', '${config.api.baseUrl}');
     log.info('Creating tw_invoices record', {wallet: issuerAddress});
     let tw_invoices_row;
     const invoiceId = `twpay_${invoiceRef}`;
-    scriptPayload = encrypt(scriptHtml); // encrypt using AES
+    const scriptPayload = encrypt(scriptHtml); // encrypt using AES
 
     tw_invoices_row = tokenWallDb.createInvoice({
       id: invoiceId,
@@ -447,6 +439,25 @@ _twp('lock', '${config.api.baseUrl}');
       scriptCipher: scriptPayload.ciphertext,
       scriptIV: scriptPayload.iv,
     });
+
+    for (let o = 1, i = 0; o <= invoiceObjects.length; o++, i++) {
+      log.info('Creating tw_invoice_objects record', {invoice: tw_invoices_row.id})
+      let tw_invoice_objects_row;
+      const objectId = `${invoiceId}-${o}`;
+
+      const mimePayload = encrypt(invoiceObjects[i].mimeType); // encrypt using AES
+      const urlPayload = encrypt(invoiceObjects[i].downloadLink); // encrypt using AES
+
+      tw_invoice_objects_row = tokenWallDb.addObject({
+        id: objectId,
+        invoiceId: invoiceId,
+        mimeEncrypted: mimePayload.ciphertext,
+        mimeIV: mimePayload.iv,
+        urlEncrypted: urlPayload.ciphertext,
+        urlIV: urlPayload.iv,
+        maxDownloads: 0, // XXX add maxDownloads field in form
+      })
+    }
 
     return res.status(200).json({
       success: true,
@@ -495,6 +506,7 @@ _twp('lock', '${config.api.baseUrl}');
  *                       paidto_address: { type: string }
  *                       token_address: { type: string }
  *                       amount: { type: number }
+ *                       cnt_assets: { type: number }
  *                       lastread_at: { type: string }
  *       400:
  *         $ref: '#/components/schemas/Error'
@@ -512,6 +524,7 @@ router.get('/invoices', (req, res) => {
     for (let i = 0; i < invoices.length; i++) {
       delete invoices[i].script_cipher;
       delete invoices[i].cipher_iv;
+      invoices[i].cnt_assets = tokenWallDb.getObjectsCountByInvoiceId(invoices[i].id);
     }
 
     return res.json({ invoices: invoices });
@@ -559,12 +572,15 @@ router.get('/invoices', (req, res) => {
  *                 script: { type: string }
  *                 paymentUrl: { type: string }
  *                 qrCode: { type: string }
+ *                 status: { type: string }
  *                 issuerAddress: { type: string }
  *                 tokenAddress: { type: string }
  *                 paymentAddress: { type: string }
  *                 invoiceRef: { type: string }
  *                 amountLamports: { type: number }
+ *                 amountPaid: { type: number }
  *                 tokenSymbol: { type: string }
+ *                 uiPaidAmount: { type: string }
  *                 uiTokenAmount: { type: string }
  *                 lastRead: { type: string }
  *       400:
@@ -644,24 +660,29 @@ router.get('/invoice', async (req, res) => {
     );
     const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
 
-    let uiTokenAmount;
+    let uiTokenAmount, uiPaidAmount;
     if (!!knownToken) {
       uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
+      uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
     } else {
       let kt = { name: tokenSymbol, decimals: 9 };
       uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
+      uiPaidAmount = actualTokenAmount(kt, invoice.amount_paid);
     }
 
     response = {
       paymentUrl,
       qrCode: payQrCode,
+      status: invoice.status,
       issuerAddress: invoice.issuer_address,
       tokenAddress: invoice.token_address,
       paymentAddress: invoice.paidto_address,
       invoiceRef: invoice.invoice_ref,
       amountLamports: invoice.lamports,
+      amountPaid: invoice.amount_paid,
       tokenSymbol: tokenSymbol,
-      uiTokenAmount: uiTokenAmount,
+      uiPaidAmount,
+      uiTokenAmount,
       lastRead: invoice.lastread_at,
       script: cleartextScript
     };
@@ -722,15 +743,8 @@ router.get('/status', async (req, res) => {
   let invoice;
   invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
 
-  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher) {
+  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher || !invoice.status) {
     return res.status(404).json({ error: 'Not Found' });
-  }
-
-  let rpcUrl;
-  if (invoice.sol_cluster.toLowerCase() === "devnet") {
-    rpcUrl = 'https://api.devnet.solana.com';
-  } else {
-    rpcUrl = 'https://api.mainnet.solana.com';
   }
 
   const paymentAddress = invoice.paidto_address;
@@ -740,6 +754,34 @@ router.get('/status', async (req, res) => {
     t => t.mintAddress === invoice.token_address
   );
   const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
+
+  let uiTokenAmount, uiPaidAmount;
+  if (!!knownToken) {
+    uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
+    uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
+  } else {
+    let kt = { name: tokenSymbol, decimals: 9 };
+    uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
+    uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
+  }
+
+  if (invoice.status === 'accepted') {
+    return res.status(200).json({
+      status: 'accepted',
+      amountPaid: invoice.amount_paid,
+      uiPaidAmount,
+      uiTokenAmount,
+      tokenSymbol,
+    });
+  }
+
+  let rpcUrl;
+  if (invoice.sol_cluster.toLowerCase() === "devnet") {
+    rpcUrl = 'https://api.devnet.solana.com';
+  } else {
+    rpcUrl = 'https://api.mainnet.solana.com';
+  }
+  // log.debug("Using RPC: ", { rpcUrl });
 
   const web3 = require('@solana/web3.js');
   const connection = new web3.Connection(rpcUrl, 'confirmed');
@@ -760,25 +802,47 @@ router.get('/status', async (req, res) => {
     return diff;
   };
 
+  // Compute the token account for this payment address (ATA for token)
+  const paymentAtas = await getTokenAccounts(paymentAddress, connection);
+  const relevantAta = paymentAtas.find(a => a.mintAddress === invoice.token_address)?.pubKey;
+
   try {
+    const destinationAddr = !!relevantAta ? relevantAta : paymentAddress;
+
     // 2. Get latest signatures from destination address.
     // NOTE: signatures also return memo, but do not contain amount information.
     const signatures = await connection.getSignaturesForAddress(
-      new web3.PublicKey(paymentAddress), {}, 'confirmed',
+      new web3.PublicKey(destinationAddr), {}, 'confirmed'
     );
     if (!signatures.length) {
       //XXX do we want status 404, etc. here?
       return res.status(200).json({
         status: 'pending',
         amountPaid: 0,
+        uiPaidAmount: `0 ${tokenSymbol}`,
         uiTokenAmount: `0 ${tokenSymbol}`,
         tokenSymbol,
       });
     }
 
+    // log.debug(`Processing signatures for ${paymentAddress}`, {
+    //   payAddress: paymentAddress,
+    //   ataAddress: destinationAddr,
+    //   count: signatures.length,
+    // });
+
     let totalReceived = BigInt(0);
+    let processedSigs = [];
+    let preSignatures = invoice.signatures.split(',');
+    let cntSkipped = 0,
+        cntProcessed  = 0;
     for (let i = 0; i < signatures.length; i++) {
       const signature = signatures[i];
+      if (preSignatures.length > 0 && -1 !== preSignatures.findIndex(v => v === signature.signature)) {
+        // transaction already processed.
+        cntSkipped++;
+        continue;
+      }
 
       // 3. Get parsed transaction details.
       const transaction = await connection.getParsedTransaction(signature.signature);
@@ -786,6 +850,7 @@ router.get('/status', async (req, res) => {
         return res.status(200).json({
           status: 'pending',
           amountPaid: 0,
+          uiPaidAmount: `0 ${tokenSymbol}`,
           uiTokenAmount: `0 ${tokenSymbol}`,
           tokenSymbol,
         });
@@ -797,29 +862,75 @@ router.get('/status', async (req, res) => {
         continue;
       }
 
+      log.info(`Processing new incoming payment for ${paymentAddress}`, {
+        payAddress: paymentAddress,
+        ataAddress: destinationAddr,
+        amountRcvd: amountRcvd,
+      });
+
       totalReceived = totalReceived + amountRcvd;
+      processedSigs.push(signature.signature);
+      cntProcessed++;
     }
 
-    let uiTokenAmount;
+    // Count previously processed amounts as received.
+    if (preSignatures.length > 0) {
+      totalReceived += BigInt(invoice.amount_paid);
+    }
+
+    // log.debug(`Processing incoming payment done for ${paymentAddress}`, {
+    //   cntProcessed,
+    //   cntSkipped,
+    //   totalReceived,
+    //   amountExpected,
+    // });
+
     if (!!knownToken) {
-      uiTokenAmount = actualTokenAmount(knownToken, Number(totalReceived));
+      uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
+      uiPaidAmount = actualTokenAmount(knownToken, Number(totalReceived));
     } else {
       let kt = { name: tokenSymbol, decimals: 9 };
-      uiTokenAmount = actualTokenAmount(kt, Number(totalReceived));
+      uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
+      uiPaidAmount = actualTokenAmount(kt, Number(totalReceived));
     }
 
     if (totalReceived < amountExpected) {
+      if (totalReceived > 0n && processedSigs.length) {
+        // UPDATE tw_invoices.status, tw_invoices.signatures
+        invoice = tokenWallDb.addProcessedSignatures(
+          'partial',
+          invoice.id,
+          processedSigs.join(','),
+          Number(totalReceived),
+        );
+      }
+
       return res.status(200).json({
         status: totalReceived > 0n ? 'partial' : 'pending',
         amountPaid: Number(totalReceived),
+        uiPaidAmount,
         uiTokenAmount,
         tokenSymbol,
       });
     }
 
+    log.info(`Processing payment completed for ${paymentAddress}`, {
+      totalReceived,
+      amountExpected,
+    });
+
+    // UPDATE tw_invoices.status, tw_invoices.signatures
+    invoice = tokenWallDb.addProcessedSignatures(
+      'accepted',
+      invoice.id,
+      processedSigs.join(','),
+      Number(totalReceived),
+    );
+
     return res.status(200).json({
       status: 'accepted',
       amountPaid: Number(totalReceived),
+      uiPaidAmount,
       uiTokenAmount,
       tokenSymbol,
     });
