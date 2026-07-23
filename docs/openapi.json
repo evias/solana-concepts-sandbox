@@ -2356,6 +2356,76 @@
         }
       }
     },
+    "/api/v1/tokenwall/add-invoice-object": {
+      "post": {
+        "tags": [
+          "TokenWall"
+        ],
+        "summary": "Add an invoice object.",
+        "description": "Create a new invoice object (asset).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "invoiceId",
+                  "mimeType",
+                  "downloadLink"
+                ],
+                "properties": {
+                  "invoiceId": {
+                    "type": "string",
+                    "description": "The invoice id."
+                  },
+                  "mimeType": {
+                    "type": "string",
+                    "description": "An extended mimetype value, e.g. image/*."
+                  },
+                  "downloadLink": {
+                    "type": "string",
+                    "description": "The plain text download link for the asset."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice object created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "invoiceId": {
+                      "type": "string"
+                    },
+                    "objectId": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
     "/api/v1/tokenwall/invoices": {
       "get": {
         "tags": [
@@ -2372,6 +2442,15 @@
               "type": "string"
             },
             "description": "The Solana Wallet Address that will receive the payment(s)."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The pagination page number."
           }
         ],
         "responses": {
@@ -2491,6 +2570,9 @@
                       "type": "string"
                     },
                     "paymentAddress": {
+                      "type": "string"
+                    },
+                    "invoiceId": {
                       "type": "string"
                     },
                     "invoiceRef": {

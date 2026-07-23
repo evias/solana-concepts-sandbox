@@ -95,8 +95,20 @@ function uag() {
 
 function ul(self) {
   if (self.sch) clearInterval(self.sch);
-  if (self.mod) self.mod.remove();
+  if (self.mod) { self.mod.remove(); self.mod = null; }
   if (self.elm) tc(self.elm);
+}
+
+function pt(p, r) {
+  if (document.querySelectorAll(`[data-twp-paid='1'][rel='${r}']`).length) {
+    return ;
+  }
+
+  let spanPt = document.createElement('span');
+  spanPt.setAttribute('data-twp-paid', '1');
+  spanPt.setAttribute('rel', r);
+  spanPt.classList.add('hidden');
+  p.appendChild(spanPt);
 }
 
 // IIFE
@@ -105,7 +117,7 @@ function ul(self) {
   i[r] = i[r] || function () {
     (i[r].q = i[r].q || []).push(arguments);
 
-    i[r].mut = null;
+    i[r].res = null;
     i[r].uag = null;
     i[r].ref = null;
     i[r].sel = null;
@@ -159,6 +171,7 @@ function ul(self) {
         spanStatusElm.innerText = texts['status_' + data.status];
         divStatusChip.classList.remove('bg-red-500', 'bg-yellow-500');
         divStatusChip.classList.add('bg-[#5BD6B5]');
+        pt(this.dom, this.ref);
         return;
       }
 
@@ -188,6 +201,8 @@ function ul(self) {
         divStatusChip.classList.add('bg-[#5BD6B5]');
         emAsterisk.classList.remove('hidden');
         emAsterisk.innerText = texts['accepted_explain'];
+        this.res = true;
+        pt(this.dom, this.ref);
 
         if (this.sch) {
           clearInterval(this.sch);
@@ -205,6 +220,7 @@ function ul(self) {
     };
 
     // Poll for payment updates every 5 seconds during 30 minutes.
+    //XXX should reduce polling after 5/10 attempts.
     this.sch = setInterval(pollInvoiceStatusFn, 5 * 1000);
     pollInvoiceStatusFn(); // poll on-load as well.
     setTimeout(() => {
