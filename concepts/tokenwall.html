@@ -377,6 +377,28 @@
                 </tbody>
               </table>
             </div>
+            <div x-show="latestInvoices && latestInvoices.length"
+                 class="mt-7 w-full h-5 grid grid-cols-1 sm:grid-cols-3">
+              <em class="text-xs sm:text-[.85rem] font-normal text-[#5F6F6A] col-span-2">
+                Showing page <span x-text="currentInvoicePage"></span> of <span x-text="countInvoicePages"></span>
+              </em>
+              <ul class="flex flex-row gap-2 justify-center sm:justify-end text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+                <li
+                  @click="paginate(currentInvoicePage-1)"
+                  :class="currentInvoicePage === 1 ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                  class="px-2 rounded-sm border border-transparent">Previous</li>
+                <template x-for="p in invoicePageNumbers" :key="p">
+                  <li
+                    @click="paginate(p)"
+                    :class="currentInvoicePage === p ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                    x-text="p" class="px-2 rounded-sm border border-transparent"></li>
+                </template>
+                <li
+                  @click="paginate(currentInvoicePage+1)"
+                  :class="currentInvoicePage == countInvoicePages ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                  class="px-2 rounded-sm border border-transparent">Next</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
@@ -600,7 +622,9 @@
           downloadLink: '',
         },
         currentInvoicePage: 1,
+        countInvoicePages: 1,
         totalLatestInvoice: 0,
+        invoicePageNumbers: [1],
 
         resetForm(){
           this.selectedToken = '';
@@ -608,6 +632,14 @@
           this.useCluster = 'Mainnet';
           this.enableAssets = true;
           this.invoiceObjects = [{mimeType: '', downloadLink: '#'}];
+        },
+
+        paginate(p) {
+          if (p < 1 || p > this.countInvoicePages) {
+            return false;
+          }
+
+          this.loadLatestInvoices(p);
         },
 
         async init() {
@@ -747,15 +779,23 @@
           }
         },
 
-        async loadLatestInvoices() {
+        async loadLatestInvoices(p) {
           try {
-            const params = '?issuer=' + this.userAddress; 
+            let params = '?issuer=' + this.userAddress;
+            if (p) {
+              params = params + '&page=' + p;
+            } 
             const response = await fetch('/api/v1/tokenwall/invoices' + params);
             if (response.ok) {
               const data = await response.json();
               this.latestInvoices = data.invoices;
               this.currentInvoicePage = data.page;
+              this.countInvoicePages = parseInt(data.total / 10)+1;
               this.totalLatestInvoice = data.total;
+
+              for (let i = 0; i < this.countInvoicePages; i++) {
+                this.invoicePageNumbers[i] = i+1;
+              }
 
               // Wait for DOM updates
               this.$nextTick(() => { this.initCopyButtons(); });
