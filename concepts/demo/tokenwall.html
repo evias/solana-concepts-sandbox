@@ -142,6 +142,26 @@
         assetDownloadLink: '#',
 
         async init() {
+          await this.loadInvoice();
+
+          let itv;
+          itv = setInterval(() => {
+            this.pTag = document.querySelector(`[data-twp-paid='1'][rel='${this.invoiceRef}']`);
+            if (!!this.pTag) {
+              this.loadInvoice();
+              if (!!itv) clearInterval(itv);
+            }
+          }, 1000);
+          setTimeout(() => {
+            if (!!itv) clearInterval(itv);
+          }, 30 * 60 * 1000);
+        },
+
+        isPaid() {
+          return !!this.invoice && !!this.pTag;
+        },
+
+        async loadInvoice() {
           try {
             const dataUrl = `//%%%%SCS_API_BASE_URL%%%%/tokenwall/invoice`;
             const dataParams = `invoiceRef=${this.invoiceRef}&enableMeta=1`;
@@ -154,21 +174,6 @@
               }
             }
           } catch(error) {}
-
-          let itv;
-          itv = setInterval(() => {
-            this.pTag = document.querySelector(`[data-twp-paid='1'][rel='${this.invoiceRef}']`);
-            if (!!this.pTag && !!itv) {
-              clearInterval(itv);
-            }
-          }, 1000);
-          setTimeout(() => {
-            if (!!itv) clearInterval(itv);
-          }, 30 * 60 * 1000);
-        },
-
-        isPaid() {
-          return !!this.invoice && !!this.pTag;
         }
       };
     }
