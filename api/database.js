@@ -1041,12 +1041,12 @@ const tokenWallDb = {
   getInvoicesCount(byAddress) {
     let stmt;
     if (!!byAddress && byAddress.length) {
-      stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices WHERE wallet_address = ?');
-      return stmt.get(byAddress).count;
+      stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices WHERE issuer_address = ?');
+      return stmt.get(byAddress).count ?? 0;
     }
 
     stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoices');
-    return stmt.get().count;
+    return stmt.get().count ?? 0;
   },
 
   // Get invoice object by ID

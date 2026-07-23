@@ -441,7 +441,7 @@ _twp('lock', '${config.api.baseUrl}');
     });
 
     for (let o = 1, i = 0; o <= invoiceObjects.length; o++, i++) {
-      log.info('Creating tw_invoice_objects record', {invoice: tw_invoices_row.id})
+      log.info('Creating tw_invoice_objects record', {invoice: tw_invoices_row.id});
       let tw_invoice_objects_row;
       const objectId = `${invoiceId}-${o}`;
 
@@ -474,6 +474,97 @@ _twp('lock', '${config.api.baseUrl}');
 
 /**
  * @swagger
+ * /api/v1/tokenwall/add-invoice-object:
+ *   post:
+ *     tags:
+ *       - TokenWall
+ *     summary: Add an invoice object.
+ *     description: Create a new invoice object (asset).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - invoiceId
+ *               - mimeType
+ *               - downloadLink
+ *             properties:
+ *               invoiceId:
+ *                 type: string
+ *                 description: The invoice id.
+ *               mimeType:
+ *                 type: string
+ *                 description: An extended mimetype value, e.g. image/*.
+ *               downloadLink:
+ *                 type: string
+ *                 description: The plain text download link for the asset.
+ *     responses:
+ *       200:
+ *         description: Invoice object created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 invoiceId: { type: string }
+ *                 objectId: { type: string }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.post('/add-invoice-object', async (req, res) => {
+  try {
+    const {
+      invoiceId, mimeType, downloadLink,
+    } = req.body;
+
+    if (!invoiceId || !mimeType || !downloadLink) {
+      return res.status(400).json({ error: 'Invalid Request' });
+    }
+
+    // Verify existence of invoice by id
+    const invoice = tokenWallDb.getInvoiceById(invoiceId);
+    if (!invoice || !invoice.cipher_iv || !invoice.script_cipher || !invoice.status) {
+      return res.status(404).json({ error: 'Not Found' });
+    }
+
+    const cntObjects = tokenWallDb.getObjectsCountByInvoiceId(invoiceId);
+
+    log.info('Creating tw_invoice_objects record', {invoice: invoiceId, cntObjects});
+    let tw_invoice_objects_row;
+    const objectId = `${invoiceId}-${cntObjects+1}`;
+    const mimePayload = encrypt(mimeType); // encrypt using AES
+    const urlPayload = encrypt(downloadLink); // encrypt using AES
+
+    tw_invoice_objects_row = tokenWallDb.addObject({
+      id: objectId,
+      invoiceId: invoiceId,
+      mimeEncrypted: mimePayload.ciphertext,
+      mimeIV: mimePayload.iv,
+      urlEncrypted: urlPayload.ciphertext,
+      urlIV: urlPayload.iv,
+      maxDownloads: 0, // XXX add maxDownloads field in form
+    })
+
+    return res.status(200).json({
+      success: true,
+      invoiceId,
+      objectId,
+    });
+  } catch (error) {
+    log.error('Error adding invoice object:', { error: error.message, stack: error.stack });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+/**
+ * @swagger
  * /api/v1/tokenwall/invoices:
  *   get:
  *     tags:
@@ -487,6 +578,12 @@ _twp('lock', '${config.api.baseUrl}');
  *         schema:
  *           type: string
  *         description: The Solana Wallet Address that will receive the payment(s).
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: number
+ *         description: The pagination page number.
  *     responses:
  *       200:
  *         description: Invoices retrieved successfully
@@ -515,19 +612,27 @@ _twp('lock', '${config.api.baseUrl}');
  */
 router.get('/invoices', (req, res) => {
   try {
-    const { issuer } = req.query;
+    const { issuer, page } = req.query;
     if (!issuer) {
       return res.status(402).json({ error: 'Invalid Request' });
     }
 
-    let invoices = tokenWallDb.getInvoicesByIssuerAddress(issuer, 5);
+    let displayPage = !page ? 1 : page;
+    const maxPerPage = 10;
+    const offsetPage = (displayPage-1) * maxPerPage;
+    let invoices = tokenWallDb.getInvoicesByIssuerAddress(issuer, maxPerPage, offsetPage);
     for (let i = 0; i < invoices.length; i++) {
       delete invoices[i].script_cipher;
       delete invoices[i].cipher_iv;
       invoices[i].cnt_assets = tokenWallDb.getObjectsCountByInvoiceId(invoices[i].id);
     }
 
-    return res.json({ invoices: invoices });
+    const cntInvoices = tokenWallDb.getInvoicesCount(issuer);
+    return res.json({
+      invoices: invoices,
+      page: displayPage,
+      total: cntInvoices,
+    });
   } catch (error) {
      log.error('Error listing invoices', { error });
      return res.status(500).json({ error: 'Failed to list invoices' });
@@ -576,6 +681,7 @@ router.get('/invoices', (req, res) => {
  *                 issuerAddress: { type: string }
  *                 tokenAddress: { type: string }
  *                 paymentAddress: { type: string }
+ *                 invoiceId: { type: string }
  *                 invoiceRef: { type: string }
  *                 amountLamports: { type: number }
  *                 amountPaid: { type: number }
@@ -677,6 +783,7 @@ router.get('/invoice', async (req, res) => {
       issuerAddress: invoice.issuer_address,
       tokenAddress: invoice.token_address,
       paymentAddress: invoice.paidto_address,
+      invoiceId: invoice.id,
       invoiceRef: invoice.invoice_ref,
       amountLamports: invoice.lamports,
       amountPaid: invoice.amount_paid,
@@ -1022,6 +1129,7 @@ router.get('/asset/redirect', (req, res) => {
     return res.status(500).json({ error: 'Decryption failed: unknown error' });
   }
 
+  tokenWallDb.updateLastDownload(objectId);
   return res.redirect(301, cleartextUrl);
 });
 

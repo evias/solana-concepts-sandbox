@@ -169,11 +169,14 @@
               </div>
             </div>
 
+            <hr class="mx-auto w-[50%] border-t-gray-200" />
             <template x-for="(object, idx) in invoiceObjects" :key="idx">
             <div class="mt-0 sm:mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div class="flex flex-col">
-                <label class="block text-md font-semibold text-[#16352C]">
-                  Paid asset <span x-text="'(' + (idx+1) + ')'"></span>
+                <label class="block text-md font-semibold"
+                       :class="enableAssets ? 'text-[#16352C]' : 'text-[#16352C] opacity-50'">
+                  <input x-show="idx === 0"
+                    type="checkbox" :checked="enableAssets" @change="toggleEnableAssetForm()" /> Downloadable asset <span x-text="'(' + (idx+1) + ')'"></span>
                 </label>
                 <em class="mt-3 text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
                   Use this section to configure a paid asset. A download link must be given which
@@ -182,11 +185,12 @@
               </div>
               <div class="flex flex-col">
                 <label for="mimeType" class="block text-md font-semibold text-[#16352C]">
-                  Asset type <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which file extensions)</em>
+                  Asset type <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which file extension)</em>
                 </label>
                 <select id="mimeType"
                         @change="useMimeType(idx, $el)"
-                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                        :disabled="!enableAssets"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
                   <option value="">Select an asset type...</option>
                   <template x-for="t in mimeTypes" :key="t.mime">
                     <option :value="t.mime" x-text="t.mimeStr"></option>
@@ -194,15 +198,17 @@
                 </select>
               </div>
               <div class="flex flex-col">
-                <label for="lamports" class="block text-md font-semibold text-[#16352C]">
+                <label for="downloadLink" class="block text-md font-semibold text-[#16352C]">
                   Asset URL <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(do not share publicly)</em>
                 </label>
                 <input
                   type="text"
+                  id="downloadLink"
                   @blur="setDownloadLink(idx, $el)"
                   @keyup="setDownloadLink(idx, $el)"
                   :value="object.downloadLink"
-                  class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  :disabled="!enableAssets"
+                  class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
               </div>
             </div>
             </template>
@@ -212,7 +218,7 @@
                 <button 
                   type="button"
                   @click="addObjectRowUI()"
-                  :disabled="!hasFilledAssetFormRows()"
+                  :disabled="!enableAssets || !hasFilledAssetFormRows()"
                   class="flex-1 bg-yellow-400 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
                   <span>Add more assets</span>
                 </button>
@@ -221,20 +227,18 @@
               <div class="flex gap-2">
                 <button 
                   type="submit"
-                  :disabled="!userAddress || !selectedToken || !invoiceLamports || !hasFilledAssetFormRows() || creatingInvoice"
+                  :disabled="!canSendForm()"
                   class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
                   <span x-show="!creatingInvoice">Create Invoice</span>
                   <span x-show="creatingInvoice">Creating...</span>
                 </button>
               </div>
-
-              <div x-show="formProgress" class="w-full bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
-                  <span x-text="formProgress"></span>
-              </div>
-
-              <div x-show="formError" class="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  <span x-text="formError"></span>
-              </div>
+            </div>
+            <div x-show="formProgress" class="w-full bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+              <span x-text="formProgress"></span>
+            </div>
+            <div x-show="formError" class="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <span x-text="formError"></span>
             </div>
           </form>
         </div>
@@ -243,7 +247,9 @@
       <section x-show="userAddress">
         <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
           <div class="flex justify-between items-center mb-4">
-            <h2 class="font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">Your latest invoices</h2>
+            <h2 class="font-display text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+              Your latest invoices <span x-text="'(' + totalLatestInvoice + ')'"></span>
+            </h2>
             <button 
               @click="showLatestInvoices = !showLatestInvoices"
               class="text-gray-600 hover:text-gray-800 text-md sm:text-2xl font-bold"
@@ -270,7 +276,7 @@
                 </thead>
                 <tbody>
                   <template x-for="invoice in latestInvoices" :key="invoice.id">
-                    <tr class="border-b border-b-gray-300 hover:bg-gray-50 transition-colors">
+                    <tr class="invoice-row border-b border-b-gray-300 hover:bg-gray-50 transition-colors" :rel="invoice.id">
                       <td class="px-4 py-3 hidden sm:table-cell">
                         <span class="text-sm text-gray-600" x-text="shortenRef(invoice.invoice_ref)"></span>
                         <span class="hidden" :id="`invoice-ref-${invoice.invoice_ref}`" x-text="invoice.invoice_ref"></span>
@@ -320,6 +326,12 @@
 
                       <td class="px-4 py-3 hidden sm:table-cell text-center">
                         <span class="text-sm font-medium" x-text="invoice.cnt_assets"></span>
+                        <button @click="showAddObjectForm(invoice.id)"
+                                class="focus:outline-none text-gray-400 hover:text-gray-700 hover:cursor-pointer"
+                                type="button">
+                          <!-- document-plus -->
+                          <svg class="w-5 h-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                        </button>
                       </td>
 
                       <td class="px-4 py-3 text-center">
@@ -429,11 +441,11 @@
     <!-- Invoice modal -->
     <div x-show="showInvoiceModal"
         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        @click.self="showInvoiceModal = false">
+        @click.self="hideInvoiceModal()">
       <div class="w-full max-w-[420px] sm:max-w-[640px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
         <div class="hidden sm:flex items-center justify-between border-b border-[#e5e7eb] p-5">
           <h2 class="text-md sm:text-[1.15rem] font-semibold text-[#111]">Invoice details for <span id="invoiceDetailsRef" class="text-[#2E7D6B]"></span></h2>
-          <button @click="showInvoiceModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+          <button @click="hideInvoiceModal()" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
         </div>
         <div class="flex flex-col gap-1 px-6 py-4">
           <em class="hidden sm:block mt-1 mb-2 text-sm font-normal text-[#5F6F6A]" id="invoiceDetailsStory"></em>
@@ -484,11 +496,66 @@
       </div>
     </div>
 
-  </div>
+    <!-- Add Object Form Modal -->
+    <div x-show="showAddObjectModal"
+         @click.self="hideAddObjectForm()"
+         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-[1.25rem] font-bold text-[#111]">Add an asset</h2>
+          <button @click="hideAddObjectForm()" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="p-5 pt-0 mt-0 sm:mt-4 flex flex-col gap-2">
+          <div class="flex flex-col">
+            <label for="addObject-invoiceId" class="block text-md font-semibold text-[#16352C]">
+              Paid asset
+            </label>
+            <em class="text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+              Use this section to configure a paid asset. A download link must be given which
+              will be unlocked by customers after they complete a payment for this invoice.
+            </em>
+            <input type="hidden" id="addObject-invoiceId" :value="addObjectFormValues.invoiceId" />
+          </div>
+          <div class="flex flex-col">
+            <label for="addObject-mimeType" class="block text-md font-semibold text-[#16352C]">
+              Asset type <em class="inline text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which file extension)</em>
+            </label>
+            <select id="addObject-mimeType"
+                    @change="addObjectFormValues.mimeType = $el.value"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+              <option value="">Select an asset type...</option>
+              <template x-for="t in mimeTypes" :key="t.mime">
+                <option :value="t.mime" x-text="t.mimeStr"></option>
+              </template>
+            </select>
+          </div>
+          <div class="flex flex-col">
+            <label for="addObject-downloadLink" class="block text-md font-semibold text-[#16352C]">
+              Asset URL <em class="inline text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(do not share publicly)</em>
+            </label>
+            <input
+              type="text"
+              @blur="addObjectFormValues.downloadLink = $el.value"
+              @keyup="addObjectFormValues.downloadLink = $el.value"
+              id="addObject-downloadLink"
+              class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+          </div>
+          <div x-show="addObjectFormError" class="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <span x-text="addObjectFormError"></span>
+          </div>
+          <div class="mt-4 flex flex-col gap-2">
+            <button type="button"
+              @click.prevent="submitAddObjectForm()"
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
+              <span x-show="!addingAsset">Add asset</span>
+              <span x-show="addingAsset">Adding...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <!-- DEMO TOKENWALL CLI INTEGRATION -->
-  <!-- TokenWall Code ><script>(function (i, s, o, g, r, a, m) { i['TokenWallObject'] = r; i[r] = i[r] ||  function () {    (i[r].q = i[r].q || []).push(arguments);  }; i[r].l = 1 * new Date(); a = s.createElement(o);  m = s.getElementsByTagName(o)[0]; a.async = 1;  a.src = g; m.parentNode.insertBefore(a, m);})(window, document, 'script', '//unrevised-framing-silo.ngrok-free.dev/api/v1/tokenwall/pay.js', '_twp');_twp('init', '5b970e58-29e4-55e2-9fd2-28a364f7d628', 'body');_twp('lock', 'unrevised-framing-silo.ngrok-free.dev/api/v1');</script><!-- End TokenWall Code -->
-  <!-- END DEMO TOKENWALL CLI INTEGRATION -->
+  </div>
 
   <script>
     function tokenWall() {
@@ -523,11 +590,23 @@
           {mime: 'application/pdf', mimeStr: 'PDF Document'},
           {mime: 'application/zip', mimeStr: 'ZIP Archive'}
         ],
+        enableAssets: true,
+        showAddObjectModal: false,
+        addingAsset: false,
+        addObjectFormError: '',
+        addObjectFormValues: {
+          invoiceId: '',
+          mimeType: '',
+          downloadLink: '',
+        },
+        currentInvoicePage: 1,
+        totalLatestInvoice: 0,
 
         resetForm(){
           this.selectedToken = '';
           this.invoiceLamports = 1;
           this.useCluster = 'Mainnet';
+          this.enableAssets = true;
           this.invoiceObjects = [{mimeType: '', downloadLink: '#'}];
         },
 
@@ -651,6 +730,10 @@
           this.loadTokens(); // force reload tokens
         },
 
+        toggleEnableAssetForm() {
+          this.enableAssets = !this.enableAssets;
+        },
+
         async loadTokens() {
           try {
             const params = '?wallet_address=' + this.userAddress + '&cluster=' + this.useCluster.toLowerCase(); 
@@ -671,6 +754,8 @@
             if (response.ok) {
               const data = await response.json();
               this.latestInvoices = data.invoices;
+              this.currentInvoicePage = data.page;
+              this.totalLatestInvoice = data.total;
 
               // Wait for DOM updates
               this.$nextTick(() => { this.initCopyButtons(); });
@@ -752,13 +837,101 @@
           }
         },
 
+        updateInvoiceRows(invoiceId) {
+          const allInvoices = document.querySelectorAll('tr.invoice-row');
+          for (let i = 0; i < allInvoices.length; i++) {
+            const elm = allInvoices[i];
+            const rel = elm.getAttribute('rel');
+
+            if (invoiceId.length && rel === invoiceId) {
+              elm.classList.add('bg-blue-200');
+            } else {
+              elm.classList.remove('bg-blue-200');
+            }
+          }
+        },
+
+        showAddObjectForm(invoiceId) {
+          this.addObjectFormValues.invoiceId = invoiceId;
+          this.updateInvoiceRows(invoiceId);
+          this.showAddObjectModal = true;
+        },
+
+        hideAddObjectForm() {
+          this.updateInvoiceRows('');
+          this.showAddObjectModal = false;
+        },
+
+        hasFilledAddObjectForm() {
+          return this.addObjectFormValues.invoiceId !== '' 
+            && this.addObjectFormValues.mimeType !== ''
+            && this.addObjectFormValues.downloadLink !== '';
+        },
+
+        async submitAddObjectForm() {
+          if (!this.hasFilledAddObjectForm()) {
+            this.addObjectFormError = 'Please fill the form fields to configure an asset.';
+            return;
+          }
+
+          this.addingAsset = true;
+          this.addObjectFormError = '';
+
+          try {
+            const response = await fetch('/api/v1/tokenwall/add-invoice-object', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                invoiceId: this.addObjectFormValues.invoiceId,
+                mimeType: this.addObjectFormValues.mimeType,
+                downloadLink: this.addObjectFormValues.downloadLink,
+              })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Authorization failed');
+            }
+
+            this.hideAddObjectForm();
+            this.loadLatestInvoices(); // Reload invoices table
+            this.resetAddObjectForm();
+          } catch (error) {
+            log.error('Error adding invoice object', { error: error.message });
+            this.addObjectFormError = error.message || 'Failed to add asset to invoice';
+          } finally {
+            this.addingAsset = false;
+          }
+        },
+
+        resetAddObjectForm() {
+          this.addObjectFormValues = {
+            invoiceId: '',
+            mimeType: '',
+            downloadLink: '',
+          };
+        },
+
+        canSendForm() {
+          return !!this.userAddress
+            && !!this.selectedToken
+            && !!this.invoiceLamports
+            && (!this.enableAssets || this.hasFilledAssetFormRows())
+            && !this.creatingInvoice;
+        },
+
+        hideInvoiceModal() {
+          this.updateInvoiceRows('');
+          this.showInvoiceModal = false;
+        },
+
         async submitCreateInvoice() {
           if (!this.userAddress || !this.selectedToken || !this.invoiceLamports) {
             this.formError = 'Please connect your wallet and select a token';
             return;
           }
 
-          if (!this.hasFilledAssetFormRows()) {
+          if (this.enableAssets && !this.hasFilledAssetFormRows()) {
             this.formError = 'Please fill the field denominated Asset URL';
             return;
           }
@@ -816,7 +989,7 @@
                 lamports: this.invoiceLamports,
                 contentSelector: 'body',
                 useCluster: this.useCluster.toLowerCase(),
-                invoiceObjects: this.invoiceObjects,
+                invoiceObjects: this.enableAssets ? this.invoiceObjects : [],
               })
             });
 
@@ -865,6 +1038,7 @@
               document.getElementById('invoiceDetailsStory').innerHTML = this.getPaymentStory(data);
               document.getElementById('invoiceDetailsPayNowLink').setAttribute('href', fullUrl);
 
+              this.updateInvoiceRows(data.invoiceId);
               this.showInvoiceModal = true;
             }
           } catch (error) {
@@ -923,12 +1097,12 @@
 
         shortenAddr(addr) {
           if (!addr || addr.length < 10) return addr;
-          return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
+          return addr.substring(0, 4) + '...' + addr.substring(addr.length - 4)
         },
 
         shortenRef(ref) {
           if (!ref || ref.length < 10) return ref;
-          return ref.substring(0, 8) + '-...-' + ref.substring(ref.length - 4)
+          return ref.substring(0, 4) + '-...-' + ref.substring(ref.length - 4)
         },
 
         shortenUrl(url) {

@@ -1025,6 +1025,9 @@
   .border-t-\[\#e5e7eb\] {
     border-top-color: #e5e7eb;
   }
+  .border-t-gray-200 {
+    border-top-color: var(--color-gray-200);
+  }
   .border-b-\[\#e5e7eb\] {
     border-bottom-color: #e5e7eb;
   }
@@ -1087,6 +1090,9 @@
   }
   .bg-blue-100 {
     background-color: var(--color-blue-100);
+  }
+  .bg-blue-200 {
+    background-color: var(--color-blue-200);
   }
   .bg-blue-600 {
     background-color: var(--color-blue-600);
@@ -1329,6 +1335,9 @@
   }
   .py-\[22px\] {
     padding-block: 22px;
+  }
+  .pt-0 {
+    padding-top: calc(var(--spacing) * 0);
   }
   .pt-2 {
     padding-top: calc(var(--spacing) * 2);
