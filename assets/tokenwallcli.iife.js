@@ -88,9 +88,13 @@ function tc(elm) {
 };
 
 function uag() {
+  const u = window.localStorage.getItem('_twp.uag');
+  if (!!u) return u;
   const array = new Uint8Array(12);
   crypto.getRandomValues(array);
-  return array.toHex();
+  const uag = array.toHex();
+  window.localStorage.setItem('_twp.uag', uag);
+  return uag;
 };
 
 function ul(self) {
