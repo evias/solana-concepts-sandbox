@@ -385,17 +385,17 @@
               <ul class="flex flex-row gap-2 justify-center sm:justify-end text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
                 <li
                   @click="paginate(currentInvoicePage-1)"
-                  :class="currentInvoicePage === 1 ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                  :class="currentInvoicePage === 1 ? 'opacity-75 cursor-not-allowed' : 'hover:text-indigo-600 hover:cursor-pointer'"
                   class="px-2 rounded-sm border border-transparent">Previous</li>
                 <template x-for="p in invoicePageNumbers" :key="p">
                   <li
                     @click="paginate(p)"
-                    :class="currentInvoicePage === p ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                    :class="currentInvoicePage === p ? 'opacity-75 cursor-not-allowed' : 'hover:text-indigo-600 hover:cursor-pointer'"
                     x-text="p" class="px-2 rounded-sm border border-transparent"></li>
                 </template>
                 <li
                   @click="paginate(currentInvoicePage+1)"
-                  :class="currentInvoicePage == countInvoicePages ? 'opacity-75 cursor-not-allowed' : 'hover:border-gray-200 hover:cursor-pointer'"
+                  :class="currentInvoicePage == countInvoicePages ? 'opacity-75 cursor-not-allowed' : 'hover:text-indigo-600 hover:cursor-pointer'"
                   class="px-2 rounded-sm border border-transparent">Next</li>
               </ul>
             </div>

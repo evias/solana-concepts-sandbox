@@ -1863,13 +1863,6 @@
       }
     }
   }
-  .hover\:border-gray-200 {
-    &:hover {
-      @media (hover: hover) {
-        border-color: var(--color-gray-200);
-      }
-    }
-  }
   .hover\:bg-\[\#6d28d9\] {
     &:hover {
       @media (hover: hover) {
