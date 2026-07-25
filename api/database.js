@@ -927,8 +927,8 @@ const tokenWallDb = {
       INSERT INTO tw_invoices (
         id, issuer_address, paidto_address, token_address,
         invoice_ref, lamports, amount_paid, script_cipher, cipher_iv, num_reads,
-        sol_cluster, status, signatures, lastread_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '', ?, ?, ?)
+        sol_cluster, lastread_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -967,6 +967,31 @@ const tokenWallDb = {
     return tokenWallDb.getObjectById(id);
   },
 
+  // Create new tw_invoice_payments entry
+  addPayment({
+    id,
+    invoiceId,
+    invoiceRef,
+    paymentRef,
+    amountPaid,
+    signatures,
+  }) {
+    const now = new Date().toISOString();
+    const stmt = db.prepare(`
+      INSERT INTO tw_invoice_payments (
+        id, invoice_id, invoice_ref, payment_ref,
+        amount_paid, signatures, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      id, invoiceId, invoiceRef, paymentRef,
+      amountPaid, signatures, now, now
+    );
+
+    return tokenWallDb.getPaymentById(id);
+  },
+
   updateLastRead(invoiceId) {
     const now = new Date().toISOString();
     const stmt = db.prepare(`
@@ -991,23 +1016,23 @@ const tokenWallDb = {
     return tokenWallDb.getObjectById(objectId);
   },
 
-  addProcessedSignatures(newStatus, invoiceId, processedSigs, amountPaid) {
-    // query previously processed signatures
-    const stmt_sigs = db.prepare('SELECT signatures FROM tw_invoices WHERE id = ?');
-    const row = stmt_sigs.get(invoiceId);
-    const signatures = row.signatures;
-    const nextSignatures = !!signatures && signatures.length > 0 ? signatures + ',' + processedSigs : processedSigs;
+  // addProcessedSignatures(invoiceId, paymentRef, signature, amountPaid) {
+  //   // query previously processed signatures
+  //   const stmt_sigs = db.prepare('SELECT signatures FROM tw_invoices WHERE id = ?');
+  //   const row = stmt_sigs.get(invoiceId);
+  //   const signatures = row.signatures;
+  //   const nextSignatures = !!signatures && signatures.length > 0 ? signatures + ',' + processedSigs : processedSigs;
 
-    const now = new Date().toISOString();
-    const stmt = db.prepare(`
-      UPDATE tw_invoices
-      SET status = ?, amount_paid = ?, signatures = ?, updated_at = ?
-      WHERE id = ?
-    `);
+  //   const now = new Date().toISOString();
+  //   const stmt = db.prepare(`
+  //     UPDATE tw_invoices
+  //     SET status = ?, amount_paid = ?, signatures = ?, updated_at = ?
+  //     WHERE id = ?
+  //   `);
 
-    stmt.run(newStatus, amountPaid, nextSignatures, now, invoiceId);
-    return tokenWallDb.getInvoiceById(invoiceId);
-  },
+  //   stmt.run(newStatus, amountPaid, nextSignatures, now, invoiceId);
+  //   return tokenWallDb.getInvoiceById(invoiceId);
+  // },
 
   // Get invoice by ID
   getInvoiceById(id) {
@@ -1066,6 +1091,51 @@ const tokenWallDb = {
   getObjectsCountByInvoiceId(invoiceId) {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoice_objects WHERE invoice_id = ?');
     return stmt.get(invoiceId).count ?? 0;
+  },
+
+  // Get invoice payment by ID
+  getPaymentById(id) {
+    const stmt = db.prepare('SELECT * FROM tw_invoice_payments WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get all payments for invoice with pagination
+  getPaymentsByInvoiceId(invoiceId, limit = 0, offset = 0) {
+    let stmt, rows;
+    if (limit === 0) {
+      stmt = db.prepare('SELECT * FROM tw_invoice_payments WHERE invoice_id = ? ORDER BY created_at DESC');
+      rows = stmt.all(invoiceId);
+    } else {
+      if (limit < 0) limit = 1;
+      if (offset < 0) offset = 0;
+
+      stmt = db.prepare('SELECT * FROM tw_invoice_payments WHERE invoice_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+      rows = stmt.all(invoiceId, limit, offset);
+    }
+    return rows;
+  },
+
+  getPaymentsCountByInvoiceId(invoiceId) {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoice_payments WHERE invoice_id = ?');
+    return stmt.get(invoiceId).count ?? 0;
+  },
+
+  getPaymentsByInvoiceAndRef(invoiceId, paymentRef) {
+    const stmt = db.prepare('SELECT * FROM tw_invoice_payments WHERE invoice_id = ? and payment_ref = ? ORDER BY created_at DESC');
+    const rows = stmt.all(invoiceId, paymentRef);
+    return rows;
+  },
+
+  getPaymentsCountByInvoiceAndRef(invoiceId, paymentRef) {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM tw_invoice_payments WHERE invoice_id = ? and payment_ref = ?');
+    return stmt.get(invoiceId, paymentRef).count ?? 0;
+  },
+
+  getSignaturesByInvoiceAndRef(invoiceId, paymentRef) {
+    const stmt = db.prepare('SELECT signatures FROM tw_invoice_payments WHERE invoice_id = ? and payment_ref = ? ORDER BY created_at DESC');
+    const rows = stmt.all(invoiceId, paymentRef);
+    return rows.reduce((acc, cur) => acc.push(cur.signatures), []);
   }
 };
 

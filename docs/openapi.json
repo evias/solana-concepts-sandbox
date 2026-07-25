@@ -2469,9 +2469,6 @@
                           "id": {
                             "type": "string"
                           },
-                          "invoice_ref": {
-                            "type": "string"
-                          },
                           "issuer_address": {
                             "type": "string"
                           },
@@ -2481,14 +2478,32 @@
                           "token_address": {
                             "type": "string"
                           },
-                          "amount": {
-                            "type": "number"
+                          "invoice_ref": {
+                            "type": "string"
                           },
-                          "cnt_assets": {
+                          "num_reads": {
                             "type": "number"
                           },
                           "lastread_at": {
                             "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          },
+                          "lamports": {
+                            "type": "number"
+                          },
+                          "sol_cluster": {
+                            "type": "string"
+                          },
+                          "cnt_assets": {
+                            "type": "number"
+                          },
+                          "cnt_payments": {
+                            "type": "number"
                           }
                         }
                       }
@@ -2527,11 +2542,11 @@
           {
             "in": "query",
             "name": "paymentRef",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             },
-            "description": "A unique payment reference."
+            "description": "A unique payment reference included as a memo (on-chain)."
           },
           {
             "in": "query",
@@ -2545,15 +2560,12 @@
         ],
         "responses": {
           "200": {
-            "description": "Invoice retrieved successfully.",
+            "description": "Invoice for payment reference retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "script": {
-                      "type": "string"
-                    },
                     "paymentUrl": {
                       "type": "string"
                     },
@@ -2595,6 +2607,9 @@
                     },
                     "lastRead": {
                       "type": "string"
+                    },
+                    "script": {
+                      "type": "string"
                     }
                   }
                 }
@@ -2602,6 +2617,9 @@
             }
           },
           "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
             "$ref": "#/components/schemas/Error"
           },
           "500": {
@@ -2634,12 +2652,12 @@
             "schema": {
               "type": "string"
             },
-            "description": "A unique payment reference."
+            "description": "A unique payment reference included as a memo (on-chain)."
           }
         ],
         "responses": {
           "200": {
-            "description": "Status retrieved successfully.",
+            "description": "Invoice instance status retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2651,6 +2669,12 @@
                     "amountPaid": {
                       "type": "number"
                     },
+                    "uiPaidAmount": {
+                      "type": "string"
+                    },
+                    "uiTokenAmount": {
+                      "type": "string"
+                    },
                     "tokenSymbol": {
                       "type": "string"
                     }
@@ -2659,7 +2683,7 @@
               }
             }
           },
-          "402": {
+          "400": {
             "$ref": "#/components/schemas/Error"
           },
           "404": {

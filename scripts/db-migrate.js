@@ -586,6 +586,81 @@ try {
         }
       }
     },
+
+    // Migration 16: Create tw_invoice_payments table
+    {
+      name: 'Create tw_invoice_payments table',
+      up: (db) => {
+        try {
+          db.exec(`
+            CREATE TABLE tw_invoice_payments (
+              id TEXT PRIMARY KEY,
+              invoice_id TEXT NOT NULL,
+              invoice_ref TEXT NOT NULL,
+              payment_ref TEXT NOT NULL,
+              amount_paid INTEGER NOT NULL DEFAULT 0,
+              signatures TEXT NOT NULL DEFAULT '',
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_payments_id ON tw_invoice_payments(invoice_id);
+            CREATE INDEX IF NOT EXISTS idx_payments_iid ON tw_invoice_payments(invoice_ref);
+            CREATE INDEX IF NOT EXISTS idx_payments_ref ON tw_invoice_payments(payment_ref);
+          `);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 17: Migrate tw_invoices.signatures to tw_invoice_payments.
+    {
+      name: 'Migrate legacy signatures to payments',
+      up: (db) => {
+        try {
+          const stmt = db.prepare(`
+            SELECT id, invoice_ref, amount_paid, signatures
+            FROM tw_invoices
+            WHERE signatures != ''
+          `);
+          const rows = stmt.all();
+
+          for (let i = 0; i < rows.length; i++) {
+            const now = new Date().toISOString();
+            const row = rows[i];
+            const stmt_ins = db.prepare(`
+              INSERT INTO tw_invoice_payments (
+                id, invoice_id, invoice_ref, payment_ref, amount_paid, signatures,
+                created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `)
+
+            const pid = `${row.id}-payment-0`;
+            stmt_ins.run(
+              pid, row.id, row.invoice_ref, 'payment-' + (i+1),
+              row.amount_paid, row.signatures, now, now
+            );
+          }
+
+          db.exec(`ALTER TABLE tw_invoices DROP COLUMN signatures`);
+          db.exec(`ALTER TABLE tw_invoices DROP COLUMN amount_paid`);
+          db.exec(`ALTER TABLE tw_invoices DROP COLUMN status`);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
   ];
 
   console.log(`   Total migrations defined: ${migrations.length}`);
