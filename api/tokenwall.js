@@ -63,10 +63,56 @@ const shortenAddr = (addr) => {
   return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
 };
 
+// Formats a token amount with a given token symbol (token.name)
+// and uses `toFixed()` to display the correct number of decimals.
 const actualTokenAmount = (token, amt) => {
   const decimals = token.decimals;
   const totalAmt = amt / (Math.pow(10, decimals));
   return totalAmt.toFixed(decimals) + ' ' + token.name;
+};
+
+// Virtual invoice status discovery, retrieves all payments for a pair
+// of invoice ID and payment reference, then takes paid vs. expected amount.
+const getInvoiceStatus = (invoiceRef, paymentRef) => {
+  const invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
+  const cntPayments = tokenWallDb.getPaymentsCountByInvoiceAndRef(invoice.id, paymentRef);
+  if (cntPayments === 0) {
+    return { status: 'pending', amountPaid: 0 };
+  }
+
+  const allPayments = tokenWallDb.getPaymentsByInvoiceAndRef(invoice.id, paymentRef);
+  const totalPaid = allPayments.reduce((acc, cur) => {
+    return acc + Number(cur.amount_paid);
+  }, 0);
+
+  if (totalPaid >= invoice.lamports) {
+    return { status: 'accepted', amountPaid: totalPaid };
+  }
+  if (totalPaid > 0) {
+    return { status: 'partial', amountPaid: totalPaid };
+  }
+    return { status: 'pending', amountPaid: 0 };
+};
+
+// Manual verification helper for received amounts.
+// NOTE: The returned amount will be positive.
+const extractTransactionAmount = (pref, sig, tx, addr, mint) => {
+  // Only check balances for relevant transactions.
+  if (!pref || !sig.memo || sig.memo !== pref) {
+    return 0;
+  }
+
+  const pre = tx.meta.preTokenBalances.find(
+    (b) => b.owner === addr && b.mint === mint
+  );
+  const post = tx.meta.postTokenBalances.find(
+    (b) => b.owner === addr && b.mint === mint
+  );
+
+  const preAmount = BigInt(pre?.uiTokenAmount.amount ?? "0");
+  const postAmount = BigInt(post?.uiTokenAmount.amount ?? "0");
+  const diff = postAmount - preAmount;
+  return diff;
 };
 
 /**
@@ -125,7 +171,7 @@ router.post('/create-invoice-tx', async (req, res) => {
     const { issuerAddress, tokenAddress, lamports, contentSelector } = req.body;
 
     if (!issuerAddress || !tokenAddress || !lamports) {
-      return res.status(402).json({ error: 'Invalid Request' });
+      return res.status(400).json({ error: 'Invalid Request' });
     }
 
     const lib = require('sas-lib');
@@ -374,7 +420,7 @@ router.post('/submit-signed-transaction', async (req, res) => {
       blockHash, maxBlockHeight,
       paymentPda, invoiceRef, signedTransaction,
       issuerAddress, tokenAddress, lamports, contentSelector,
-      useCluster, invoiceObjects,
+      useCluster, invoiceObjects, invoiceType,
     } = req.body;
 
     log.info('Received signed transaction submission');
@@ -530,7 +576,7 @@ router.post('/add-invoice-object', async (req, res) => {
 
     // Verify existence of invoice by id
     const invoice = tokenWallDb.getInvoiceById(invoiceId);
-    if (!invoice || !invoice.cipher_iv || !invoice.script_cipher || !invoice.status) {
+    if (!invoice || !invoice.cipher_iv || !invoice.script_cipher) {
       return res.status(404).json({ error: 'Not Found' });
     }
 
@@ -598,13 +644,18 @@ router.post('/add-invoice-object', async (req, res) => {
  *                     type: object
  *                     properties:
  *                       id: { type: string }
- *                       invoice_ref: { type: string } 
  *                       issuer_address: { type: string }
  *                       paidto_address: { type: string }
  *                       token_address: { type: string }
- *                       amount: { type: number }
- *                       cnt_assets: { type: number }
+ *                       invoice_ref: { type: string }
+ *                       num_reads: { type: number }
  *                       lastread_at: { type: string }
+ *                       created_at: { type: string }
+ *                       updated_at: { type: string }
+ *                       lamports: { type: number }
+ *                       sol_cluster: { type: string }
+ *                       cnt_assets: { type: number }
+ *                       cnt_payments: { type: number }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
@@ -614,7 +665,7 @@ router.get('/invoices', (req, res) => {
   try {
     const { issuer, page } = req.query;
     if (!issuer) {
-      return res.status(402).json({ error: 'Invalid Request' });
+      return res.status(400).json({ error: 'Invalid Request' });
     }
 
     let displayPage = !page ? 1 : page;
@@ -624,7 +675,9 @@ router.get('/invoices', (req, res) => {
     for (let i = 0; i < invoices.length; i++) {
       delete invoices[i].script_cipher;
       delete invoices[i].cipher_iv;
+
       invoices[i].cnt_assets = tokenWallDb.getObjectsCountByInvoiceId(invoices[i].id);
+      invoices[i].cnt_payments = tokenWallDb.getPaymentsCountByInvoiceId(invoices[i].id);
     }
 
     const cntInvoices = tokenWallDb.getInvoicesCount(issuer);
@@ -656,10 +709,10 @@ router.get('/invoices', (req, res) => {
  *         description: The invoice reference field.
  *       - in: query
  *         name: paymentRef
- *         required: false
+ *         required: true
  *         schema:
  *           type: string
- *         description: A unique payment reference.
+ *         description: A unique payment reference included as a memo (on-chain).
  *       - in: query
  *         name: enableMeta
  *         required: false
@@ -668,13 +721,12 @@ router.get('/invoices', (req, res) => {
  *         description: Whether to include metadata.
  *     responses:
  *       200:
- *         description: Invoice retrieved successfully.
+ *         description: Invoice for payment reference retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 script: { type: string }
  *                 paymentUrl: { type: string }
  *                 qrCode: { type: string }
  *                 status: { type: string }
@@ -689,15 +741,18 @@ router.get('/invoices', (req, res) => {
  *                 uiPaidAmount: { type: string }
  *                 uiTokenAmount: { type: string }
  *                 lastRead: { type: string }
+ *                 script: { type: string }
  *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
  *         $ref: '#/components/schemas/Error'
  *       500:
  *         $ref: '#/components/schemas/Error'
  */
 router.get('/invoice', async (req, res) => {
   const { invoiceRef, paymentRef, enableMeta } = req.query;
-  if (!invoiceRef) {
-    return res.status(402).json({ error: 'Invalid Request' });
+  if (!invoiceRef || !paymentRef) {
+    return res.status(400).json({ error: 'Invalid Request' });
   }
 
   let invoice;
@@ -738,13 +793,11 @@ router.get('/invoice', async (req, res) => {
     recipient: invoice.paidto_address,
     amount: BigInt(invoiceAmount),
     label: `TokenWall Invoice`,
-    message: `Payment for invoice ${invoice.invoice_ref}`
+    message: `Payment for invoice ${invoice.invoice_ref}`,
+    memo: paymentRef,
   };
   if (invoice.token_address !== SCS_SOL_MINT_ADDRESS) {
     payParams.splToken = invoice.token_address;
-  }
-  if (!!paymentRef && paymentRef.length) {
-    payParams.memo = paymentRef;
   }
 
   const paymentUrl = solanaPay.encodeURL(payParams);
@@ -765,28 +818,29 @@ router.get('/invoice', async (req, res) => {
       t => t.mintAddress === invoice.token_address
     );
     const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
+    const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
     let uiTokenAmount, uiPaidAmount;
     if (!!knownToken) {
       uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
-      uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
+      uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
     } else {
       let kt = { name: tokenSymbol, decimals: 9 };
       uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
-      uiPaidAmount = actualTokenAmount(kt, invoice.amount_paid);
+      uiPaidAmount = actualTokenAmount(kt, paymentsState.amountPaid);
     }
 
     response = {
       paymentUrl,
       qrCode: payQrCode,
-      status: invoice.status,
+      status: paymentsState.status,
       issuerAddress: invoice.issuer_address,
       tokenAddress: invoice.token_address,
       paymentAddress: invoice.paidto_address,
       invoiceId: invoice.id,
       invoiceRef: invoice.invoice_ref,
       amountLamports: invoice.lamports,
-      amountPaid: invoice.amount_paid,
+      amountPaid: paymentsState.amountPaid,
       tokenSymbol: tokenSymbol,
       uiPaidAmount,
       uiTokenAmount,
@@ -818,22 +872,21 @@ router.get('/invoice', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: A unique payment reference.
+ *         description: A unique payment reference included as a memo (on-chain).
  *     responses:
  *       200:
- *         description: Status retrieved successfully.
+ *         description: Invoice instance status retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status:
- *                   type: string
- *                 amountPaid:
- *                   type: number
- *                 tokenSymbol:
- *                   type: string
- *       402:
+ *                 status: { type: string }
+ *                 amountPaid: { type: number }
+ *                 uiPaidAmount: { type: string }
+ *                 uiTokenAmount: { type: string }
+ *                 tokenSymbol: { type: string }
+ *       400:
  *         $ref: '#/components/schemas/Error'
  *       404:
  *         $ref: '#/components/schemas/Error'
@@ -843,17 +896,18 @@ router.get('/invoice', async (req, res) => {
 router.get('/status', async (req, res) => {
   const { invoiceRef, paymentRef } = req.query;
   if (!invoiceRef || !paymentRef) {
-    return res.status(402).json({ error: 'Invalid Request' });
+    return res.status(400).json({ error: 'Invalid Request' });
   }
 
   // 1. Retrieve invoice details from DB
   let invoice;
   invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
 
-  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher || !invoice.status) {
+  if (!invoice || !invoice.cipher_iv || !invoice.script_cipher) {
     return res.status(404).json({ error: 'Not Found' });
   }
 
+  // 2. Interpret invoice data and read payments
   const paymentAddress = invoice.paidto_address;
   const tokenAddress = invoice.token_address;
   const amountExpected = BigInt(invoice.lamports);
@@ -861,21 +915,24 @@ router.get('/status', async (req, res) => {
     t => t.mintAddress === invoice.token_address
   );
   const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
+  const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
+  const paymentsCount = tokenWallDb.getPaymentsCountByInvoiceId(invoice.id);
 
   let uiTokenAmount, uiPaidAmount;
   if (!!knownToken) {
     uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
-    uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
+    uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
   } else {
     let kt = { name: tokenSymbol, decimals: 9 };
     uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
-    uiPaidAmount = actualTokenAmount(knownToken, invoice.amount_paid);
+    uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
   }
 
-  if (invoice.status === 'accepted') {
+  // 3. Return from status endpoint as fast as possible in case the invoice is paid.
+  if (paymentsState.status === 'accepted') {
     return res.status(200).json({
-      status: 'accepted',
-      amountPaid: invoice.amount_paid,
+      status: paymentsState.status,
+      amountPaid: paymentsState.amountPaid,
       uiPaidAmount,
       uiTokenAmount,
       tokenSymbol,
@@ -893,54 +950,38 @@ router.get('/status', async (req, res) => {
   const web3 = require('@solana/web3.js');
   const connection = new web3.Connection(rpcUrl, 'confirmed');
 
-  // Manual verification for received amounts.
-  // NOTE: The returned amount will be positive.
-  const extractTransactionAmount = (tx, addr, mint) => {
-    const pre = tx.meta.preTokenBalances.find(
-      (b) => b.owner === addr && b.mint === mint
-    );
-    const post = tx.meta.postTokenBalances.find(
-      (b) => b.owner === addr && b.mint === mint
-    );
-
-    const preAmount = BigInt(pre?.uiTokenAmount.amount ?? "0");
-    const postAmount = BigInt(post?.uiTokenAmount.amount ?? "0");
-    const diff = postAmount - preAmount;
-    return diff;
-  };
-
-  // Compute the token account for this payment address (ATA for token)
+  // 4. Compute the token account for this payment address (ATA for token)
   const paymentAtas = await getTokenAccounts(paymentAddress, connection);
   const relevantAta = paymentAtas.find(a => a.mintAddress === invoice.token_address)?.pubKey;
 
   try {
     const destinationAddr = !!relevantAta ? relevantAta : paymentAddress;
 
-    // 2. Get latest signatures from destination address.
+    // 5. Get latest signatures from destination address.
     // NOTE: signatures also return memo, but do not contain amount information.
     const signatures = await connection.getSignaturesForAddress(
       new web3.PublicKey(destinationAddr), {}, 'confirmed'
     );
     if (!signatures.length) {
-      //XXX do we want status 404, etc. here?
       return res.status(200).json({
-        status: 'pending',
-        amountPaid: 0,
-        uiPaidAmount: `0 ${tokenSymbol}`,
-        uiTokenAmount: `0 ${tokenSymbol}`,
+        status: paymentsState.status,
+        amountPaid: paymentsState.amountPaid,
+        uiPaidAmount,
+        uiTokenAmount,
         tokenSymbol,
       });
     }
 
-    // log.debug(`Processing signatures for ${paymentAddress}`, {
-    //   payAddress: paymentAddress,
-    //   ataAddress: destinationAddr,
-    //   count: signatures.length,
-    // });
+    // 6. Pre-processing, read already processed signatures.
+    let preSignatures = tokenWallDb.getSignaturesByInvoiceAndRef(invoiceRef, paymentRef);
 
-    let totalReceived = BigInt(0);
-    let processedSigs = [];
-    let preSignatures = invoice.signatures.split(',');
+    log.debug(`Processing signatures for ${paymentAddress}`, {
+      payAddress: paymentAddress,
+      ataAddress: destinationAddr,
+      count: signatures.length,
+      preSignatures,
+    });
+
     let cntSkipped = 0,
         cntProcessed  = 0;
     for (let i = 0; i < signatures.length; i++) {
@@ -951,21 +992,24 @@ router.get('/status', async (req, res) => {
         continue;
       }
 
-      // 3. Get parsed transaction details.
+      // 7. Get parsed transaction details.
       const transaction = await connection.getParsedTransaction(signature.signature);
       if (!transaction || !transaction.slot) {
-        return res.status(200).json({
-          status: 'pending',
-          amountPaid: 0,
-          uiPaidAmount: `0 ${tokenSymbol}`,
-          uiTokenAmount: `0 ${tokenSymbol}`,
-          tokenSymbol,
-        });
+        cntSkipped++;
+        continue;
       }
 
-      // 4. Extract the received amount from transaction for token mint address.
-      const amountRcvd = extractTransactionAmount(transaction, paymentAddress, tokenAddress);
+      // 8. Extract the received amount from transaction for token mint address.
+      // NOTE: signatures also return memo, but do not contain amount information.
+      const amountRcvd = extractTransactionAmount(
+        paymentRef,
+        signature,
+        transaction,
+        paymentAddress,
+        tokenAddress,
+      );
       if (amountRcvd <= 0n) { // NOTE: we don't want to return negative amounts from API.
+        cntSkipped++;
         continue;
       }
 
@@ -975,15 +1019,20 @@ router.get('/status', async (req, res) => {
         amountRcvd: amountRcvd,
       });
 
-      totalReceived = totalReceived + amountRcvd;
-      processedSigs.push(signature.signature);
+      tokenWallDb.addPayment({
+        id: `${invoice.id}-payment-${paymentsCount+1}`,
+        invoiceId: invoice.id,
+        invoiceRef: invoice.invoice_ref,
+        paymentRef,
+        amountPaid: Number(amountRcvd),
+        signatures: signature.signature,
+      })
+
       cntProcessed++;
     }
 
-    // Count previously processed amounts as received.
-    if (preSignatures.length > 0) {
-      totalReceived += BigInt(invoice.amount_paid);
-    }
+    // 9. Re-evaluate payments state after processing.
+    const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
     // log.debug(`Processing incoming payment done for ${paymentAddress}`, {
     //   cntProcessed,
@@ -994,49 +1043,21 @@ router.get('/status', async (req, res) => {
 
     if (!!knownToken) {
       uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
-      uiPaidAmount = actualTokenAmount(knownToken, Number(totalReceived));
+      uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
     } else {
       let kt = { name: tokenSymbol, decimals: 9 };
       uiTokenAmount = actualTokenAmount(kt, invoice.lamports);
-      uiPaidAmount = actualTokenAmount(kt, Number(totalReceived));
+      uiPaidAmount = actualTokenAmount(kt, paymentsState.amountPaid);
     }
 
-    if (totalReceived < amountExpected) {
-      if (totalReceived > 0n && processedSigs.length) {
-        // UPDATE tw_invoices.status, tw_invoices.signatures
-        invoice = tokenWallDb.addProcessedSignatures(
-          'partial',
-          invoice.id,
-          processedSigs.join(','),
-          Number(totalReceived),
-        );
-      }
-
-      return res.status(200).json({
-        status: totalReceived > 0n ? 'partial' : 'pending',
-        amountPaid: Number(totalReceived),
-        uiPaidAmount,
-        uiTokenAmount,
-        tokenSymbol,
-      });
-    }
-
-    log.info(`Processing payment completed for ${paymentAddress}`, {
-      totalReceived,
-      amountExpected,
-    });
-
-    // UPDATE tw_invoices.status, tw_invoices.signatures
-    invoice = tokenWallDb.addProcessedSignatures(
-      'accepted',
-      invoice.id,
-      processedSigs.join(','),
-      Number(totalReceived),
-    );
+    // log.info(`Processing payment completed for ${paymentAddress}`, {
+    //   totalReceived,
+    //   amountExpected,
+    // });
 
     return res.status(200).json({
-      status: 'accepted',
-      amountPaid: Number(totalReceived),
+      status: paymentsState.status,
+      amountPaid: paymentsState.amountPaid,
       uiPaidAmount,
       uiTokenAmount,
       tokenSymbol,
@@ -1211,10 +1232,9 @@ router.get('/tokens', async (req, res) => {
         const knownToken = knownTokens.findIndex(
           t => t.mintAddress === ownedTokens[i].mintAddress
         );
-
         if (knownToken !== -1) {
           knownTokens[knownToken].tokenAmount = ownedTokens[i].tokenAmount;
-        } else { 
+        } else {
           knownTokens.push(ownedTokens[i]);
         }
       }
