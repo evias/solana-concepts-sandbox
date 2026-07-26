@@ -137,6 +137,7 @@
         copyYear: '2026',
 
         invoiceRef: '%%%%SCS_API_DEMO_PARAM%%%%',
+        paymentRef: '',
         invoice: null,
         pTag: null,
         assetDownloadLink: '#',
@@ -162,9 +163,13 @@
         },
 
         async loadInvoice() {
+          if (!window.localStorage.hasItem('_twp.uag')) {
+            return ;
+          }
+          this.paymentRef = window.localStorage.getItem('_twp.uag');
           try {
             const dataUrl = `//%%%%SCS_API_BASE_URL%%%%/tokenwall/invoice`;
-            const dataParams = `invoiceRef=${this.invoiceRef}&enableMeta=1`;
+            const dataParams = `invoiceRef=${this.invoiceRef}&paymentRef=${this.paymentRef}&enableMeta=1`;
             const response = await fetch(`${dataUrl}?${dataParams}`);
             if (response.ok) {
               const data = await response.json();

@@ -2441,7 +2441,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "The Solana Wallet Address that will receive the payment(s)."
+            "description": "The Solana Wallet Address that issued invoices."
           },
           {
             "in": "query",
@@ -2461,7 +2461,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "prompts": {
+                    "page": {
+                      "type": "number"
+                    },
+                    "total": {
+                      "type": "number"
+                    },
+                    "invoices": {
                       "type": "array",
                       "items": {
                         "type": "object",
@@ -2677,6 +2683,66 @@
                     },
                     "tokenSymbol": {
                       "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenwall/income": {
+      "get": {
+        "tags": [
+          "TokenWall"
+        ],
+        "summary": "Retrieve income aggregation, grouped by token symbol.",
+        "description": "Retrieves income aggregation, grouped by token symbol.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issuer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Solana Wallet Address that issued invoices."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Total income by ttokens retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "decimals": {
+                            "type": "number"
+                          },
+                          "total": {
+                            "type": "number"
+                          }
+                        }
+                      }
                     }
                   }
                 }

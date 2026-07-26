@@ -144,7 +144,8 @@
                     <option :value="token.mintAddress" x-text="formatToken(token)"></option>
                   </template>
                 </select>
-                <div x-show="userAddress && knownTokens.length === 0" class="mt-3 rounded-[10px] border border-red-600 bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
+                <div x-show="userAddress && knownTokens.length === 0"
+                      class="mt-3 rounded-[10px] border border-red-600 bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn col-span-2">
                   You don't own any tokens yet, tokens are needed to determine an exact mint address.
                 </div>
               </div>
@@ -259,6 +260,15 @@
             </button>
           </div>
           <div class="space-y-4" x-show="showLatestInvoices" x-collapse>
+            <div x-show="totalIncomeByTokens.length"
+                 class="w-full border-0 border-blue-400 bg-gray-100 flex flex-row gap-3 h-16 p-5">
+              <span class="text-md font-semibold text-[#5F6F6A]">Total income: </span>
+              <template x-for="entry in totalIncomeByTokens" :key="entry.name">
+                <span class="text-md font-semibold text-blue-400"
+                    x-show="entry.total > 0"
+                    x-text="actualTokenAmount(entry, entry.total)"></span>
+              </template>
+            </div>
             <p x-show="!latestInvoices || !latestInvoices.length">No invoices found</p>
             <div x-show="latestInvoices && latestInvoices.length" class="overflow-x-auto">
               <table class="min-w-full border-collapse">
@@ -269,7 +279,7 @@
                     <th class="text-left px-4 py-3 font-semibold text-gray-700">Token&nbsp;<span id="mintAddressCopyMsg"></span></th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-700">Amount</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-700">Assets</th>
-                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
+                    <th class="text-left px-4 py-3 font-semibold text-gray-700">Payments</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-700">Creation date</th>
                     <th class="text-left px-4 py-3 font-semibold text-gray-700">Actions</th>
                   </tr>
@@ -321,7 +331,12 @@
                       </td>
 
                       <td class="px-4 py-3 hidden sm:table-cell">
-                        <span class="text-sm font-medium" x-text="actualTokenAmount(getToken(invoice.token_address), invoice.lamports)"></span>
+                        <span class="text-sm font-medium"
+                              :class="{
+                                'text-blue-400': invoice.cnt_payments > 0,
+                                'text-red-400': invoice.cnt_payments == 0,
+                              }"
+                              x-text="actualTokenAmount(getToken(invoice.token_address), invoice.lamports)"></span>
                       </td>
 
                       <td class="px-4 py-3 hidden sm:table-cell text-center">
@@ -335,18 +350,7 @@
                       </td>
 
                       <td class="px-4 py-3 text-center">
-                        <!-- shield-check -->
-                        <svg x-show="invoice.status === 'accepted'"
-                             class="w-5 h-5 inline text-green-500 hover:cursor-pointer"
-                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /><title>Invoice paid</title></svg>
-                        <!-- exclamation-triangle -->
-                        <svg x-show="invoice.status === 'partial'"
-                             class="w-5 h-5 inline text-yellow-500 hover:cursor-pointer"
-                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /><title>Partially paid</title></svg>
-                        <!-- clipboard -->
-                        <svg x-show="invoice.status === 'pending'"
-                             class="w-5 h-5 inline text-red-500 hover:cursor-pointer"
-                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" /><title>Waiting for payment</title></svg>
+                        <span class="text-sm font-medium" x-text="invoice.cnt_payments"></span>
                       </td>
 
                       <td class="px-4 py-3 hidden sm:table-cell">
@@ -625,6 +629,7 @@
         countInvoicePages: 1,
         totalLatestInvoice: 0,
         invoicePageNumbers: [1],
+        totalIncomeByTokens: [],
 
         resetForm(){
           this.selectedToken = '';
@@ -654,7 +659,6 @@
 
         initCopyButtons() {
           const copyBtns = document.querySelectorAll('.copyBtn');
-          console.log("initCopyButtons", copyBtns);
           for (let i = 0; i < copyBtns.length; i++) {
             let elm = copyBtns[i];
             elm.addEventListener('click', async() => {
@@ -748,6 +752,7 @@
           this.userAddress = addr;
 
           this.loadTokens();
+          this.loadIncome();
           this.loadLatestInvoices();
         },
 
@@ -784,7 +789,7 @@
             let params = '?issuer=' + this.userAddress;
             if (p) {
               params = params + '&page=' + p;
-            } 
+            }
             const response = await fetch('/api/v1/tokenwall/invoices' + params);
             if (response.ok) {
               const data = await response.json();
@@ -805,6 +810,19 @@
           }
         },
 
+        async loadIncome() {
+          try {
+            const params = '?issuer=' + this.userAddress;
+            const response = await fetch('/api/v1/tokenwall/income' + params);
+            if (response.ok) {
+              const data = await response.json();
+              this.totalIncomeByTokens = data.tokens;
+            }
+          } catch (error) {
+            log.error('Error loading income', { error: error.message });
+          }
+        },
+
         useToken($el) {
           this.selectedToken = $el.value;
           document.getElementById('totalPriceSymbol').innerText = this.getToken(this.selectedToken).name;
@@ -812,16 +830,29 @@
         },
 
         actualTokenAmount(token, amt) {
+          if (!token) {
+            return 0 + ' DHP';
+          }
+
           const decimals = token.decimals;
-          const totalAmt = amt / (Math.pow(10, decimals));
-          return totalAmt.toFixed(decimals) + ' ' + token.name;
+          const totalAmt = (amt / (Math.pow(10, decimals))).toFixed(decimals);
+
+          // Remove trailing 0s.
+          return totalAmt.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + ' ' + token.name;
         },
 
         async updateTotal($el) {
           this.invoiceLamports = $el.value;
           const currentToken = this.getToken(this.selectedToken);
-          const decimals = currentToken.decimals;
-          const totalAmt = $el.value / (Math.pow(10, decimals));
+          let totalAmt, decimals;
+          if (!currentToken) {
+            totalAmt = 0;
+            decimals = 0;
+          } else {
+            decimals = currentToken.decimals;
+            totalAmt = $el.value / (Math.pow(10, decimals));
+          }
+
           const totalFmt = totalAmt.toFixed(decimals);
           document.getElementById('totalPriceAmount').innerText = totalFmt;
 

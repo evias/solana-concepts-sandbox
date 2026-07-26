@@ -1074,6 +1074,18 @@ const tokenWallDb = {
     return stmt.get().count ?? 0;
   },
 
+  getIncomeByTokens(issuerAddress) {
+    const stmt = db.prepare(`
+      SELECT i.token_address, sum(p.amount_paid) as total
+      FROM tw_invoices i
+      LEFT JOIN tw_invoice_payments p on (p.invoice_id = i.id)
+      WHERE i.issuer_address = ?
+      GROUP BY i.token_address;
+    `);
+    const rows = stmt.all(issuerAddress);
+    return rows;
+  },
+
   // Get invoice object by ID
   getObjectById(id) {
     const stmt = db.prepare('SELECT * FROM tw_invoice_objects WHERE id = ?');

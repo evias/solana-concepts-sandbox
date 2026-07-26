@@ -623,7 +623,7 @@ router.post('/add-invoice-object', async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: The Solana Wallet Address that will receive the payment(s).
+ *         description: The Solana Wallet Address that issued invoices.
  *       - in: query
  *         name: page
  *         required: false
@@ -638,7 +638,11 @@ router.post('/add-invoice-object', async (req, res) => {
  *             schema:
  *               type: object
  *               properties:
- *                 prompts:
+ *                 page:
+ *                   type: number
+ *                 total:
+ *                   type: number
+ *                 invoices:
  *                   type: array
  *                   items:
  *                     type: object
@@ -681,7 +685,7 @@ router.get('/invoices', (req, res) => {
     }
 
     const cntInvoices = tokenWallDb.getInvoicesCount(issuer);
-    return res.json({
+    return res.status(200).json({
       invoices: invoices,
       page: displayPage,
       total: cntInvoices,
@@ -1065,6 +1069,83 @@ router.get('/status', async (req, res) => {
   } catch (error) {
     log.error('Error fetching invoice status', { error });
     return res.status(500).json({ error: 'Failed to fetch status' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/tokenwall/income:
+ *   get:
+ *     tags:
+ *       - TokenWall
+ *     summary: Retrieve income aggregation, grouped by token symbol.
+ *     description: Retrieves income aggregation, grouped by token symbol.
+ *     parameters:
+ *       - in: query
+ *         name: issuer
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Solana Wallet Address that issued invoices.
+ *     responses:
+ *       200:
+ *         description: Total income by ttokens retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tokens:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name: { type: string }
+ *                       decimals: { type: number }
+ *                       total: { type: number }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/income', async (req, res) => {
+  try {
+    const { issuer } = req.query;
+    if (!issuer) {
+      return res.status(400).json({ error: 'Invalid Request' });
+    }
+
+    const incomeRows = tokenWallDb.getIncomeByTokens(issuer);
+    // log.info(`Found income rows for issuer: ${issuer}`, { incomeRows });
+
+    const response = [];
+    for (let i = 0; i < incomeRows.length; i++) {
+      const known = knownTokens.find(
+        t => t.mintAddress === incomeRows[i].token_address
+      )
+      if (!! known) {
+        response.push({
+          name: known.name,
+          decimals: known.decimals,
+          total: incomeRows[i].total ?? 0,
+        });
+      } else {
+        response.push({
+          name: incomeRows[i].token_address,
+          decimals: 9,
+          total: incomeRows.total ?? 0,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      tokens: response,
+    });
+  } catch (error) {
+    log.error('Error fetching income', { error });
+    return res.status(500).json({ error: 'Failed to fetch income' });
   }
 });
 
