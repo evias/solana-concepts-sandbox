@@ -926,14 +926,14 @@ const tokenWallDb = {
     const stmt = db.prepare(`
       INSERT INTO tw_invoices (
         id, issuer_address, paidto_address, token_address,
-        invoice_ref, lamports, amount_paid, script_cipher, cipher_iv, num_reads,
+        invoice_ref, lamports, script_cipher, cipher_iv, num_reads,
         sol_cluster, lastread_at, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       id, issuerAddress, paidtoAddress, tokenAddress,
-      invoiceRef, lamports, 0, scriptCipher, scriptIV, 1, useCluster,
+      invoiceRef, lamports, scriptCipher, scriptIV, 1, useCluster,
       now, now, now
     );
 
