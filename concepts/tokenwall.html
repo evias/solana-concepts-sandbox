@@ -1092,10 +1092,18 @@
           }
         },
 
+        getRandomPaymentRef() {
+          const array = new Uint8Array(12);
+          crypto.getRandomValues(array);
+          return array.toHex();
+        },
+
         async showInvoice(invoiceRef) {
           try {
             if (!this.userAddress) return;
-            const response = await fetch(`/api/v1/tokenwall/invoice?invoiceRef=${invoiceRef}&enableMeta=1`);
+            const paymentRef = this.getRandomPaymentRef();
+            const params = `invoiceRef=${invoiceRef}&paymentRef=${paymentRef}&enableMeta=1`;
+            const response = await fetch(`/api/v1/tokenwall/invoice?${params}`);
             if (response.ok) {
               const data = await response.json();
               const fullUrl = data.paymentUrl;
