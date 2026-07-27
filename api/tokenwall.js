@@ -87,11 +87,11 @@ const getInvoiceStatus = (invoiceRef, paymentRef) => {
 
   if (totalPaid >= invoice.lamports) {
     return { status: 'accepted', amountPaid: totalPaid };
-  }
-  if (totalPaid > 0) {
+  } else if (totalPaid > 0) {
     return { status: 'partial', amountPaid: totalPaid };
   }
-    return { status: 'pending', amountPaid: 0 };
+
+  return { status: 'pending', amountPaid: 0 };
 };
 
 // Manual verification helper for received amounts.
@@ -932,6 +932,12 @@ router.get('/status', async (req, res) => {
     uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
   }
 
+  log.info(`Status discovery for ${paymentAddress}`, {
+    invoiceRef, paymentRef,
+    paymentsState,
+    paymentsCount,
+  });
+
   // 3. Return from status endpoint as fast as possible in case the invoice is paid.
   if (paymentsState.status === 'accepted') {
     return res.status(200).json({
@@ -949,7 +955,11 @@ router.get('/status', async (req, res) => {
   } else {
     rpcUrl = 'https://api.mainnet.solana.com';
   }
-  // log.debug("Using RPC: ", { rpcUrl });
+
+  log.info("Status discovery using RPC: ", {
+    invoiceRef, paymentRef,
+    rpcUrl,
+  });
 
   const web3 = require('@solana/web3.js');
   const connection = new web3.Connection(rpcUrl, 'confirmed');
@@ -960,6 +970,12 @@ router.get('/status', async (req, res) => {
 
   try {
     const destinationAddr = !!relevantAta ? relevantAta : paymentAddress;
+
+    log.info("Using destination address (ATA): ", {
+      invoiceRef, paymentRef,
+      payAddress: paymentAddress,
+      ataAddress: destinationAddr,
+    });
 
     // 5. Get latest signatures from destination address.
     // NOTE: signatures also return memo, but do not contain amount information.
@@ -980,17 +996,20 @@ router.get('/status', async (req, res) => {
     let preSignatures = tokenWallDb.getSignaturesByInvoiceAndRef(invoiceRef, paymentRef);
 
     log.debug(`Processing signatures for ${paymentAddress}`, {
+      invoiceRef, paymentRef,
       payAddress: paymentAddress,
       ataAddress: destinationAddr,
       count: signatures.length,
-      preSignatures,
+      countBefore: preSignatures.length,
     });
 
     let cntSkipped = 0,
         cntProcessed  = 0;
     for (let i = 0; i < signatures.length; i++) {
       const signature = signatures[i];
-      if (preSignatures.length > 0 && -1 !== preSignatures.findIndex(v => v === signature.signature)) {
+      if (preSignatures.length > 0 && -1 !== preSignatures.findIndex(
+        v => v === signature.signature
+      )) {
         // transaction already processed.
         cntSkipped++;
         continue;
@@ -1018,6 +1037,7 @@ router.get('/status', async (req, res) => {
       }
 
       log.info(`Processing new incoming payment for ${paymentAddress}`, {
+        invoiceRef, paymentRef,
         payAddress: paymentAddress,
         ataAddress: destinationAddr,
         amountRcvd: amountRcvd,
@@ -1031,19 +1051,19 @@ router.get('/status', async (req, res) => {
         amountPaid: Number(amountRcvd),
         signatures: signature.signature,
       })
-
       cntProcessed++;
     }
 
     // 9. Re-evaluate payments state after processing.
     const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
-    // log.debug(`Processing incoming payment done for ${paymentAddress}`, {
-    //   cntProcessed,
-    //   cntSkipped,
-    //   totalReceived,
-    //   amountExpected,
-    // });
+    log.info(`[DONE] Status discovery for ${paymentAddress}`, {
+      invoiceRef, paymentRef,
+      cntProcessed,
+      cntSkipped,
+      amountExpected,
+      paymentsState,
+    });
 
     if (!!knownToken) {
       uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
@@ -1054,11 +1074,6 @@ router.get('/status', async (req, res) => {
       uiPaidAmount = actualTokenAmount(kt, paymentsState.amountPaid);
     }
 
-    // log.info(`Processing payment completed for ${paymentAddress}`, {
-    //   totalReceived,
-    //   amountExpected,
-    // });
-
     return res.status(200).json({
       status: paymentsState.status,
       amountPaid: paymentsState.amountPaid,
@@ -1067,7 +1082,7 @@ router.get('/status', async (req, res) => {
       tokenSymbol,
     });
   } catch (error) {
-    log.error('Error fetching invoice status', { error });
+    log.error('Error fetching invoice status', { error: error.message });
     return res.status(500).json({ error: 'Failed to fetch status' });
   }
 });

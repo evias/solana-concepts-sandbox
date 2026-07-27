@@ -1016,24 +1016,6 @@ const tokenWallDb = {
     return tokenWallDb.getObjectById(objectId);
   },
 
-  // addProcessedSignatures(invoiceId, paymentRef, signature, amountPaid) {
-  //   // query previously processed signatures
-  //   const stmt_sigs = db.prepare('SELECT signatures FROM tw_invoices WHERE id = ?');
-  //   const row = stmt_sigs.get(invoiceId);
-  //   const signatures = row.signatures;
-  //   const nextSignatures = !!signatures && signatures.length > 0 ? signatures + ',' + processedSigs : processedSigs;
-
-  //   const now = new Date().toISOString();
-  //   const stmt = db.prepare(`
-  //     UPDATE tw_invoices
-  //     SET status = ?, amount_paid = ?, signatures = ?, updated_at = ?
-  //     WHERE id = ?
-  //   `);
-
-  //   stmt.run(newStatus, amountPaid, nextSignatures, now, invoiceId);
-  //   return tokenWallDb.getInvoiceById(invoiceId);
-  // },
-
   // Get invoice by ID
   getInvoiceById(id) {
     const stmt = db.prepare('SELECT * FROM tw_invoices WHERE id = ?');
@@ -1147,7 +1129,7 @@ const tokenWallDb = {
   getSignaturesByInvoiceAndRef(invoiceId, paymentRef) {
     const stmt = db.prepare('SELECT signatures FROM tw_invoice_payments WHERE invoice_id = ? and payment_ref = ? ORDER BY created_at DESC');
     const rows = stmt.all(invoiceId, paymentRef);
-    return rows.reduce((acc, cur) => acc.push(cur.signatures), []);
+    return rows.length ? rows.reduce((acc, cur) => acc.push(cur.signatures), []) : [];
   }
 };
 
