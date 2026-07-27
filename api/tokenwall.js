@@ -919,8 +919,8 @@ router.get('/status', async (req, res) => {
     t => t.mintAddress === invoice.token_address
   );
   const tokenSymbol = !!knownToken ? knownToken.name : `SPL (${shortenAddr(invoice.token_address)})`;
-  const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
   const paymentsCount = tokenWallDb.getPaymentsCountByInvoiceId(invoice.id);
+  let paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
   let uiTokenAmount, uiPaidAmount;
   if (!!knownToken) {
@@ -1055,7 +1055,7 @@ router.get('/status', async (req, res) => {
     }
 
     // 9. Re-evaluate payments state after processing.
-    const paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
+    paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
     log.info(`[DONE] Status discovery for ${paymentAddress}`, {
       invoiceRef, paymentRef,
