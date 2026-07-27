@@ -932,11 +932,11 @@ router.get('/status', async (req, res) => {
     uiPaidAmount = actualTokenAmount(knownToken, paymentsState.amountPaid);
   }
 
-  log.info(`Status discovery for ${paymentAddress}`, {
-    invoiceRef, paymentRef,
-    paymentsState,
-    paymentsCount,
-  });
+  // log.info(`Status discovery for ${paymentAddress}`, {
+  //   invoiceRef, paymentRef,
+  //   paymentsState,
+  //   paymentsCount,
+  // });
 
   // 3. Return from status endpoint as fast as possible in case the invoice is paid.
   if (paymentsState.status === 'accepted') {
@@ -956,10 +956,10 @@ router.get('/status', async (req, res) => {
     rpcUrl = 'https://api.mainnet.solana.com';
   }
 
-  log.info("Status discovery using RPC: ", {
-    invoiceRef, paymentRef,
-    rpcUrl,
-  });
+  // log.info("Status discovery using RPC: ", {
+  //   invoiceRef, paymentRef,
+  //   rpcUrl,
+  // });
 
   const web3 = require('@solana/web3.js');
   const connection = new web3.Connection(rpcUrl, 'confirmed');
@@ -971,11 +971,11 @@ router.get('/status', async (req, res) => {
   try {
     const destinationAddr = !!relevantAta ? relevantAta : paymentAddress;
 
-    log.info("Using destination address (ATA): ", {
-      invoiceRef, paymentRef,
-      payAddress: paymentAddress,
-      ataAddress: destinationAddr,
-    });
+    // log.info("Using destination address (ATA): ", {
+    //   invoiceRef, paymentRef,
+    //   payAddress: paymentAddress,
+    //   ataAddress: destinationAddr,
+    // });
 
     // 5. Get latest signatures from destination address.
     // NOTE: signatures also return memo, but do not contain amount information.
@@ -995,13 +995,13 @@ router.get('/status', async (req, res) => {
     // 6. Pre-processing, read already processed signatures.
     let preSignatures = tokenWallDb.getSignaturesByInvoiceAndRef(invoiceRef, paymentRef);
 
-    log.debug(`Processing signatures for ${paymentAddress}`, {
-      invoiceRef, paymentRef,
-      payAddress: paymentAddress,
-      ataAddress: destinationAddr,
-      count: signatures.length,
-      countBefore: preSignatures.length,
-    });
+    // log.debug(`Processing signatures for ${paymentAddress}`, {
+    //   invoiceRef, paymentRef,
+    //   payAddress: paymentAddress,
+    //   ataAddress: destinationAddr,
+    //   count: signatures.length,
+    //   countBefore: preSignatures.length,
+    // });
 
     let cntSkipped = 0,
         cntProcessed  = 0;
@@ -1036,12 +1036,12 @@ router.get('/status', async (req, res) => {
         continue;
       }
 
-      log.info(`Processing new incoming payment for ${paymentAddress}`, {
-        invoiceRef, paymentRef,
-        payAddress: paymentAddress,
-        ataAddress: destinationAddr,
-        amountRcvd: amountRcvd,
-      });
+      // log.info(`Processing new incoming payment for ${paymentAddress}`, {
+      //   invoiceRef, paymentRef,
+      //   payAddress: paymentAddress,
+      //   ataAddress: destinationAddr,
+      //   amountRcvd: amountRcvd,
+      // });
 
       tokenWallDb.addPayment({
         id: `${invoice.id}-payment-${paymentsCount+1}`,
@@ -1057,13 +1057,13 @@ router.get('/status', async (req, res) => {
     // 9. Re-evaluate payments state after processing.
     paymentsState = getInvoiceStatus(invoiceRef, paymentRef);
 
-    log.info(`[DONE] Status discovery for ${paymentAddress}`, {
-      invoiceRef, paymentRef,
-      cntProcessed,
-      cntSkipped,
-      amountExpected,
-      paymentsState,
-    });
+    // log.info(`Status discovery completed for ${paymentAddress}`, {
+    //   invoiceRef, paymentRef,
+    //   cntProcessed,
+    //   cntSkipped,
+    //   amountExpected,
+    //   paymentsState,
+    // });
 
     if (!!knownToken) {
       uiTokenAmount = actualTokenAmount(knownToken, invoice.lamports);
