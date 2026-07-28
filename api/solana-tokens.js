@@ -210,14 +210,19 @@ async function getTokenAccounts(accountAddress, conn) {
         mintAddress: 'So11111111111111111111111111111111111111112',
         name: 'SOL',
         tokenAmount: (balance / web3.LAMPORTS_PER_SOL).toFixed(9),
+        lamports: parseInt(balance * web3.LAMPORTS_PER_SOL),
       },
     ];
     accounts.forEach(acct => {
       const { mint: mintAddress, tokenAmount } = acct.account.data["parsed"]["info"];
+      const actualAmount = parseFloat(tokenAmount.uiAmountString);
+      const amountAsLamports = parseInt((actualAmount * Math.pow(10, tokenAmount.decimals)).toFixed(0));
+
       tokenAccounts.push({
         pubKey: acct.pubkey,
         mintAddress,
         tokenAmount: tokenAmount.uiAmountString,
+        lamports: amountAsLamports,
       });
     });
 

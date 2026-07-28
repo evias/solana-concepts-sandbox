@@ -2803,6 +2803,20 @@
                           }
                         }
                       }
+                    },
+                    "tokens": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "total": {
+                            "type": "number"
+                          }
+                        }
+                      }
                     }
                   }
                 }
