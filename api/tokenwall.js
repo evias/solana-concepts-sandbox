@@ -1104,7 +1104,7 @@ router.get('/status', async (req, res) => {
  *         description: The Solana Wallet Address that issued invoices.
  *     responses:
  *       200:
- *         description: Total income by ttokens retrieved successfully.
+ *         description: Total income by tokens retrieved successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -1135,19 +1135,19 @@ router.get('/income', async (req, res) => {
     const incomeRows = tokenWallDb.getIncomeByTokens(issuer);
     // log.info(`Found income rows for issuer: ${issuer}`, { incomeRows });
 
-    const response = [];
+    const tokens = []; // tokens contains total income
     for (let i = 0; i < incomeRows.length; i++) {
       const known = knownTokens.find(
         t => t.mintAddress === incomeRows[i].token_address
-      )
+      );
       if (!! known) {
-        response.push({
+        tokens.push({
           name: known.name,
           decimals: known.decimals,
           total: incomeRows[i].total ?? 0,
         });
       } else {
-        response.push({
+        tokens.push({
           name: incomeRows[i].token_address,
           decimals: 9,
           total: incomeRows.total ?? 0,
@@ -1156,11 +1156,112 @@ router.get('/income', async (req, res) => {
     }
 
     return res.status(200).json({
-      tokens: response,
+      tokens: tokens,
     });
   } catch (error) {
     log.error('Error fetching income', { error });
     return res.status(500).json({ error: 'Failed to fetch income' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/tokenwall/balances:
+ *   get:
+ *     tags:
+ *       - TokenWall
+ *     summary: Retrieve withdrawable token balances.
+ *     description: Retrieves withdrawable token balances.
+ *     parameters:
+ *       - in: query
+ *         name: issuer
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Solana Wallet Address that issued invoices.
+ *     responses:
+ *       200:
+ *         description: Token balances retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 balances:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name: { type: string }
+ *                       owner: { type: string }
+ *                       total: { type: number }
+ *       400:
+ *         $ref: '#/components/schemas/Error'
+ *       404:
+ *         $ref: '#/components/schemas/Error'
+ *       500:
+ *         $ref: '#/components/schemas/Error'
+ */
+router.get('/balances', async (req, res) => {
+  try {
+    let { issuer, cluster } = req.query;
+    if (!issuer) {
+      return res.status(400).json({ error: 'Invalid Request' });
+    }
+    if (!cluster) cluster = 'mainnet';
+
+    let rpcUrl;
+    if (cluster.toLowerCase() === "devnet") {
+      rpcUrl = 'https://api.devnet.solana.com';
+    } else {
+      rpcUrl = 'https://api.mainnet.solana.com';
+    }
+
+    // log.info("Balances discovery using RPC: ", {
+    //   issuer,
+    //   rpcUrl,
+    // });
+
+    const web3 = require('@solana/web3.js');
+    const connection = new web3.Connection(rpcUrl, 'confirmed');
+
+    const incomeRows = tokenWallDb.getIncomeByTokens(issuer);
+    const balanceRows = tokenWallDb.getIncomeAddresses(issuer);
+    // log.info(`Found balance rows for issuer: ${issuer}`, { balanceRows });
+
+    const balances = []; // balances contains withdrawable tokens
+    for (let i = 0; i < balanceRows.length; i++) {
+      const hasIncome = incomeRows.find(
+        r => r.token_address === balanceRows[i].mint && r.total > 0
+      );
+      if (!hasIncome) continue;
+
+      const knownToken = knownTokens.find(
+        t => t.mintAddress === balanceRows[i].mint
+      );
+
+      const paymentAddress = balanceRows[i].address;
+      const ownedTokens = await getTokenAccounts(paymentAddress, connection);
+
+      const balanceForToken = ownedTokens.find(
+        t => t.mintAddress === balanceRows[i].mint && t.tokenAmount > 0
+      );
+
+      if (!! balanceForToken) {
+        balances.push({
+          name: !!knownToken ? knownToken.name : balanceRows[i].mint,
+          owner: balanceForToken.pubKey,
+          total: parseInt(balanceForToken.tokenAmount),
+        });
+      }
+    }
+
+    return res.status(200).json({
+      balances: balances,
+    });
+  } catch (error) {
+    log.error('Error fetching token balances', { error });
+    return res.status(500).json({ error: 'Failed to fetch token balances' });
   }
 });
 

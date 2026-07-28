@@ -261,13 +261,24 @@
           </div>
           <div class="space-y-4" x-show="showLatestInvoices" x-collapse>
             <div x-show="totalIncomeByTokens.length"
-                 class="w-full border-0 border-blue-400 bg-gray-100 flex flex-row gap-3 h-16 p-5">
-              <span class="text-md font-semibold text-[#5F6F6A]">Total income: </span>
-              <template x-for="entry in totalIncomeByTokens" :key="entry.name">
-                <span class="text-md font-semibold text-blue-400"
-                    x-show="entry.total > 0"
-                    x-text="actualTokenAmount(entry, entry.total)"></span>
-              </template>
+                 class="w-full border-0 border-blue-400 bg-gray-100 grid grid-cols-1 sm:grid-cols-3 sm:justify-items-strech h-auto sm:h-16 p-5">
+              <div class="sm:col-span-2">
+                <span class="text-md font-semibold text-[#5F6F6A]">Total income: </span>
+                <template x-for="entry in totalIncomeByTokens" :key="entry.name">
+                  <span class="mr-4 text-md font-semibold text-blue-400"
+                      x-show="entry.total > 0"
+                      x-text="actualTokenAmount(entry, entry.total)"></span>
+                </template>
+              </div>
+              <div class="justify-self-end">
+                <button class="flex flex-row gap-1 rounded-[6px] border px-4 py-0 text-sm sm:text-[.95rem] font-medium text-white transition-colors border-green-700 bg-green-600 hover:bg-green-700 disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed"
+                        type="button"
+                        @click="openWithdrawModal()">
+                  <!-- arrow-down-on-square -->
+                  <svg class="h-5 w-5 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M9 12l3 3m0 0 3-3m-3 3V2.25" /></svg>
+                  <span>Withdraw tokens</span>
+                </button>
+              </div>
             </div>
             <p x-show="!latestInvoices || !latestInvoices.length">No invoices found</p>
             <div x-show="latestInvoices && latestInvoices.length" class="overflow-x-auto">
@@ -581,6 +592,57 @@
       </div>
     </div>
 
+    <!-- Withdraw tokens modal -->
+    <div x-show="showWithdrawModal"
+         @click.self="hideWithdrawModal()"
+         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-[1.25rem] font-bold text-[#111]">Withdraw tokens</h2>
+          <button @click="hideWithdrawModal()" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="p-5 pt-0 mt-0 sm:mt-4 flex flex-col gap-2">
+          <div class="flex flex-col">
+            <label for="withdrawal-signature" class="block text-md font-semibold text-[#16352C]">
+              Withdrawable tokens
+            </label>
+            <em class="text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">
+              TokenWall uses Solana's <b>Associated Token Account</b> (ATA) features, you may
+              use this form to sign a withdrawal request to send the tokens back to your wallet.
+            </em>
+            <input type="hidden" id="withdrawal-signature" :value="withdrawalFormValues.signature" />
+          </div>
+          <div class="flex flex-col">
+            <label for="withdrawal-type" class="block text-md font-semibold text-[#16352C]">
+              Withdrawal type <em class="inline text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(which tokens to withdraw)</em>
+            </label>
+            <select id="withdrawal-type"
+                    @change="withdrawalFormValues.withdrawalType = $el.value"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+              <option value="all">Withdraw all available tokens</option>
+              <template x-for="entry in totalIncomeByTokens" :key="entry.name">
+                <option class="text-md font-semibold text-blue-400"
+                    :value="entry.name"
+                    x-show="entry.total > 0"
+                    x-text="actualTokenAmount(entry, entry.total)"></option>
+              </template>
+            </select>
+          </div>
+          <div x-show="withdrawalFormError" class="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <span x-text="withdrawalFormError"></span>
+          </div>
+          <div class="mt-4 flex flex-col gap-2">
+            <button type="button"
+              @click.prevent="submitAddObjectForm()"
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
+              <span x-show="!withdrawing">Withdraw now</span>
+              <span x-show="withdrawing">Requesting signature...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -630,6 +692,13 @@
         totalLatestInvoice: 0,
         invoicePageNumbers: [1],
         totalIncomeByTokens: [],
+        showWithdrawModal: false,
+        withdrawalFormError: '',
+        withdrawalFormValues: {
+          signature: '',
+          withdrawalType: 'all',
+        },
+        withdrawing: false,
 
         resetForm(){
           this.selectedToken = '';
@@ -1134,6 +1203,14 @@
           return `This invoice prepares a payment of <b>${tokenAmt}</b> to ${this.shortenAddr(data.paymentAddress)}.<br />`
             + `Click <a class="font-semibold text-indigo-500 hover:text-indigo-600" href="${data.paymentUrl}" target="_blank" rel="noopener nofollow">here</a> `
             + `or on the button below to create a payment for this invoice.`;
+        },
+
+        openWithdrawModal() {
+          this.showWithdrawModal = true;
+        },
+
+        hideWithdrawModal() {
+          this.showWithdrawModal = false;
         },
 
         async openDocumentation() {

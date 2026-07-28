@@ -2721,7 +2721,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Total income by ttokens retrieved successfully.",
+            "description": "Total income by tokens retrieved successfully.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2737,6 +2737,66 @@
                           },
                           "decimals": {
                             "type": "number"
+                          },
+                          "total": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "404": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenwall/balances": {
+      "get": {
+        "tags": [
+          "TokenWall"
+        ],
+        "summary": "Retrieve withdrawable token balances.",
+        "description": "Retrieves withdrawable token balances.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issuer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Solana Wallet Address that issued invoices."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token balances retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "balances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "owner": {
+                            "type": "string"
                           },
                           "total": {
                             "type": "number"

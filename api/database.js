@@ -1068,6 +1068,16 @@ const tokenWallDb = {
     return rows;
   },
 
+  getIncomeAddresses(issuerAddress) {
+    const stmt = db.prepare(`
+      SELECT i.token_address as mint, i.paidto_address as address
+      FROM tw_invoices i
+      WHERE issuer_address = ?
+    `);
+    const rows = stmt.all(issuerAddress);
+    return rows;
+  },
+
   // Get invoice object by ID
   getObjectById(id) {
     const stmt = db.prepare('SELECT * FROM tw_invoice_objects WHERE id = ?');
