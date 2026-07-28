@@ -1195,6 +1195,13 @@ router.get('/income', async (req, res) => {
  *                       name: { type: string }
  *                       owner: { type: string }
  *                       total: { type: number }
+ *                 tokens:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       name: { type: string }
+ *                       total: { type: number }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       404:
@@ -1242,22 +1249,47 @@ router.get('/balances', async (req, res) => {
 
       const paymentAddress = balanceRows[i].address;
       const ownedTokens = await getTokenAccounts(paymentAddress, connection);
+      log.info("Downloaded token accounts: ", {ownedTokens});
 
       const balanceForToken = ownedTokens.find(
-        t => t.mintAddress === balanceRows[i].mint && t.tokenAmount > 0
+        t => t.mintAddress === balanceRows[i].mint && t.lamports > 0
       );
 
       if (!! balanceForToken) {
         balances.push({
           name: !!knownToken ? knownToken.name : balanceRows[i].mint,
           owner: balanceForToken.pubKey,
-          total: parseInt(balanceForToken.tokenAmount),
+          decimals: !!knownToken ? knownToken.decimals : 9,
+          total: balanceForToken.lamports,
         });
       }
     }
 
+    const incomeByTokens = [];
+    for (let i = 0; i < balances.length; i++) {
+      const token = balances[i].name;
+      const decimals = balances[i].decimals;
+
+      // aggregate once per token
+      if (-1 !== incomeByTokens.findIndex(t => t.name === token)) {
+        continue;
+      }
+
+      const tokenBalances = balances.filter(b => b.name === token);
+      const totalAmount = tokenBalances.reduce((acc, cur) => {
+        return acc + Number(cur.total);
+      }, 0);
+
+      incomeByTokens.push({
+        name: token,
+        decimals: decimals,
+        total: totalAmount,
+      });
+    }
+
     return res.status(200).json({
       balances: balances,
+      tokens: incomeByTokens,
     });
   } catch (error) {
     log.error('Error fetching token balances', { error });
