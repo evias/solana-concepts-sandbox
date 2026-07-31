@@ -58,6 +58,8 @@ const knownTokens = [
   }
 ];
 
+// Helper to shorten the display of Solana Wallet Addresses.
+// Returns a string.
 const shortenAddr = (addr) => {
   if (!addr || addr.length < 10) return addr;
   return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4)
@@ -65,6 +67,7 @@ const shortenAddr = (addr) => {
 
 // Formats a token amount with a given token symbol (token.name)
 // and uses `toFixed()` to display the correct number of decimals.
+// Returns a string.
 const actualTokenAmount = (token, amt) => {
   const decimals = token.decimals;
   const totalAmt = amt / (Math.pow(10, decimals));
@@ -73,6 +76,7 @@ const actualTokenAmount = (token, amt) => {
 
 // Virtual invoice status discovery, retrieves all payments for a pair
 // of invoice ID and payment reference, then takes paid vs. expected amount.
+// Returns an object: {status,amountPaid}.
 const getInvoiceStatus = (invoiceRef, paymentRef) => {
   const invoice = tokenWallDb.getInvoiceByRef(invoiceRef);
   const cntPayments = tokenWallDb.getPaymentsCountByInvoiceAndRef(invoice.id, paymentRef);
@@ -96,9 +100,11 @@ const getInvoiceStatus = (invoiceRef, paymentRef) => {
 
 // Manual verification helper for received amounts.
 // NOTE: The returned amount will be positive.
+// Returns a number.
 const extractTransactionAmount = (pref, sig, tx, addr, mint) => {
   // Only check balances for relevant transactions.
-  if (!pref || !sig.memo || sig.memo !== pref) {
+  const sigMemoFormat = `[${pref.length}] ${pref}`; // Solana signature.memo format.
+  if (!pref || !sig.memo || sig.memo !== sigMemoFormat) {
     return 0;
   }
 
@@ -115,14 +121,54 @@ const extractTransactionAmount = (pref, sig, tx, addr, mint) => {
   return diff;
 };
 
+// Manual token balances discovery for tokens that can be withdrawn.
+// Returns an array of objects: [{name,owner,decimals,total}].
+const getWithdrawableTokenBalances = async (issuerAddress, connection) => {
+  const incomeRows = tokenWallDb.getIncomeByTokens(issuerAddress);
+  const balanceRows = tokenWallDb.getIncomeAddresses(issuerAddress);
+  // log.info(`Found balance rows for issuer: ${issuerAddress}`, { balanceRows });
+
+  const balances = []; // balances contains withdrawable tokens
+  for (let i = 0; i < balanceRows.length; i++) {
+    const hasIncome = incomeRows.find(
+      r => r.token_address === balanceRows[i].mint && r.total > 0
+    );
+    if (!hasIncome) continue;
+
+    const knownToken = knownTokens.find(
+      t => t.mintAddress === balanceRows[i].mint
+    );
+
+    const paymentAddress = balanceRows[i].address;
+    const ownedTokens = await getTokenAccounts(paymentAddress, connection);
+    // log.info("Downloaded token accounts: ", {ownedTokens});
+
+    const balanceForToken = ownedTokens.find(
+      t => t.mintAddress === balanceRows[i].mint && t.lamports > 0
+    );
+
+    if (!! balanceForToken) {
+      balances.push({
+        name: !!knownToken ? knownToken.name : balanceRows[i].mint,
+        paymentPda: paymentAddress,
+        paymentAta: balanceForToken.pubKey,
+        decimals: !!knownToken ? knownToken.decimals : 9,
+        total: balanceForToken.lamports,
+      });
+    }
+  }
+
+  return balances;
+};
+
 /**
  * @swagger
  * /api/v1/tokenwall/create-invoice-tx:
  *   post:
  *     tags:
  *       - TokenWall
- *     summary: Create an invoice (PDA) to permit paid access to your content.
- *     description: Creates a <script> HTML/JS to permit paid access to your content.
+ *     summary: Create an invoice transaction to be signed by the issuer wallet.
+ *     description: Creates an invoice transaction to be signed by the issuer wallet.
  *     requestBody:
  *       required: true
  *       content:
@@ -155,12 +201,10 @@ const extractTransactionAmount = (pref, sig, tx, addr, mint) => {
  *               type: object
  *               properties:
  *                 success: { type: boolean }
- *                 file:
- *                   type: object
- *                   properties:
- *                     txSig: { type: string }
- *                     invoiceRef: { type: string }
- *                     invoicePda: { type: string }
+ *                 blockhash: { type: object }
+ *                 invoiceRef: { type: string }
+ *                 transaction: { type: string }
+ *                 isTestMode: { type: boolean }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
@@ -182,6 +226,7 @@ router.post('/create-invoice-tx', async (req, res) => {
     // Initialize RPC connection ("fetchMaybeX").
     const rpc = createSolanaRpc('https://api.devnet.solana.com');
     const COMPUTE_BUDGET_PROGRAM = new web3.PublicKey('ComputeBudget111111111111111111111111111111');
+    const MEMO_PROGRAM = new web3.PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
 
     // 2: Create payout details (unique).
     // CAUTION: Every call to this method generates a different uuidv5.
@@ -199,31 +244,7 @@ router.post('/create-invoice-tx', async (req, res) => {
       payoutSeed,
     });
 
-    // 3. Create unique payment credential PDA per invoice. Each invoice has
-    // exactly 1 credential PDA and schema, and each "payment" of the invoice
-    // is done via sending tokens to the credential PDA.
     const issuerPubKey = new web3.PublicKey(issuerAddress);
-    const credentialName = crypto.createHash('sha256').update(
-      payoutSeed
-    ).digest().toString('hex').substring(0, 32);
-
-    const [credentialPda] = await lib.deriveCredentialPda({
-      authority: issuerAddress,
-      name: credentialName
-    });
-    log.info('Credential PDA derived', { credentialPda, credentialName });
-
-    const schemaName = 'TokenWall-Invoice-Basket';
-    const fieldNames = ['payerAddress', 'paymentTxSig'];
-    const schemaVersion = 1;
-
-    const [schemaPda] = await lib.deriveSchemaPda({
-      credential: credentialPda,
-      name: schemaName,
-      version: schemaVersion
-    });
-    log.info('Schema PDA derived', { schemaPda });
-
     const transaction = new web3.Transaction();
 
     // Add compute budget instruction for max. 50k
@@ -238,58 +259,14 @@ router.post('/create-invoice-tx', async (req, res) => {
     computeBudgetInstruction.data.writeUInt32LE(50000, 1); // after discriminator
     transaction.add(computeBudgetInstruction);
 
-    let credentialAccount = await lib.fetchMaybeCredential(rpc, credentialPda);
-    if (!credentialAccount || credentialAccount.exists === false) {
-      const kitIx = lib.getCreateCredentialInstruction({
-        payer: issuerAddress,
-        authority: issuerAddress,
-        credential: credentialPda,
-        name: credentialName,
-        signers: [issuerAddress],
-      });
-
-      const createCredentialIx = new web3.TransactionInstruction({
-        programId: lib.SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
-        keys: [
-          sasIntegration.roleToWeb3Account(issuerAddress, 3),
-          sasIntegration.roleToWeb3Account(credentialPda, 1),
-          sasIntegration.roleToWeb3Account(issuerAddress, 0),
-          sasIntegration.roleToWeb3Account(web3.SystemProgram.programId, 0),
-        ],
-        data: Buffer.from(kitIx.data)
-      });
-
-      transaction.add(createCredentialIx);
-    }
-
-    let schemaAccount = await lib.fetchMaybeSchema(rpc, schemaPda);
-    if (!schemaAccount || schemaAccount.exists === false) {
-      const layout = Buffer.from([12, 12]); // payerAddress, paymentTxSig in string format.
-      const kitIx = lib.getCreateSchemaInstruction({
-        payer: issuerAddress,
-        authority: issuerAddress,
-        credential: credentialPda,
-        schema: schemaPda,
-        layout: layout,
-        fieldNames: fieldNames,
-        name: schemaName,
-        description: 'TokenWall Payment baskets schema',
-      });
-
-      const createSchemaIx = new web3.TransactionInstruction({
-        programId: lib.SOLANA_ATTESTATION_SERVICE_PROGRAM_ADDRESS,
-        keys: [
-          sasIntegration.roleToWeb3Account(issuerAddress, 3),
-          sasIntegration.roleToWeb3Account(issuerAddress, 0),
-          sasIntegration.roleToWeb3Account(credentialPda, 0),
-          sasIntegration.roleToWeb3Account(schemaPda, 1),
-          sasIntegration.roleToWeb3Account(web3.SystemProgram.programId, 0),
-        ],
-        data: Buffer.from(kitIx.data)
-      });
-
-      transaction.add(createSchemaIx);
-    }
+    const memoBuffer = Buffer.from(invoiceRef, 'utf8');
+    transaction.add(
+      new web3.TransactionInstruction({
+        programId: MEMO_PROGRAM,
+        keys: [],
+        data: memoBuffer
+      })
+    );
 
     // Get recent blockhash
     const connection = new web3.Connection('https://api.devnet.solana.com', 'confirmed');
@@ -322,7 +299,6 @@ router.post('/create-invoice-tx', async (req, res) => {
       success: true,
       blockhash,
       invoiceRef,
-      paymentPda: credentialPda,
       transaction: base64Tx,
       isTestMode: false,
     });
@@ -353,7 +329,6 @@ router.post('/create-invoice-tx', async (req, res) => {
  *             required:
  *               - invoiceRef
  *               - signedTransaction
- *               - paymentPda
  *               - blockHash
  *               - maxBlockHeight
  *               - issuerAddress
@@ -369,9 +344,6 @@ router.post('/create-invoice-tx', async (req, res) => {
  *               signedTransaction:
  *                 type: string
  *                 description: Base64 signed transaction from user's wallet.
- *               paymentPda:
- *                 type: string
- *                 description: The payment PDA for this invoice.
  *               blockHash:
  *                 type: string
  *                 description: The block hash.
@@ -417,8 +389,7 @@ router.post('/create-invoice-tx', async (req, res) => {
 router.post('/submit-signed-transaction', async (req, res) => {
   try {
     const {
-      blockHash, maxBlockHeight,
-      paymentPda, invoiceRef, signedTransaction,
+      blockHash, maxBlockHeight, invoiceRef, signedTransaction,
       issuerAddress, tokenAddress, lamports, contentSelector,
       useCluster, invoiceObjects, invoiceType,
     } = req.body;
@@ -481,7 +452,7 @@ _twp('lock', '${config.api.baseUrl}');
       tokenAddress,
       lamports,
       useCluster,
-      paidtoAddress: paymentPda,
+      paidtoAddress: issuerAddress,
       scriptCipher: scriptPayload.ciphertext,
       scriptIV: scriptPayload.iv,
     });
@@ -509,7 +480,7 @@ _twp('lock', '${config.api.baseUrl}');
       success: true,
       invoiceId,
       invoiceRef,
-      paymentPda,
+      paymentPda: issuerAddress,
       txSig: transactionSignature,
     });
   } catch (error) {
@@ -979,9 +950,17 @@ router.get('/status', async (req, res) => {
 
     // 5. Get latest signatures from destination address.
     // NOTE: signatures also return memo, but do not contain amount information.
-    const signatures = await connection.getSignaturesForAddress(
+    let signatures = await connection.getSignaturesForAddress(
       new web3.PublicKey(destinationAddr), {}, 'confirmed'
     );
+
+    // Try using the destination address instead of the ATA.
+    if (!signatures.length && destinationAddr !== paymentAddress) {
+      signatures = await connection.getSignaturesForAddress(
+        new web3.PublicKey(paymentAddress), {}, 'confirmed'
+      );
+    }
+
     if (!signatures.length) {
       return res.status(200).json({
         status: paymentsState.status,
@@ -1022,6 +1001,12 @@ router.get('/status', async (req, res) => {
         continue;
       }
 
+      // log.info(`Downloaded parsed transaction with signature ${signature.signature}`, {
+      //   invoiceRef, paymentRef,
+      //   transaction,
+      //   signature,
+      // });
+
       // 8. Extract the received amount from transaction for token mint address.
       // NOTE: signatures also return memo, but do not contain amount information.
       const amountRcvd = extractTransactionAmount(
@@ -1036,12 +1021,12 @@ router.get('/status', async (req, res) => {
         continue;
       }
 
-      // log.info(`Processing new incoming payment for ${paymentAddress}`, {
-      //   invoiceRef, paymentRef,
-      //   payAddress: paymentAddress,
-      //   ataAddress: destinationAddr,
-      //   amountRcvd: amountRcvd,
-      // });
+      log.info(`Processing new incoming payment for ${paymentAddress}`, {
+        invoiceRef, paymentRef,
+        payAddress: paymentAddress,
+        ataAddress: destinationAddr,
+        amountRcvd: amountRcvd,
+      });
 
       tokenWallDb.addPayment({
         id: `${invoice.id}-payment-${paymentsCount+1}`,
@@ -1171,7 +1156,7 @@ router.get('/income', async (req, res) => {
  *     tags:
  *       - TokenWall
  *     summary: Retrieve withdrawable token balances.
- *     description: Retrieves withdrawable token balances.
+ *     description: Retrieves withdrawable token balances (MAINNET, always).
  *     parameters:
  *       - in: query
  *         name: issuer
@@ -1211,17 +1196,9 @@ router.get('/income', async (req, res) => {
  */
 router.get('/balances', async (req, res) => {
   try {
-    let { issuer, cluster } = req.query;
+    let { issuer } = req.query;
     if (!issuer) {
       return res.status(400).json({ error: 'Invalid Request' });
-    }
-    if (!cluster) cluster = 'mainnet';
-
-    let rpcUrl;
-    if (cluster.toLowerCase() === "devnet") {
-      rpcUrl = 'https://api.devnet.solana.com';
-    } else {
-      rpcUrl = 'https://api.mainnet.solana.com';
     }
 
     // log.info("Balances discovery using RPC: ", {
@@ -1230,40 +1207,8 @@ router.get('/balances', async (req, res) => {
     // });
 
     const web3 = require('@solana/web3.js');
-    const connection = new web3.Connection(rpcUrl, 'confirmed');
-
-    const incomeRows = tokenWallDb.getIncomeByTokens(issuer);
-    const balanceRows = tokenWallDb.getIncomeAddresses(issuer);
-    // log.info(`Found balance rows for issuer: ${issuer}`, { balanceRows });
-
-    const balances = []; // balances contains withdrawable tokens
-    for (let i = 0; i < balanceRows.length; i++) {
-      const hasIncome = incomeRows.find(
-        r => r.token_address === balanceRows[i].mint && r.total > 0
-      );
-      if (!hasIncome) continue;
-
-      const knownToken = knownTokens.find(
-        t => t.mintAddress === balanceRows[i].mint
-      );
-
-      const paymentAddress = balanceRows[i].address;
-      const ownedTokens = await getTokenAccounts(paymentAddress, connection);
-      log.info("Downloaded token accounts: ", {ownedTokens});
-
-      const balanceForToken = ownedTokens.find(
-        t => t.mintAddress === balanceRows[i].mint && t.lamports > 0
-      );
-
-      if (!! balanceForToken) {
-        balances.push({
-          name: !!knownToken ? knownToken.name : balanceRows[i].mint,
-          owner: balanceForToken.pubKey,
-          decimals: !!knownToken ? knownToken.decimals : 9,
-          total: balanceForToken.lamports,
-        });
-      }
-    }
+    const connection = new web3.Connection('https://api.mainnet.solana.com', 'confirmed');
+    const balances = await getWithdrawableTokenBalances(issuer, connection);
 
     const incomeByTokens = [];
     for (let i = 0; i < balances.length; i++) {
@@ -1442,7 +1387,7 @@ router.get('/tokens', async (req, res) => {
     const web3 = require('@solana/web3.js');
     const connection = new web3.Connection(rpcUrl, 'confirmed');
 
-    const solanaPriceEur = await getTokenPrice('wrapped-solana', 'SOL');
+    const solanaPriceEur = await getTokenPrice('solana', 'SOL');
     const solTokenIndex = knownTokens.findIndex(t => t.name === 'SOL');
     knownTokens[solTokenIndex].priceEur = solanaPriceEur;
 
