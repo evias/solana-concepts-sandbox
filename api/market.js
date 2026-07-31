@@ -24,11 +24,11 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
   try {
     const endpointUrl = config.market.apiUrl + '/coins';
     const params = [
-      'blockchains=solana',
       'currency=EUR',
       'symbol=' + coinstatsSymbol,
       'coinIds=' + coinstatsId,
     ];
+    if (coinstatsId !== 'solana') params.push('blockchains=solana');
 
     log.info("Requesting price info from CoinStats API: ", {params});
 
@@ -41,8 +41,11 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
     }
 
     const data = await response.json();
-    const row = data.result[0];
+    if (!data || !data.result || !data.result.length) {
+      throw new Error(`No data returned by API for ${coinstatsSymbol}:${coinstatsId}`);
+    }
 
+    const row = data.result[0];
     const insertedRow = marketDataDb.createEntry({
       tokenSymbol: row.symbol,
       tokenPrice: row.price.toFixed(2),
@@ -50,7 +53,7 @@ async function getTokenPrice(coinstatsId, coinstatsSymbol) {
 
     return parseFloat(row.price.toFixed(2));
   } catch(error) {
-    log.error('Error getting market data:', { error });
+    log.error('Error getting market data:', { error: error.message });
 
     // fallback to DB price if API errored and we have DB data.
     if (lastPrice) {

@@ -163,7 +163,7 @@
         },
 
         async loadInvoice() {
-          if (!window.localStorage.hasItem('_twp.uag')) {
+          if (!window.localStorage.getItem('_twp.uag')) {
             return ;
           }
           this.paymentRef = window.localStorage.getItem('_twp.uag');

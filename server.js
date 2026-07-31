@@ -128,7 +128,7 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/concepts/docs', express.static(path.join(__dirname, 'concepts/docs')));
 
 app.listen(bindPort, bindHost, async () => {
-  await getTokenPrice('wrapped-solana', 'SOL');
+  await getTokenPrice('solana', 'SOL');
   await debounceNext(500);
 
   await getTokenPrice('usd-coin', 'USDC');

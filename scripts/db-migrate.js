@@ -528,23 +528,19 @@ try {
 
           if (!hasLamports) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN lamports INTEGER NOT NULL DEFAULT 1;`);
-            return true;
           }
           if (!hasCluster) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN sol_cluster TEXT NOT NULL DEFAULT 'mainnet';`);
-            return true;
           }
           if (!hasStatus) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN status TEXT NOT NULL DEFAULT 'pending';`);
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN signatures TEXT NOT NULL DEFAULT '';`);
-            return true;
           }
-
           if (!hasAmountPaid) {
             db.exec(`ALTER TABLE tw_invoices ADD COLUMN amount_paid INTEGER NOT NULL DEFAULT 0;`);
-            return true;
           }
-          return false;
+
+          return true;
         } catch (error) {
           if (error.message.includes('already exists')) {
             return false;
@@ -651,6 +647,28 @@ try {
           db.exec(`ALTER TABLE tw_invoices DROP COLUMN signatures`);
           db.exec(`ALTER TABLE tw_invoices DROP COLUMN amount_paid`);
           db.exec(`ALTER TABLE tw_invoices DROP COLUMN status`);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
+
+    // Migration 18: Update tw_invoices to contain credential_name.
+    {
+      name: 'Update tw_invoices table to contain credential_name',
+      up: (db) => {
+        try {
+          const tableInfo = db.prepare("PRAGMA table_info(tw_invoices)").all();
+          const hasCredName = tableInfo.some(col => col.name === 'credential_name');
+
+          if (!hasCredName) {
+            db.exec(`ALTER TABLE tw_invoices ADD COLUMN credential_name TEXT NOT NULL DEFAULT '';`);
+          }
 
           return true;
         } catch (error) {

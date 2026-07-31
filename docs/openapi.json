@@ -2169,8 +2169,8 @@
         "tags": [
           "TokenWall"
         ],
-        "summary": "Create an invoice (PDA) to permit paid access to your content.",
-        "description": "Creates a <script> HTML/JS to permit paid access to your content.",
+        "summary": "Create an invoice transaction to be signed by the issuer wallet.",
+        "description": "Creates an invoice transaction to be signed by the issuer wallet.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2215,19 +2215,17 @@
                     "success": {
                       "type": "boolean"
                     },
-                    "file": {
-                      "type": "object",
-                      "properties": {
-                        "txSig": {
-                          "type": "string"
-                        },
-                        "invoiceRef": {
-                          "type": "string"
-                        },
-                        "invoicePda": {
-                          "type": "string"
-                        }
-                      }
+                    "blockhash": {
+                      "type": "object"
+                    },
+                    "invoiceRef": {
+                      "type": "string"
+                    },
+                    "transaction": {
+                      "type": "string"
+                    },
+                    "isTestMode": {
+                      "type": "boolean"
                     }
                   }
                 }
@@ -2259,7 +2257,6 @@
                 "required": [
                   "invoiceRef",
                   "signedTransaction",
-                  "paymentPda",
                   "blockHash",
                   "maxBlockHeight",
                   "issuerAddress",
@@ -2277,10 +2274,6 @@
                   "signedTransaction": {
                     "type": "string",
                     "description": "Base64 signed transaction from user's wallet."
-                  },
-                  "paymentPda": {
-                    "type": "string",
-                    "description": "The payment PDA for this invoice."
                   },
                   "blockHash": {
                     "type": "string",
@@ -2767,7 +2760,7 @@
           "TokenWall"
         ],
         "summary": "Retrieve withdrawable token balances.",
-        "description": "Retrieves withdrawable token balances.",
+        "description": "Retrieves withdrawable token balances (MAINNET, always).",
         "parameters": [
           {
             "in": "query",
