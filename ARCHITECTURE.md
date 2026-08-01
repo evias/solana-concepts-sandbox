@@ -146,10 +146,92 @@ This guide details the implementation plan for the selected concepts in the heal
   - File metadata includes: filename, file size, SHA2-256 hash, timestamp, uploader wallet.
   - On-chain audit trail of all file uploads and caregiver authorizations.
 - **File Storage:**
-  - Files persisted to disk at `/uploads/{credentialId}/{filename}`.
-  - Each credential has its own folder for organized storage.
-  - Test mode (NODE_ENV=test) skips file writes to prevent polluting production uploads.
-  - File upload transactions create memos: `{wallet} file upload: {filename} - {fileHash} (SHA2-256)`
+   - Files persisted to disk at `/uploads/{credentialId}/{filename}`.
+   - Each credential has its own folder for organized storage.
+   - Test mode (NODE_ENV=test) skips file writes to prevent polluting production uploads.
+   - File upload transactions create memos: `{wallet} file upload: {filename} - {fileHash} (SHA2-256)`
+
+### 6. HCP Console (Personal Health Agent Creation)
+
+- **Purpose:** Enable healthcare professionals to create and deploy personalized Health agents with prompt-based attestations recorded on Solana blockchain.
+- **Routes:** `/api/v1/hcpconsole/`
+  - GET `/api/v1/hcpconsole/prompts` - Retrieve available system prompts for agent creation
+  - POST `/api/v1/hcpconsole/create-agent-tx` - Create unsigned transaction for agent registration
+  - POST `/api/v1/hcpconsole/submit-signed-transaction` - Submit signed agent creation transaction
+  - GET `/api/v1/hcpconsole/agents` - List agents created by wallet
+  - GET `/api/v1/hcpconsole/agent/:agentId` - Retrieve specific agent details
+- **Features:**
+  - Create personalized Health agents with custom system prompts
+  - Each agent is assigned a unique agent ID and associated SPL token
+  - Prompt attestation recorded on-chain via memo transactions
+  - Agent metadata stored with SHA2-256 hash for integrity verification
+  - Multi-cluster support (Devnet and Mainnet)
+  - Agent listing with pagination
+- **Frontend:**
+  - Accessible in browser via: `/hcpconsole`.
+  - Source code in `concepts/hcpconsole.html`.
+  - Use TailwindCSS4 for layout and styling.
+  - Alpine.js for agent creation form, wallet connection, and agent management.
+  - Display system prompts as selectable options
+  - Show created agents with timestamps and on-chain references
+- **Solana Integration:**
+  - Agent registration creates unsigned transaction for user to sign
+  - SPL token mint created for each agent (NFT reference)
+  - Prompt attestation stored in transaction memo with format: `{agentName} agent created: {promptHash} (SHA2-256)`
+  - Agent data and metadata stored on-chain for verification
+  - Support for both Devnet and Mainnet deployment
+  - Transaction fees paid by agent creator
+
+### 7. TokenWall (Paid Content: Token Invoices)
+
+- **Purpose:** Enable creators to monetize content by creating payment invoices on Solana blockchain, with support for downloadable assets and inline payment widgets.
+- **Routes:** `/api/v1/tokenwall/`
+  - POST `/api/v1/tokenwall/create-invoice-tx` - Create unsigned transaction for invoice creation
+  - POST `/api/v1/tokenwall/submit-signed-transaction` - Submit signed invoice transaction
+  - POST `/api/v1/tokenwall/add-invoice-object` - Add downloadable asset to invoice
+  - GET `/api/v1/tokenwall/invoices` - List invoices created by issuer wallet
+  - GET `/api/v1/tokenwall/invoice` - Retrieve specific invoice with payment details
+  - GET `/api/v1/tokenwall/status` - Check payment status for invoice instance
+  - GET `/api/v1/tokenwall/income` - Get income aggregation by token
+  - GET `/api/v1/tokenwall/balances` - Retrieve withdrawable token balances (Mainnet only)
+  - GET `/api/v1/tokenwall/tokens` - List known tokens and/or wallet-owned tokens
+  - GET `/api/v1/tokenwall/pay.js` - Retrieve TokenWall payment widget JavaScript
+  - GET `/api/v1/tokenwall/asset/redirect` - Redirect to asset download link after payment verification
+- **Features:**
+  - Create payment invoices denominated in any SPL token (SOL, USDC, EURC, DHP, AIDH)
+  - Attach multiple downloadable assets per invoice (encrypted URLs)
+  - Real-time payment status tracking with blockchain verification
+  - Solana Pay QR code generation for mobile wallet payments
+  - Inline payment widget embeddable on any website
+  - Income aggregation and withdrawal tracking
+  - Support for Devnet (testing) and Mainnet (production)
+  - Automatic asset unlock after payment confirmation
+- **Frontend:**
+  - Accessible in browser via: `/tokenwall`.
+  - Source code in `concepts/tokenwall.html`.
+  - Use TailwindCSS4 for layout and styling.
+  - Alpine.js for invoice creation, payment tracking, and asset management.
+  - Wallet connection via Phantom or manual address entry
+  - Paginated invoice dashboard with payment statistics
+  - Real-time price conversion to EUR for token amounts
+- **Solana Integration:**
+  - Invoice creation requires user signature (user pays transaction fee)
+  - Memo program stores invoice reference for payment reconciliation
+  - SPL token transfers tracked with invoice reference in memo
+  - Solana Pay URL generation for standard wallet integration
+  - Payment verification checks on-chain transaction signatures
+  - Compute budget set to 50k units per invoice
+  - Asset URLs encrypted in database using AES-256-CBC
+- **Database:**
+  - `tw_invoices` table stores invoice metadata and encrypted script
+  - `tw_invoice_objects` table stores encrypted asset URLs and MIME types
+  - `tw_payments` table tracks incoming payments with signatures and amounts
+  - Payment statuses: pending, partial, accepted
+- **Asset Management:**
+  - Download URLs encrypted and securely stored
+  - Automatic redirect to asset URL only after payment confirmation
+  - Payment status verified before granting access
+  - Support for any MIME type and file hosting service
 
 ## Dependency Management
 

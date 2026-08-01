@@ -31,6 +31,7 @@ npm run docs:generate # Generate OpenAPI spec at docs/openapi.json
 - **CareCircle**: Health credential sharing with authorized signers (SAS-based)
 - **HealthCred**: Health credentials + badge minting
 - **HCP Console**: Personal Health Agent creation with prompt attestation on Solana
+- **TokenWall**: Create payment invoices and restrict access to paid content
 
 ## Test Mode Behavior
 
@@ -63,8 +64,12 @@ Tests run with `NODE_ENV=test` automatically via Jest config. Key differences:
 ```
 SCS_BIND_HOST=localhost
 SCS_BIND_PORT=3000
+SCS_BUILD=development
+SCS_BASE_URL=localhost:3000/api/v1
 SCS_UPLOADS_PATH=uploads/
-SCS_KEYPAIR_FILE=.payer-keypair.json
+SCS_PAYER_KEYPAIR_FILE=.payer-keypair.json
+SCS_CIPHER_KEYPAIR_FILE=.cipher-keypair.json
+SCS_MARKET_DATA_APIKEY=
 SCS_LOGS_FILE=sandbox.log
 ```
 
