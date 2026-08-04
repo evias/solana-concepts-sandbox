@@ -167,14 +167,14 @@ router.get('/credentials', async (req, res) => {
           sasCredentialId: cred.sas_credential_id
         });
       }
-     }
+    }
 
-     return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
-   } catch (error) {
-     log.error('Error listing credentials', { error });
-     return res.status(500).json({ error: 'Failed to list credentials' });
-   }
- });
+    return res.json({ credentials: credentials.sort((a, b) => a.id.localeCompare(b.id)) });
+  } catch (error) {
+    log.error('Error listing credentials', { error });
+    return res.status(500).json({ error: 'Failed to list credentials' });
+  }
+});
 
 /**
  * @swagger

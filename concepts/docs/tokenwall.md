@@ -221,7 +221,7 @@ To restrict access to content based on payment:
 ```
 
 The script will:
-- Lock the `.paid-content` element
+- Lock the `body` element
 - Display a payment widget overlay
 - Unlock content after successful payment
 - Persist unlock status in browser storage
