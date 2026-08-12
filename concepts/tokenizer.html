@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokenizer - Digitize Real World Assets (RWA)</title>
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link href="/assets/base.min.css" rel="stylesheet">
+    <script src="/assets/alpinejs.min.js" defer></script>
+    <!-- Client-side logger -->
+    <script src="/assets/logger.js"></script>
+    <script defer src="/assets/marked.min.js"></script>
+    <script src="/assets/country-states.js"></script>
+    <!-- Solana Web3.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@latest/lib/index.iife.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="container mx-auto" x-data="tokenWall()">
+    <header class="px-2 sm:px-6 pt-6">
+      <div class="mx-auto flex max-w-7xl items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+        <div class="flex items-center gap-3">
+          <div class="h-8 w-8 rounded-full bg-pink-400"></div>
+          <div>
+            <p class="text-sm font-semibold text-slate-900">Tokenizer</p>
+            <p class="text-xs text-slate-500">Digitize Real World Assets (RWA)</p>
+          </div>
+        </div>
+        <div class="inline sm:hidden text-xs -mt-4">
+          <a href="/">
+            <!-- mobile home button -->
+            <svg
+              class="pl-4 pt-4 w-16 h-16" viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+              <rect width='24' height='24' stroke='none' fill='#000000' opacity='0'/><g transform="matrix(0.04 0 0 0.04 12 12)"><g><g transform="matrix(1 0 0 1 0 0)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(224,79,95); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -256)" d="M 7.9 256 C 7.9 119 119 7.9 256 7.9 C 393 7.9 504.1 119 504.1 256 C 504.1 393 393 504.1 256 504.1 C 119 504.1 7.9 393 7.9 256 z" stroke-linecap="round" /></g><g transform="matrix(1 0 0 1 -0.05 -67.52)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-255.95, -188.48)" d="M 408.1 206.8 L 258 131.9 C 256.7 131.3 255.3 131.3 254 131.9 L 103.80000000000001 206.8 C 102.10000000000001 207.60000000000002 101.10000000000001 209.20000000000002 101.10000000000001 211.10000000000002 L 101.10000000000001 240.70000000000002 C 101.10000000000001 242.3 101.9 243.8 103.30000000000001 244.70000000000002 C 104.70000000000002 245.60000000000002 106.4 245.70000000000002 107.80000000000001 245.00000000000003 L 256 171.00000000000003 L 404.1 245.00000000000003 C 404.70000000000005 245.30000000000004 405.40000000000003 245.50000000000003 406.1 245.50000000000003 C 407 245.50000000000003 407.90000000000003 245.30000000000004 408.6 244.80000000000004 C 410 243.90000000000003 410.8 242.40000000000003 410.8 240.80000000000004 L 410.8 211 C 410.8 209.2 409.8 207.5 408.1 206.8 z" stroke-linecap="round" /></g><g transform="matrix(1 0 0 1 0 16.3)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;" transform=" translate(-256, -272.3)" d="M 380.5 245.8 L 256 183.8 L 131.5 245.8 L 131.5 360.8 L 200.5 360.8 L 200.5 272.6 L 248 272.6 L 248 360.8 L 380.5 360.8 z" stroke-linecap="round" /></g><g transform="matrix(1 0 0 1 23.7 32.6)" ><path style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-dashoffset: 0; stroke-linejoin: miter; stroke-miterlimit: 4; fill: rgb(234,73,73); fill-rule: nonzero; opacity: 1;" transform=" translate(-279.7, -288.6)" d="M 263.7 272.6 L 295.7 272.6 L 295.7 304.6 L 263.7 304.6 z" stroke-linecap="round" /></g></g></g>
+            </svg>
+          </a>
+        </div>
+        <div class="hidden sm:flex text-sm text-slate-500">
+          <a href="/" class="px-2 transition hover:-translate-y-1">← Back</a>
+
+          <a href="#" @click="openDocumentation()" class="px-2 transition hover:-translate-y-1">📚 Documentation</button>
+
+          <a href="/docs/v1" target="_blank" rel="noopener noreferrer" class="px-2 transition hover:-translate-y-1">📖 API Documentation</a>
+
+          <div class="flex flex-row gap-2">
+            <div class="hidden sm:flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Solana Devnet Ready
+            </div>
+            <div class="hidden sm:flex items-center gap-1 rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700 ring-1 ring-teal-200">
+              <span>1 SOL &lt;&gt; </span><span id="solanaPriceEur">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto min-w-screen max-w-screen sm:min-w-7xl sm:max-w-7xl px-2 sm:px-5 pb-16 pt-8">
+      <!-- Wallet connection -->
+      <section
+        class="mb-8 rounded-[14px] border bg-white p-3 sm:p-7"
+        :class="userAddress && selectedCredential ? 'border-green-400' : 'border-red-700'">
+        <div class="flex justify-between items-center mb-2">
+          <h2
+            @click="if (userAddress && selectedCredential) showWalletDetails = !showWalletDetails"
+            class="text-md sm:text-[1.25rem] font-bold">
+            <span x-show="!userAddress">Connect your Wallet<span class="text-red-700"> *</span></span>
+            <span x-show="userAddress" x-text="'Connected as ' + getCredentialName() + ' (' + shortenStr(userAddress) + ')'"></span>
+          </h2>
+          <button 
+            x-show="userAddress && selectedCredential"
+            @click="showWalletDetails = !showWalletDetails"
+            class="text-gray-600 hover:text-gray-800 text-md sm:text-2xl font-bold"
+            :title="showWalletDetails ? 'Collapse' : 'Expand'">
+            <span x-show="showWalletDetails">▼</span>
+            <span x-show="!showWalletDetails">▶</span>
+          </button>
+        </div>
+        <div class="mt-2 flex flex-col" x-show="showWalletDetails" x-collapse>
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              @click="showWalletModal = true"
+              class="rounded-[6px] border px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white transition-colors"
+              :class="userAddress ? 'border-green-700 bg-green-600 hover:bg-green-700' : 'border-indigo-700 bg-indigo-600 hover:bg-indigo-700'">
+              <span x-show="!userAddress">Connect Wallet</span>
+              <span x-show="userAddress" x-text="'Connected: ' + shortenStr(userAddress)"></span>
+            </button>
+            <button
+              type="button"
+              x-show="userAddress"
+              @click="disconnectWallet"
+              class="rounded-[6px] border border-red-600 bg-red-600 px-4 py-2.5 text-sm sm:text-[.95rem] font-medium text-white hover:bg-red-700">
+              Disconnect
+            </button>
+          </div>
+          <p x-show="!userAddress" class="mt-2 text-xs sm:text-[.875rem] text-[#6b7280]">
+            Connect your wallet and select a credential
+          </p>
+
+          <label for="credential" class="mt-[18px] mb-2 block text-md sm:text-[1.25rem] font-semibold text-[#16352C]">
+            Associated credential<span class="text-red-700"> *</span>
+          </label>
+          <select id="credential" @change="useCredential($el)" class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <option value="">Select a credential...</option>
+            <template x-for="cred in userCredentials" :key="cred.id">
+              <option :value="cred.sas_credential_address" x-text="cred.full_name"></option>
+            </template>
+          </select>
+          <div x-show="userAddress && userCredentials.length === 0" class="mt-3 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-[15px] py-3 text-[.875rem] text-warn">
+            You don't have any credentials yet.
+            <a href="/healthcred" class="font-semibold underline">Create your first credential in HealthCred</a>.
+          </div>
+        </div>
+      </section>
+
+      <!-- Tokenize asset form -->
+      <section class="animate-fade">
+        <div class="mb-5 rounded-[14px] border border-[#D9E2DF] bg-white p-3 sm:p-7">
+          <h2 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your real world asset(s)</h2>
+          <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to tokenize a RWA.</p>
+
+          <div class="my-2 rounded-[10px] border border-[#EAD9A8] bg-[#FBF4DF] px-4 py-3 text-xs sm:text-[.88rem] text-warn">
+            This form lets you digitalize real world assets, aka. <b>tokenize assets</b>. For example, you can choose to tokenize your real estate,<br />
+            or an ownership contract, or even your collectibles. Tokens created using the form below will be available on <b>Solana <span x-text="useCluster"></span></b>.
+          </div>
+
+          <form @submit.prevent="submitTokenizer()" class="space-y-4">
+
+            <!-- General assets information -->
+            <div class="mt-0 sm:mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="flex flex-col">
+                <label for="label" class="block text-md font-semibold text-[#16352C]">
+                  Label<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(public label of the tokenized asset)</em>
+                </label>
+                <input
+                    type="text"
+                    id="label"
+                    :value="sharedFormValues.label"
+                    placeholder="e.g. Sale contract for Citroën Saxo 1997 Blue"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+              </div>
+              <div class="flex flex-col">
+                <label for="rwaType" class="block text-md font-semibold text-[#16352C]">
+                  Type of Real World Asset (RWA)<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(e.g. real estate, or commodities)</em>
+                </label>
+                <select id="rwaType"
+                        @change="useRwaType($el)"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <template x-for="t in assetTypes" :key="t.id">
+                    <option :value="t.id" x-text="t.name" :selected="t.id === sharedFormValues.rwaType"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="flex flex-col">
+                <label for="legalType" class="block text-md font-semibold text-[#16352C]">
+                  Legal definition<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. what does the token represent)</em>
+                </label>
+                <select id="legalType"
+                        @change="useLegalType($el)"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <option value="">Select a legal definition...</option>
+                  <template x-for="t in legalTypes" :key="t.id">
+                    <option :value="t.id" x-text="t.name"></option>
+                  </template>
+                </select>
+              </div>
+            </div>
+
+            <!-- Legal structure -->
+            <div class="mt-0 sm:mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="flex flex-col">
+                <label for="identifier" class="block text-md font-semibold text-[#16352C]">
+                  Identifier <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(automatically generated public identifier of the asset)</em>
+                </label>
+                <input
+                    type="text"
+                    id="identifier"
+                    :value="sharedFormValues.identifier"
+                    disabled="disabled"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none">
+              </div>
+              <div class="flex flex-col">
+                <label for="custodian" class="block text-md font-semibold text-[#16352C]">
+                  Custodian <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(credential of the custodian, if it applies)</em>
+                </label>
+                <select id="custodian" @change="useCustodianFromList($el)"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <option value="">Select a custodian...</option>
+                  <option value="manual">Enter address manually</option>
+                  <option x-show="!!selectedCredential" :value="selectedCredential">Self-custody</option>
+                  <template x-for="cred in otherCredentials" :key="cred.id">
+                    <option x-show="!selectedCredential || selectedCredential != cred.sas_credential_address"
+                            :value="cred.sas_credential_address"
+                            x-text="cred.full_name"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="flex flex-col">
+                <label for="identifier" class="block text-md font-semibold text-[#16352C]">
+                  SAS Credential <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(Solana address of the custodian's SAS Credential)</em>
+                </label>
+                <input
+                    @blur="useCustodianAddress($el)"
+                    @keyup="useCustodianAddress($el)"
+                    type="text"
+                    id="identifier"
+                    :value="sharedFormValues.custodianCredential"
+                    :disabled="selectedCustodian !== 'manual'"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none"
+                    :class="selectedCustodian === 'manual' ? 'focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20' : ''">
+              </div>
+            </div>
+
+            <!-- Ownership proof(s) -->
+            <div class="mt-0 sm:mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="flex flex-col">
+                <label for="ownershipProofType" class="block text-md font-semibold text-[#16352C]">
+                  Type of ownership proof<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. which type of proof do you include)</em>
+                </label>
+                <select id="ownershipProofType"
+                        @change="sharedFormValues.ownershipProofType = $el.value"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  <option value="">Select a type of ownership proof...</option>
+                  <template x-for="t in ownershipProofTypes" :key="t.id">
+                    <option :value="t.id" x-text="t.name"></option>
+                  </template>
+                </select>
+              </div>
+              <div class="flex flex-col">
+                <label for="ownershipProofFile" class="block text-md font-semibold text-[#16352C]">
+                  Upload an ownership proof <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. attach a PDF document)</em>
+                </label>
+                <input
+                    type="file"
+                    id="ownershipProofFile"
+                    @change="useOwnershipProof($el)"
+                    :disabled="sharedFormValues.useUrlForOwnershipProof"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:bg-gray-200">
+              </div>
+              <div class="flex flex-col">
+                <label for="ownershipProofUrl" class="block text-md font-semibold text-[#16352C]">
+                  <input type="checkbox"
+                         @change="sharedFormValues.useUrlForOwnershipProof = !sharedFormValues.useUrlForOwnershipProof"
+                         :checked="sharedFormValues.useUrlForOwnershipProof" /> Use proof from URL <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(e.g. if you already uploaded the proof(s))</em>
+                </label>
+                <input
+                    type="text"
+                    id="ownershipProofUrl"
+                    :value="sharedFormValues.ownershipProofUrl"
+                    :disabled="!sharedFormValues.useUrlForOwnershipProof"
+                    placeholder="e.g. https://evi.as/bitcoin.pdf"
+                    class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:bg-gray-200">
+              </div>
+            </div>
+
+            <hr class="mx-auto w-[50%] border-t-gray-200" />
+
+            <!-- Attested documents upload -->
+            <div class="bg-[#FBF4DF] rounded-[10px] border border-[#EAD9A8] mt-0 sm:mt-4 p-4 flex flex-col">
+              <h3 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Upload existing attestations (optional)</h3>
+              <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Upload documents obtained during official registration of your asset(s).</p>
+              <template x-for="(d, i) in sharedFormValues.attestedDocuments" :key="i">
+                <div class="grid grid-cols-1 mt-2 sm:grid-cols-3 gap-2">
+                  <div class="flex flex-col">
+                    <label for="attestedDocumentType" class="block text-md font-semibold text-[#16352C]">
+                      Type of document <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. which type of attestation)</em>
+                    </label>
+                    <select id="attestedDocumentType"
+                            @change="sharedFormValues.attestedDocuments[i].fileType = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a type of document...</option>
+                      <template x-for="t in attestedDocumentTypes" :key="t.id">
+                        <option :value="t.id" x-text="t.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="attestedDocumentFile" class="block text-md font-semibold text-[#16352C]">
+                      Upload an attested document <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. attach a PDF document)</em>
+                    </label>
+                    <div class="w-full relative">
+                      <input
+                          type="file"
+                          :id="`attestedDocumentFile-${i}`"
+                          @change="useAttestedDocument(i, $el)"
+                          :disabled="sharedFormValues.attestedDocuments[i].useUrl"
+                          class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:bg-gray-200">
+                      <!-- shield-check -->
+                      <svg class="h-5 w-5 inline absolute top-1 left-1 text-green-400 font-semibold"
+                           x-show="hasAttestedDocument(i)"
+                           xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>
+                    </div>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="attestedDocumentUrl" class="block text-md font-semibold text-[#16352C]">
+                      <input type="checkbox"
+                            @change="sharedFormValues.attestedDocuments[i].useUrl = !sharedFormValues.attestedDocuments[i].useUrl"
+                            :checked="sharedFormValues.attestedDocuments[i].useUrl" /> Use document from URL <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(e.g. if you already uploaded it)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="attestedDocumentUrl"
+                        :value="sharedFormValues.attestedDocuments[i].url"
+                        :disabled="!sharedFormValues.attestedDocuments[i].useUrl"
+                        placeholder="e.g. https://evi.as/bitcoin.pdf"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20 disabled:bg-gray-200">
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Asset registration details -->
+
+            <!-- COLLECTIBLE -->
+            <template x-if="sharedFormValues.rwaType === 'collectible'">
+              <div class="bg-[#FBF4DF] rounded-[10px] border border-[#EAD9A8] mt-0 sm:mt-4 p-4 flex flex-col">
+                <h3 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your collectible</h3>
+                <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to complete a collectible registration.</p>
+                <div class="grid grid-cols-2 mt-2 sm:grid-cols-4 gap-2">
+                  <div class="flex flex-col">
+                    <label for="collectibleCategory" class="block text-md font-semibold text-[#16352C]">
+                      Category<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. what type of collectible is this)</em>
+                    </label>
+                    <select id="collectibleCategory"
+                            @change="collectibleFormValues.category = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a category...</option>
+                      <template x-for="c in collectibleCategories" :key="c.id">
+                        <option :value="c.id" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="serialNumber" class="block text-md font-semibold text-[#16352C]">
+                      Serial Number<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(platform-specific collectible ID)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="serialNumber"
+                        :value="collectibleFormValues.serialNumber"
+                        placeholder="e.g. 7777777 or 12345678"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="fullName" class="block text-md font-semibold text-[#16352C]">
+                      Full name<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the denomination of this collectible)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="fullName"
+                        :value="collectibleFormValues.fullName"
+                        placeholder="e.g. 1909 T206 Honus Wagner"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="conditionGrade" class="block text-md font-semibold text-[#16352C]">
+                      Condition Grading<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. describes the item's preservation)</em>
+                    </label>
+                    <select id="conditionGrade"
+                            @change="collectibleFormValues.conditionGrade = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a condition...</option>
+                      <template x-for="c in gradingConditionTypes" :key="c.id">
+                        <option :value="c.id" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- REAL ESTATE -->
+            <template x-if="sharedFormValues.rwaType === 'realestate'">
+              <div class="bg-[#FBF4DF] rounded-[10px] border border-[#EAD9A8] mt-0 sm:mt-4 p-4 flex flex-col">
+                <h3 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your real estate</h3>
+                <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to complete a real estate registration.</p>
+                <div class="grid grid-cols-2 mt-2 sm:grid-cols-4 gap-2">
+                  <div class="flex flex-col">
+                    <label for="realestateCategory" class="block text-md font-semibold text-[#16352C]">
+                      Category<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. what type of real estate is this)</em>
+                    </label>
+                    <select id="realestateCategory"
+                            @change="realEstateFormValues.category = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a category...</option>
+                      <template x-for="c in realEstateCategories" :key="c.id">
+                        <option :value="c.id" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="parcelNumber" class="block text-md font-semibold text-[#16352C]">
+                      Parcel Number<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(unique number to identify a plot of land)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="parcelNumber"
+                        :value="realEstateFormValues.parcelNumber"
+                        placeholder="e.g. 123-456-789-000"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="registryNumber" class="block text-md font-semibold text-[#16352C]">
+                      Registry Number<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the real estate registration number)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="registryNumber"
+                        :value="realEstateFormValues.registryNumber"
+                        placeholder="e.g. 12345678901234"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="cadastralReference" class="block text-md font-semibold text-[#16352C]">
+                      Cadastral Reference<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. pinpoints the parcel, land and unit)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="cadastralReference"
+                        :value="realEstateFormValues.cadastralReference"
+                        placeholder="e.g. 9872023JH5797S0001GS"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 mt-2 sm:grid-cols-4 gap-2">
+                  <div class="flex flex-col">
+                    <label for="realestateCountry" class="block text-md font-semibold text-[#16352C]">
+                      Country<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. country in which the land is registered)</em>
+                    </label>
+                    <select id="realestateCountry"
+                            @change="realEstateFormValues.country = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <template x-for="c in countries" :key="c">
+                        <option :value="c" x-text="c" :selected="selectedCountry === c"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="realestateJurisdiction" class="block text-md font-semibold text-[#16352C]">
+                      Jurisdiction<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. state that rules over the property)</em>
+                    </label>
+                    <select id="realestateJurisdiction"
+                            @change="realEstateFormValues.jurisdiction = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a jurisdiction...</option>
+                      <template x-for="s in countryStates" :key="s">
+                        <option :value="s" x-text="s" :selected="realEstateFormValues.jurisdiction === s"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="parcelAddress" class="block text-md font-semibold text-[#16352C]">
+                      Parcel Address<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the exact street name and number)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="parcelAddress"
+                        :value="realEstateFormValues.parcelAddress"
+                        placeholder="e.g. Carrer poble 7, 03510, Alicante, Spain"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="postalCode" class="block text-md font-semibold text-[#16352C]">
+                      Postal Code<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. postal code of the parcel)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="postalCode"
+                        :value="realEstateFormValues.postalCode"
+                        placeholder="e.g. 03510"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- OWNERSHIP CONTRACTS -->
+            <template x-if="sharedFormValues.rwaType === 'ownership'">
+              <div class="bg-[#FBF4DF] rounded-[10px] border border-[#EAD9A8] mt-0 sm:mt-4 p-4 flex flex-col">
+                <h3 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your vehicle or equipment</h3>
+                <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to complete an ownership registration.</p>
+                <div class="grid grid-cols-2 mt-2 sm:grid-cols-3 gap-2">
+                  <div class="flex flex-col">
+                    <label for="ownershipCategory" class="block text-md font-semibold text-[#16352C]">
+                      Category<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. type of equipment)</em>
+                    </label>
+                    <select id="ownershipCategory"
+                            @change="ownershipContractFormValues.category = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a category...</option>
+                      <template x-for="c in ownershipCategories" :key="c.id">
+                        <option :value="c.id" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="contractTerms" class="block text-md font-semibold text-[#16352C]">
+                      Contract Terms<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. type of legal agreement)</em>
+                    </label>
+                    <select id="contractTerms"
+                            @change="ownershipContractFormValues.contractTerms = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a legal terms structure...</option>
+                      <template x-for="t in legalTermsTypes" :key="t.id">
+                        <option :value="t.id" x-text="t.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="serialNumber" class="block text-md font-semibold text-[#16352C]">
+                      Serial Number<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. serial or chassis number)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="serialNumber"
+                        :value="ownershipContractFormValues.serialNumber"
+                        placeholder="e.g. 7777777 or 12345678"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="assetMake" class="block text-md font-semibold text-[#16352C]">
+                      Make or Brand<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. brand or manufacturer)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="assetMake"
+                        :value="ownershipContractFormValues.assetMake"
+                        placeholder="e.g. Ferrari"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="conditionGrade" class="block text-md font-semibold text-[#16352C]">
+                      Model<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. model name)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="assetMake"
+                        :value="ownershipContractFormValues.assetModel"
+                        placeholder="e.g. SF90 Stradale"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="assetYear" class="block text-md font-semibold text-[#16352C]">
+                      Year<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the production date)</em>
+                    </label>
+                    <input
+                        type="number"
+                        id="assetYear"
+                        :value="ownershipContractFormValues.assetModel"
+                        min="1900"
+                        :max="(new Date()).getFullYear()"
+                        placeholder="1988"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- INSURANCE CONTRACTS -->
+            <template x-if="sharedFormValues.rwaType === 'insurance'">
+              <div class="bg-[#FBF4DF] rounded-[10px] border border-[#EAD9A8] mt-0 sm:mt-4 p-4 flex flex-col">
+                <h3 class="font-display text-lg sm:text-[1.25rem] font-semibold text-[#16352C]">Describe your insurance contract</h3>
+                <p class="mt-1 text-sm sm:text-[.95rem] text-[#5F6F6A]">Fill the fields below to register an insurance contract.</p>
+                <div class="grid grid-cols-2 mt-2 sm:grid-cols-3 gap-2">
+                  <div class="flex flex-col">
+                    <label for="insuranceCategory" class="block text-md font-semibold text-[#16352C]">
+                      Category<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. type of insurance contract)</em>
+                    </label>
+                    <select id="insuranceCategory"
+                            @change="insuranceContractFormValues.category = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <option value="">Select a category...</option>
+                      <template x-for="c in insuranceCategories" :key="c.id">
+                        <option :value="c.id" x-text="c.name"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="coveragePeriod" class="block text-md font-semibold text-[#16352C]">
+                      Coverage Period<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(e.g. short-term or annual)</em>
+                    </label>
+                    <select id="coveragePeriod"
+                            @change="insuranceContractFormValues.coveragePeriod = $el.value"
+                            class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[11px] mt-2 font-sans text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                      <template x-for="p in coveragePeriodTypes" :key="p.id">
+                        <option :value="p.id" x-text="p.name" :selected="p.id === insuranceContractFormValues.coveragePeriod"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="policyNumber" class="block text-md font-semibold text-[#16352C]">
+                      Policy Number<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the insurance policy identifier)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="policyNumber"
+                        :value="insuranceContractFormValues.policyNumber"
+                        placeholder="e.g. 7777777 or 12345678"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="assetID" class="block text-md font-semibold text-[#16352C]">
+                      Asset Identifier<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the unique asset identifier)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="assetID"
+                        :value="insuranceContractFormValues.assetID"
+                        placeholder="e.g. IC-AST-847291"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="propertyAddress" class="block text-md font-semibold text-[#16352C]">
+                      Property Address<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the exact street name and number)</em>
+                    </label>
+                    <input
+                        type="text"
+                        id="propertyAddress"
+                        :value="insuranceContractFormValues.propertyAddress"
+                        placeholder="e.g. Carrer poble 7, 03510, Alicante, Spain"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="gracePeriod" class="block text-md font-semibold text-[#16352C]">
+                      Grace Period<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the insurance policy grace period in days)</em>
+                    </label>
+                    <input
+                        type="number"
+                        id="gracePeriod"
+                        :value="insuranceContractFormValues.gracePeriod"
+                        min="0"
+                        placeholder="15"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="startDate" class="block text-md font-semibold text-[#16352C]">
+                      Start Date<span class="text-red-700"> *</span> <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the exact date at which coverage starts)</em>
+                    </label>
+                    <input
+                        type="date"
+                        id="startDate"
+                        :value="insuranceContractFormValues.startDate"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="endDate" class="block text-md font-semibold text-[#16352C]">
+                      End Date <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. the exact date at which coverage ends)</em>
+                    </label>
+                    <input
+                        type="date"
+                        id="endDate"
+                        :value="insuranceContractFormValues.endDate"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                  <div class="flex flex-col">
+                    <label for="renewalDate" class="block text-md font-semibold text-[#16352C]">
+                      Renewal Date <em class="block text-xs sm:text-[.85rem] font-normal text-[#5F6F6A]">(i.e. optional, set a renewal date)</em>
+                    </label>
+                    <input
+                        type="date"
+                        id="renewalDate"
+                        :value="insuranceContractFormValues.renewalDate"
+                        class="w-full rounded-[10px] border border-[#D9E2DF] bg-white px-3 py-[10px] mt-2 text-sm sm:text-md text-[#22312D] outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- Actions -->
+            <div class="w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div class="hidden sm:block">&nbsp;</div>
+              <div class="hidden sm:block">&nbsp;</div>
+              <div class="flex gap-2">
+                <button 
+                  type="submit"
+                  :disabled="!canSendForm()"
+                  class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50 hover:cursor-pointer disabled:cursor-not-allowed">
+                  <span x-show="!tokenizingAsset">Tokenize asset</span>
+                  <span x-show="tokenizingAsset">Tokenizing...</span>
+                </button>
+              </div>
+            </div>
+            <div x-show="formProgress" class="w-full bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
+              <span x-text="formProgress"></span>
+            </div>
+            <div x-show="formError" class="w-full bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <span x-text="formError"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="px-2 sm:px-6 pb-8">
+      <div class="mx-auto max-w-7xl rounded-2xl bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)] ring-1 ring-slate-200">
+        <div class="flex flex-col gap-3 sm:flex-row items-center sm:items-start sm:justify-between">
+          <p class="text-xs sm:text-sm text-slate-500">
+            <em x-text="appVersion"></em>
+          </p>
+          <p class="text-xs sm:text-sm text-center font-medium text-slate-600">
+            © <span x-text="copyYear"></span> <a href="https://evi.as" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">Grégory Saive</a> for <a href="https://resoftware.es" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700">re:Software S.L.</a>,<br />All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Wallet Modal -->
+    <div x-show="showWalletModal"
+         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showWalletModal = false">
+      <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-[1.25rem] font-bold text-[#111]">Connect Wallet</h2>
+          <button @click="showWalletModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="flex flex-col gap-4 p-6">
+          <button @click="connectPhantom()" class="w-full rounded-[8px] border border-[#7c3aed] bg-[#7c3aed] px-4 py-3 text-[.95rem] font-semibold text-white hover:bg-[#6d28d9]">
+            🌐 Connect Phantom Wallet
+          </button>
+          <div class="flex items-center gap-3">
+            <div class="h-px flex-1 bg-[#e5e7eb]"></div>
+            <span class="shrink-0 text-[.85rem] text-[#999]">or</span>
+            <div class="h-px flex-1 bg-[#e5e7eb]"></div>
+          </div>
+          <div>
+            <label class="mb-2 block text-[.9rem] font-semibold text-[#374151]">Enter Account Address Manually</label>
+            <input x-model="manualAddress" type="text" placeholder="Solana account address" class="mb-3 w-full rounded-[8px] border border-[#d1d5db] px-3 py-2 text-[.9rem] font-sans outline-none focus:border-[#2E7D6B] focus:ring-2 focus:ring-[#2E7D6B]/20">
+            <button @click="connectManually()" class="w-full rounded-[8px] border border-[#666] bg-[#666] px-4 py-2.5 text-[.9rem] font-semibold text-white hover:bg-[#555]">Use This Address</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div x-show="showConfirmationModal"
+         class="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="showConfirmationModal = false">
+      <div class="w-full max-w-[420px] rounded-[10px] bg-white shadow-[0_10px_40px_rgba(0,0,0,.2)]">
+        <div class="flex items-center justify-between border-b border-[#e5e7eb] p-5">
+          <h2 class="text-[1.25rem] font-bold text-[#111]">Confirm tokenization process</h2>
+          <button @click="showConfirmationModal = false" class="rounded p-1 text-[1.5rem] leading-none text-[#999]">✕</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-6">
+          <div class="flex flex-col">
+            <label>Type of asset: </label>
+            <span class="font-semibold" id="confirmationType"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Identifier: </label>
+            <span class="font-semibold" id="confirmationIdentifier"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Label: </label>
+            <span class="font-semibold" id="confirmationLabel"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Custodian: </label>
+            <span class="font-semibold" id="confirmationCustodian"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Ownership proof: </label>
+            <span class="font-semibold" id="confirmationOwnershipProof"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Existing attestations: </label>
+            <span class="font-semibold" id="confirmationAttestations"></span>
+          </div>
+          <div class="flex flex-col">
+            <label>Asset information: </label>
+            <span class="font-semibold" id="confirmationAssetInformation"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documentation Modal -->
+    <div x-show="showDocumentation"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" @click.self="showDocumentation = false">
+      <div class="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+          <h2 class="text-2xl font-bold">Tokenizer Documentation</h2>
+          <button
+            @click="showDocumentation = false"
+            class="text-gray-500 hover:text-gray-700 text-2xl">
+            ✕
+          </button>
+        </div>
+        <div class="p-6 prose prose-sm max-w-none" x-html="documentationContent"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function tokenWall() {
+      const log = window.createLogger('concept/tokenizer');
+      return {
+        appVersion: '@main/dev',
+        copyYear: '2026',
+        loadingInfo: false,
+        showDocumentation: false,
+        documentationContent: '',
+
+        userAddress: '',
+        manualAddress: '',
+        showWalletModal: false,
+        showWalletDetails: true,
+        selectedCredential: '',
+        selectedCustodian: '',
+        userCredentials: [],
+        otherCredentials: [],
+
+        countries: [],
+        selectedCountry: 'Spain',
+        countryStates: [],
+
+        showConfirmationModal: false,
+        sharedFormValues: {
+          label: '',
+          identifier: '',
+          rwaType: 'collectible',
+          legalType: 'ownership',
+          transferRules: [],
+          attestedDocuments: [{ fileType: '', useUrl: false, url: '', name: '', mime: '' }],
+          custodianCredential: '',
+          ownershipProofType: 'title_certificate',
+          ownershipProof: '',
+          ownershipProofMime: '',
+          useUrlForOwnershipProof: false,
+          ownershipProofUrl: '',
+        },
+        realEstateFormValues: {
+          category: '',
+          parcelNumber: '',
+          registryNumber: '',
+          parcelAddress: '',
+          country: 'Spain',
+          postalCode: '',
+          jurisdiction: '',
+          cadastralReference: '',
+          valuation: 0,
+        },
+        collectibleFormValues: {
+          category: '',
+          serialNumber: '',
+          fullName: '',
+          conditionGrade: '',
+          valuation: 0,
+        },
+        ownershipContractFormValues: {
+          category: '',
+          serialNumber: '',
+          assetMake: '',
+          assetModel: '',
+          assetYear: '',
+          ownerCredential: '',
+          contractTerms: '',
+        },
+        insuranceContractFormValues: {
+          category: '',
+          policyNumber: '',
+          assetID: '',
+          propertyAddress: '',
+          coveragePeriod: 'short_term',
+          startDate: '',
+          endDate: '',
+          renewalDate: '',
+          gracePeriod: 0,
+          eventSources: [],
+        },
+
+        assetTypes: [
+          { id: "collectible", name: "Collectible", short: 'COL' },
+          { id: "realestate", name: "Real estate", short: 'EST' },
+          { id: "ownership", name: "Vehicle or equipment", short: 'OWN' },
+          { id: "insurance", name: "Insurance contract", short: 'INS' },
+        ],
+        legalTypes: [
+          { id: "ownership", name: "Ownership" },
+          { id: "beneficial_ownership", name: "Beneficial ownership" },
+          { id: "revenue_share", name: "Revenue share" },
+          { id: "usage_rights", name: "Usage rights" },
+          { id: "debt_claim", name: "Debt claim" },
+          { id: "insurance_claim", name: "Insurance claim" },
+          { id: "proof_of_eligibility", name: "Proof of eligibility" },
+        ],
+        transferRuleTypes: [
+          { id: "kyc_required", name: "KYC required" },
+          { id: "lockup_periods", name: "Lock-up periods" },
+          { id: "restrictions", name: "Regulatory restrictions" },
+        ],
+        ownershipProofTypes: [
+          { id: "title", name: "Current title holder" },
+          { id: "co_owner", name: "Co-ownership holder" },
+          { id: "charges", name: "Charges" },
+          { id: "mortgages", name: "Mortgages" },
+          { id: "easements", name: "Easements" },
+          { id: "title_certificate", name: "Title certificate" },
+          { id: "grading_certificate", name: "Grading company certification" },
+          { id: "registration_document", name: "Registration document" },
+          { id: "sale_contract", name: "Sale contract" },
+          { id: "expert_verification", name: "Expert verification" },
+          { id: "provenance", name: "Provenance history" },
+        ],
+        attestedDocumentTypes: [
+          { id: "deed", name: "Deed" },
+          { id: "appraisal", name: "Appraisal" },
+          { id: "title_search", name: "Title search" },
+          { id: "spv_documents", name: "SPV document" },
+          { id: "board_resolutions", name: "Board resolutions" },
+          { id: "registration", name: "Registration office attestation" },
+          { id: "dealer_attest", name: "Dealer attestation" },
+          { id: "notary", name: "Notary document" },
+          { id: "grading", name: "Grading attestation" },
+          { id: "ownership", name: "Ownership attestation" },
+          { id: "custody", name: "Custody attestation" },
+          { id: "signed_policy", name: "Signed policy" },
+          { id: "underwriting", name: "Underwriting approval" },
+        ],
+        legalTermsTypes: [
+          { id: "full_ownership", name: "Full ownership" },
+          { id: "installment_ownership", name: "Installment ownership" },
+          { id: "lease_to_own", name: "Lease-to-own" },
+          { id: "shared_ownership", name: "Shared ownership" },
+          { id: "usage_rights", name: "Usage rights" },
+        ],
+        gradingConditionTypes: [
+          { id: "new", name: "New" },
+          { id: "like_new", name: "Like new" },
+          { id: "very_good", name: "Very good" },
+          { id: "good", name: "Good" },
+          { id: "fair", name: "Fair" },
+          { id: "acceptable", name: "Acceptable" },
+          { id: "poor", name: "Poor (deteriorated)" },
+        ],
+        coveragePeriodTypes: [
+          { id: "short_term", name: "Short term (i.e. max. 6 months)" },
+          { id: "annual", name: "Standard annual (i.e. 12 months)" },
+          { id: "multi_year", name: "Multi-year (e.g. 3 years)" },
+          { id: "policy_term", name: "Policy-term (e.g. lease period)" },
+          { id: "continuous", name: "Open-ended (i.e. automatic renewal)" },
+          { id: "lifetime", name: "Lifetime (i.e. whole life)" },
+          { id: "usage_based", name: "Usage-based (e.g. pay-as-you-drive, pay-per-day)" },
+        ],
+
+        realEstateCategories: [
+          { id: "residential", name: "Residential (e.g. homes, appartments)" },
+          { id: "commercial", name: "Commercial (e.g. offices, warehouses)" },
+          { id: "land", name: "Land (e.g. industrial, agricultural)" },
+          { id: "special_purpose", name: "Special purpose (e.g. hotels, hospitals)" },
+          { id: "investment", name: "Investment (e.g. SPV, fractional ownership)" },
+        ],
+        ownershipCategories: [
+          { id: "vehicle", name: "Vehicle ownership (e.g. car, bus, trucks)" },
+          { id: "equipment", name: "Equipment ownership (e.g. machinery, tools)" },
+          { id: "goods", name: "Consumer goods (e.g. electronics, furtniture)" },
+          { id: "assets", name: "Asset title (e.g. title transfer, bills)" },
+          { id: "shared", name: "Shared ownership (e.g. joint, time-share)" },
+        ],
+        collectibleCategories: [
+          { id: "cards", name: "Trading cards (e.g. sports, pokémon)" },
+          { id: "currency", name: "Coins and currency (e.g. rare coins, metals)" },
+          { id: "stamps", name: "Stamps (e.g. postal, first-day covers)" },
+          { id: "art", name: "Art and Prints (e.g. original art, signed posters)" },
+          { id: "toys", name: "Toys and Memorabilia (e.g. vintage toys, comics)" },
+          { id: "luxury", name: "Luxury collectibles (e.g. watches, jewelry)" },
+          { id: "gaming", name: "Gaming culture (e.g. cartridges, consoles)" },
+        ],
+        insuranceCategories: [
+          { id: "property", name: "Property insurance (e.g. homeowners, fire)" },
+          { id: "vehicle", name: "Vehicle insurance (e.g. car, fleet)" },
+          { id: "life_and_health", name: "Health insurance (e.g. term, disability)" },
+          { id: "liability", name: "Liability insurance (e.g. personal, product)" },
+          { id: "specialty", name: "Specialty insurance (e.g. cargo, event)" },
+          { id: "parametric", name: "Parametric insurance (e.g. weather, flood)" },
+        ],
+
+        knownTokens: [],
+        useCluster: 'Devnet',
+        formError: '',
+        formProgress: '',
+        tokenizingAsset: false,
+        showLatestAssets: true, // Note: only shown after userAddress is set.
+        latestAssets: [],
+        isPrivateInfo: false,
+
+        currentAssetPage: 1,
+        countAssetPages: 1,
+        totalLatestAssets: 0,
+        assetPageNumbers: [1],
+        randomFormNonce: 0,
+
+        resetForm(){
+          this.useCluster = 'Devnet';
+          this.isPrivateInfo = false;
+        },
+
+        paginate(p) {
+          if (p < 1 || p > this.countAssetPages) {
+            return false;
+          }
+
+          this.loadLatestAssets(p);
+        },
+
+        async init() {
+          this.showWalletDetails = !this.userAddress;
+          this.randomFormNonce = this.getRandomBytes(2).toUpperCase();
+          this.updateIdentifier();
+
+          this.initCopyButtons();
+          this.loadSystemInfo();
+          this.loadMarketData();
+          this.loadOtherCredentials();
+
+          this.countries = getCountries();
+          this.selectedCountry = 'Spain';
+          this.countryStates = getStates(this.selectedCountry);
+
+          log.info('TokenWall initialized', { userAddress: this.userAddress, countries: this.countries });
+        },
+
+        initCopyButtons() {
+          const copyBtns = document.querySelectorAll('.copyBtn');
+          for (let i = 0; i < copyBtns.length; i++) {
+            let elm = copyBtns[i];
+            elm.addEventListener('click', async() => {
+              const valueElm = document.querySelector(elm.getAttribute('rel'))
+              const statusElm = document.querySelector(elm.getAttribute('target'));
+
+              const textToCopy = valueElm.textContent;
+              await this.copyToClipboard(textToCopy, statusElm);
+            });
+          }
+        },
+
+        async copyToClipboard(message, statusElm) {
+          try {
+            await navigator.clipboard.writeText(message);
+            if (!!statusElm) {
+              statusElm.textContent = '✓';
+              setTimeout(()=>statusElm.textContent='', 2500);
+            }
+          } catch(e) {}
+        },
+
+        async loadSystemInfo() {
+          if ((new Date()).getFullYear() > 2026) {
+            this.copyYear = "2026-" + (new Date()).getFullYear();
+          }
+          const syslog = window.createLogger('core/system');
+          try {
+            const res = await fetch(`/api/v1/system/info`);
+            const data = await res.json();
+            this.appVersion = data.appVersion;
+          } catch (err) {
+            syslog.error('Error loading system information', { err });
+          }
+        },
+
+        // XXX /tokens API for tokenizer
+        async loadMarketData() {
+          try {
+            const response = await fetch('/api/v1/tokenizer/tokens?cluster=mainnet');
+            if (response.ok) {
+              const data = await response.json();
+              this.knownTokens = data.tokens;
+              this.updateSolanaPrice();
+            }
+          } catch (error) {
+            log.error('Error loading market data', { error: error.message });
+          }
+        },
+
+        async connectPhantom() {
+          try {
+            if (!window.solana) {
+              alert('Phantom wallet not installed. Please install it from https://phantom.app');
+              return;
+            }
+
+            const response = await window.solana.connect();
+
+            this.showWalletModal = false;
+            this.setConnectedWallet(response.publicKey.toString());
+          } catch (error) {
+            log.error('Error connecting Phantom', { error: error.message });
+            alert('Failed to connect Phantom wallet');
+          }
+        },
+
+        connectManually() {
+          if (!this.manualAddress.trim()) {
+            alert('Please enter a valid address');
+            return;
+          }
+
+          const addressRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+          if (!addressRegex.test(this.manualAddress)) {
+            alert('Invalid Solana address format');
+            return;
+          }
+
+          this.manualAddress = '';
+          this.showWalletModal = false;
+          this.setConnectedWallet(this.manualAddress);
+        },
+
+        disconnectWallet() {
+          this.userAddress = '';
+          this.selectedCredential = '';
+          this.userCredentials = [];
+        },
+
+        setConnectedWallet(addr) {
+          this.userAddress = addr;
+          this.loadUserCredentials();
+          this.loadLatestAssets();
+        },
+
+        usePrivateInfo() {
+          this.isPrivateInfo = !this.isPrivateInfo;
+          this.updateIdentifier();
+        },
+
+        useLabel($el) {
+          this.sharedFormValues.label = $el.value;
+        },
+
+        useRwaType($el) {
+          this.sharedFormValues.rwaType = $el.value;
+          this.updateIdentifier();
+        },
+
+        useLegalType($el) {
+          this.sharedFormValues.legalType = $el.value;
+        },
+
+        useCredential($el) {
+          this.selectedCredential = $el.value;
+        },
+
+        useCustodianFromList($el) {
+          this.selectedCustodian = $el.value;
+          this.sharedFormValues.custodianCredential = '';
+          if ($el.value !== 'manual') {
+            this.sharedFormValues.custodianCredential = $el.value;
+          }
+        },
+
+        useCustodianAddress($el) {
+          this.sharedFormValues.custodianCredential = $el.value;
+        },
+
+        useOwnershipProof($el) {
+          if (!$el.files) {
+            return;
+          }
+
+          const file = $el.files[0];
+          this.sharedFormValues.ownershipProof = file.name;
+          this.sharedFormValues.ownershipProofMime = file.mime;
+        },
+
+        useAttestedDocument(i, $el) {
+          if (!$el.files || i >= this.sharedFormValues.attestedDocuments.length) {
+            return;
+          }
+
+          const file = $el.files[0];
+          this.sharedFormValues.attestedDocuments[i].name = file.name;
+          this.sharedFormValues.attestedDocuments[i].mime = file.mime;
+        },
+
+        hasAttestedDocument(i) {
+          if (i >= this.sharedFormValues.attestedDocuments.length) {
+            return false;
+          }
+
+          const doc = this.sharedFormValues.attestedDocuments[i];
+          return doc.name.length > 0 && doc.mime.length > 0; 
+        },
+
+        updateIdentifier() {
+          let rwaShort = 'COL';
+          if (!!this.sharedFormValues.rwaType) {
+            rwaShort = this.assetTypes.find(t => t.id === this.sharedFormValues.rwaType).short;
+          }
+
+          let nextIndex = this.latestAssets.length + 1;
+
+          let payload = [
+            'RWA',
+            (new Date()).getFullYear(),
+            this.isPrivateInfo ? 'PRIV' : 'PUB',
+            rwaShort,
+            this.randomFormNonce,
+          ];
+
+          this.sharedFormValues.identifier = payload.join('-');
+        },
+
+        getCredentialName() {
+          if (!this.selectedCredential) {
+            return '';
+          }
+
+          for (let i = 0; i < this.userCredentials.length; i++) {
+            if (this.userCredentials[i].sas_credential_address === this.selectedCredential) {
+              return this.userCredentials[i].full_name;
+            }
+          }
+
+          return '';
+        },
+
+        async loadUserCredentials() {
+          try {
+            if (!this.userAddress) return;
+            const response = await fetch(`/api/v1/tokenizer/credentials?wallet=${this.userAddress}`);
+            if (response.ok) {
+              const data = await response.json();
+              this.userCredentials = data.credentials || [];
+              log.info('Loaded credentials', { count: this.userCredentials.length });
+            }
+          } catch (error) {
+            log.error('Error loading credentials', { error: error.message });
+          }
+        },
+
+        async loadOtherCredentials() {
+          try {
+            const response = await fetch(`/api/v1/tokenizer/credentials?limit=50`);
+            if (response.ok) {
+              const data = await response.json();
+              this.otherCredentials = data.credentials || [];
+              log.info('Loaded other credentials', { count: this.otherCredentials.length });
+            }
+          } catch (error) {
+            log.error('Error loading credentials', { error: error.message });
+          }
+        },
+
+        async loadLatestAssets(p) {
+          try {
+            let params = '?issuer=' + this.userAddress;
+            if (p) {
+              params = params + '&page=' + p;
+            }
+            const response = await fetch('/api/v1/tokenizer/assets' + params);
+            if (response.ok) {
+              const data = await response.json();
+              this.latestAssets = data.assets;
+              this.currentAssetPage = data.page;
+              this.countAssetPages = parseInt(data.total / 10)+1;
+              this.totalLatestAssets = data.total;
+
+              for (let i = 0; i < this.countAssetPages; i++) {
+                this.assetPageNumbers[i] = i+1;
+              }
+
+              // Wait for DOM updates
+              this.$nextTick(() => { this.initCopyButtons(); });
+            }
+          } catch (error) {
+            log.error('Error loading invoices', { error: error.message });
+          }
+        },
+
+        async updateSolanaPrice() {
+          const solPrice = this.getToken(null, 'SOL')?.priceEur;
+          if (typeof solPrice !== undefined) {
+            document.getElementById('solanaPriceEur').innerText = solPrice + ' EUR';
+          }
+        },
+
+        canSendForm() {
+          return !!this.userAddress
+            && !!this.sharedFormValues.label
+            && !!this.sharedFormValues.rwaType
+            && !!this.sharedFormValues.legalType
+            && !!this.sharedFormValues.ownershipProofType
+            && !this.tokenizingAsset;
+
+            //XXX custodian?
+            //XXX ownership proof
+            //XXX per-type fields
+        },
+
+        fillConfirmationModal() {
+          const legalType = this.legalTermsTypes.find(t => t.id === this.sharedFormValues.legalType);
+          const rwaType = this.assetTypes.find(t => t.id === this.sharedFormValues.rwaType);
+
+          const actualType = [legalType.name, 'over', rwaType.name].join(' ');
+
+          const ownershipType = this.ownershipProofTypes.find(t => t.id === this.sharedFormValues.ownershipProofType);
+          const ownershipFileOrUrl = this.sharedFormValues.useUrlForOwnershipProof ? this.sharedFormValues.ownershipProofUrl : this.sharedFormValues.ownershipProof;
+
+          const actualProof = [ownershipType, 'with file at', ownershipFileOrUrl];
+
+          document.getElementById('confirmationType').innerText = actualType;
+          document.getElementById('confirmationIdentifier').innerText = this.sharedFormValues.identifier;
+          document.getElementById('confirmationLabel').innerText = this.sharedFormValues.label;
+          document.getElementById('confirmationCustodian').innerText = this.sharedFormValues.custodianCredential;
+          document.getElementById('confirmationOwnershipProof').innerText = actualProof;
+          document.getElementById('confirmationAttestations').innerText = this.sharedFormValues.label;
+          document.getElementById('confirmationAssetInformation').innerText = this.sharedFormValues.label;
+        },
+
+        async submitConfirmedTokenizer() {
+          if (!this.userAddress) {
+            this.formError = 'Please connect your wallet and select a credential';
+            return;
+          }
+
+          this.tokenizingAsset = true;
+          this.formError = '';
+          this.formProgress = '';
+
+          try {
+            // XXX
+          } catch (error) {
+            log.error('Error tokenizing asset', { error: error.message });
+            this.formError = error.message || 'Failed to tokenize asset';
+          } finally {
+            this.tokenizingAsset = false;
+          }
+        },
+
+        submitTokenizer() {
+          this.fillConfirmationModal();
+          this.showConfirmationModal = true;
+        },
+
+        async openDocumentation() {
+          try {
+            const response = await fetch('/concepts/docs/tokenwall.md');
+            if (response.ok) {
+              const markdown = await response.text();
+              this.documentationContent = marked.parse(markdown);
+              this.showDocumentation = true;
+            }
+          } catch (error) {
+            log.error('Error loading documentation', { error: error.message });
+            alert('Failed to load documentation');
+          }
+        },
+
+        getRandomBytes(b) {
+          const array = new Uint8Array(b);
+          crypto.getRandomValues(array);
+          return array.toHex();
+        },
+
+        getToken(byMint, byName) {
+          if (byName !== undefined && byName.length) {
+            return this.knownTokens.find(t => t.name === byName);
+          }
+
+          return this.knownTokens.find(t => t.mintAddress === byMint);
+        },
+
+        getSolscanLink(t, v, c) {
+          return `https://solscan.io/${t}/${v}?cluster=${c}`;
+        },
+
+        shortenStr(addr) {
+          if (!addr || addr.length < 10) return addr;
+          return addr.substring(0, 4) + '...' + addr.substring(addr.length - 4)
+        },
+
+        shortenPayUrl(url) {
+          if (!url || url.length < 20) return url;
+
+          if (url.substring(0, 6) === 'solana') {
+            return url.substring(0, 6+1+44+8) + '...';
+          }
+
+          return url.substring(0, 20) + '-...-' + url.substring(url.length - 4)
+        }
+      };
+    }
+  </script>
+</body>
+</html>

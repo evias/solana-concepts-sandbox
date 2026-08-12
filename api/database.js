@@ -673,6 +673,12 @@ const credentialDb = {
   getCredentialCount() {
     const stmt = db.prepare('SELECT COUNT(*) as count FROM credentials');
     return stmt.get().count;
+  },
+
+  // Get total credential count by address
+  getCredentialCountByWallet(walletAddress) {
+    const stmt = db.prepare('SELECT COUNT(*) as count FROM credentials WHERE wallet_address = ?');
+    return stmt.get(walletAddress).count;
   }
 };
 
@@ -1143,5 +1149,62 @@ const tokenWallDb = {
   }
 };
 
+// Tokenizer database helpers
+const tokenizerDb = {
+  // Get rwa_assets by id field
+  getAssetById(id) {
+    const stmt = db.prepare('SELECT * FROM rwa_assets WHERE id = ?');
+    const row = stmt.get(id);
+    return row;
+  },
+
+  // Get rwa_assets by identifier field
+  getAssetByIdentifier(id) {
+    const stmt = db.prepare('SELECT * FROM rwa_assets WHERE identifier = ?');
+    const row = stmt.get(ref);
+    return row;
+  },
+
+  // Get all rwa_assets with issuer_address and with pagination
+  getAssetsByIssuerAddress(issuerAddress, limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM rwa_assets WHERE issuer_address = ? ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(issuerAddress, limit, offset);
+    return rows;
+  },
+
+  // Get all rwa_assets with pagination
+  getAllAssets(limit = 10, offset = 0) {
+    const stmt = db.prepare('SELECT * FROM rwa_assets ORDER BY created_at DESC LIMIT ? OFFSET ?');
+    const rows = stmt.all(limit, offset);
+    return rows;
+  },
+
+  // Get total rwa_assets count
+  getAssetsCount(byAddress) {
+    let stmt;
+    if (!!byAddress && byAddress.length) {
+      stmt = db.prepare('SELECT COUNT(*) as count FROM rwa_assets WHERE issuer_address = ?');
+      return stmt.get(byAddress).count ?? 0;
+    }
+
+    stmt = db.prepare('SELECT COUNT(*) as count FROM rwa_assets');
+    return stmt.get().count ?? 0;
+  }
+};
+
 // Export database and helper functions (do NOT initialize on require)
-module.exports = { db, petDb, vaccinationDb, nutritionPlanDb, feedingActionDb, credentialDb, badgeDb, certificationDb, hcpConsoleDb, marketDataDb, tokenWallDb, initializeDatabase, runMigrations };
+module.exports = { db,
+  petDb,
+  vaccinationDb,
+  nutritionPlanDb,
+  feedingActionDb,
+  credentialDb,
+  badgeDb,
+  certificationDb,
+  hcpConsoleDb,
+  marketDataDb,
+  tokenWallDb,
+  tokenizerDb,
+  initializeDatabase,
+  runMigrations,
+};

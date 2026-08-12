@@ -557,12 +557,12 @@
 
                             <div>
                                 <strong class="text-gray-700">Transaction Hash:</strong>
-                                <template x-if="selectedCredential.transaction_hash">
-                                    <a :href="`https://solscan.io/tx/${selectedCredential.transaction_hash}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
-                                        <span x-text="selectedCredential.transaction_hash"></span> ↗
+                                <template x-if="selectedCredential.transaction_signature">
+                                    <a :href="`https://solscan.io/tx/${selectedCredential.transaction_signature}?cluster=devnet`" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-700 font-mono text-xs break-all">
+                                        <span x-text="selectedCredential.transaction_signature"></span> ↗
                                     </a>
                                 </template>
-                                <p x-show="!selectedCredential.transaction_hash">N/A</p>
+                                <p x-show="!selectedCredential.transaction_signature">N/A</p>
                             </div>
 
                             <div>

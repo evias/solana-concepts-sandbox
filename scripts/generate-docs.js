@@ -63,11 +63,12 @@ const options = {
           type: 'object',
           properties: {
             id: { type: 'string' },
-            name: { type: 'string' },
-            owner: { type: 'string' },
-            didId: { type: 'string' },
-            mint: { type: 'string' },
-            sasCredentialId: { type: 'string' }
+            full_name: { type: 'string' },
+            wallet_address: { type: 'string' },
+            did_id: { type: 'string' },
+            mint_address: { type: 'string' },
+            sas_credential_id: { type: 'string' },
+            sas_credential_address: { type: 'string' }
           }
         },
         Signer: {
@@ -120,6 +121,10 @@ const options = {
         description: 'Paid content with token invoices'
       },
       {
+        name: 'Tokenizer',
+        description: 'Digitize Real World Assets (RWA)'
+      },
+      {
         name: 'Logs',
         description: 'Client-side logging'
       }
@@ -134,6 +139,7 @@ const options = {
     path.join(__dirname, '../api/carecircle.js'),
     path.join(__dirname, '../api/hcpconsole.js'),
     path.join(__dirname, '../api/tokenwall.js'),
+    path.join(__dirname, '../api/tokenizer.js'),
     path.join(__dirname, '../api/logs.js')
   ]
 };
