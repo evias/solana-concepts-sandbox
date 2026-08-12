@@ -69,19 +69,22 @@
           "id": {
             "type": "string"
           },
-          "name": {
+          "full_name": {
             "type": "string"
           },
-          "owner": {
+          "wallet_address": {
             "type": "string"
           },
-          "didId": {
+          "did_id": {
             "type": "string"
           },
-          "mint": {
+          "mint_address": {
             "type": "string"
           },
-          "sasCredentialId": {
+          "sas_credential_id": {
+            "type": "string"
+          },
+          "sas_credential_address": {
             "type": "string"
           }
         }
@@ -136,6 +139,10 @@
     {
       "name": "TokenWall",
       "description": "Paid content with token invoices"
+    },
+    {
+      "name": "Tokenizer",
+      "description": "Digitize Real World Assets (RWA)"
     },
     {
       "name": "Logs",
@@ -1157,7 +1164,36 @@
           "HealthCred"
         ],
         "summary": "List credentials",
-        "description": "Returns all credentials.",
+        "description": "Returns credentials, all or by wallet address with limit and offset.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The maximum number of rows to return."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The number of rows to skip in response."
+          }
+        ],
         "responses": {
           "200": {
             "description": "Credentials retrieved successfully",
@@ -1174,19 +1210,40 @@
                           "id": {
                             "type": "string"
                           },
-                          "name": {
+                          "wallet_address": {
                             "type": "string"
                           },
-                          "mint": {
+                          "full_name": {
                             "type": "string"
                           },
-                          "owner": {
+                          "date_of_birth": {
                             "type": "string"
                           },
-                          "didId": {
+                          "profession": {
                             "type": "string"
                           },
-                          "sasCredentialId": {
+                          "email": {
+                            "type": "string"
+                          },
+                          "did_id": {
+                            "type": "string"
+                          },
+                          "sas_credential_id": {
+                            "type": "string"
+                          },
+                          "sas_credential_address": {
+                            "type": "string"
+                          },
+                          "mint_address": {
+                            "type": "string"
+                          },
+                          "transaction_signature": {
+                            "type": "string"
+                          },
+                          "badges_count": {
+                            "type": "string"
+                          },
+                          "created_at": {
                             "type": "string"
                           }
                         }
@@ -2885,6 +2942,285 @@
       "get": {
         "tags": [
           "TokenWall"
+        ],
+        "summary": "Retrieve known tokens and/or owned tokens by wallet_address.",
+        "description": "Retrieve known tokens and/or owned tokens by wallet_address.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet_address",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Solana Wallet Address to read owned tokens from."
+          },
+          {
+            "in": "query",
+            "name": "cluster",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Solana cluster from which to read token account balances."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tokens retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "prompts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "mintAddress": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "balance": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenizer/assets": {
+      "get": {
+        "tags": [
+          "Tokenizer"
+        ],
+        "summary": "Retrieve rwa_assets entries by wallet_address.",
+        "description": "Retrieve rwa_assets entries by wallet_address.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "issuer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Solana Wallet Address that tokenized assets."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The pagination page number."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assets retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "number"
+                    },
+                    "total": {
+                      "type": "number"
+                    },
+                    "assets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "identifier": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "rwa_type": {
+                            "type": "string"
+                          },
+                          "legal_type": {
+                            "type": "string"
+                          },
+                          "reg_signature": {
+                            "type": "string"
+                          },
+                          "registry_type": {
+                            "type": "string"
+                          },
+                          "registry_data": {
+                            "type": "string"
+                          },
+                          "issuer_address": {
+                            "type": "string"
+                          },
+                          "issuer_sas_address": {
+                            "type": "string"
+                          },
+                          "custodian_sas_address": {
+                            "type": "string"
+                          },
+                          "schema_sas_address": {
+                            "type": "string"
+                          },
+                          "token_mint_address": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          },
+                          "updated_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenizer/credentials": {
+      "get": {
+        "tags": [
+          "Tokenizer"
+        ],
+        "summary": "List credentials owned by wallet",
+        "description": "Returns all credentials where the wallet is the owner.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "wallet",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Solana wallet address"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The maximum number of rows to return."
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "type": "number"
+            },
+            "description": "The number of rows to skip in response."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Credentials retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "wallet_address": {
+                            "type": "string"
+                          },
+                          "full_name": {
+                            "type": "string"
+                          },
+                          "date_of_birth": {
+                            "type": "string"
+                          },
+                          "profession": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "did_id": {
+                            "type": "string"
+                          },
+                          "sas_credential_id": {
+                            "type": "string"
+                          },
+                          "sas_credential_address": {
+                            "type": "string"
+                          },
+                          "mint_address": {
+                            "type": "string"
+                          },
+                          "transaction_signature": {
+                            "type": "string"
+                          },
+                          "badges_count": {
+                            "type": "string"
+                          },
+                          "created_at": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "500": {
+            "$ref": "#/components/schemas/Error"
+          }
+        }
+      }
+    },
+    "/api/v1/tokenizer/tokens": {
+      "get": {
+        "tags": [
+          "Tokenizer"
         ],
         "summary": "Retrieve known tokens and/or owned tokens by wallet_address.",
         "description": "Retrieve known tokens and/or owned tokens by wallet_address.",

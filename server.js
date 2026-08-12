@@ -79,6 +79,10 @@ app.use('/api/v1/hcpconsole', hcpconsoleApi);
 const tokenwallApi = require('./api/tokenwall');
 app.use('/api/v1/tokenwall', tokenwallApi);
 
+// Tokenizer API routes
+const tokenizerApi = require('./api/tokenizer');
+app.use('/api/v1/tokenizer', tokenizerApi);
+
 // Serve individual concept pages
 app.get('/pettracker', (req, res) => {
   res.sendFile(path.join(__dirname, 'concepts/pettracker.html'));
@@ -119,6 +123,9 @@ app.get('/demo/:concept/:param', (req, res) => {
 
   finalHtml = finalHtml.replaceAll('%%%%SCS_API_BASE_URL%%%%', config.api.baseUrl)
   res.send(finalHtml);
+});
+app.get('/tokenizer', (req, res) => {
+  res.sendFile(path.join(__dirname, 'concepts/tokenizer.html'));
 });
 
 // Serve assets

@@ -495,7 +495,26 @@ router.post('/submit-signed-transaction', async (req, res) => {
  *     tags:
  *       - HealthCred
  *     summary: List credentials
- *     description: Returns all credentials.
+ *     description: Returns credentials, all or by wallet address with limit and offset.
+ *     parameters:
+ *       - in: query
+ *         name: wallet
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Solana wallet address
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: number
+ *         description: The maximum number of rows to return.
+ *       - in: query
+ *         name: offset
+ *         required: false
+ *         schema:
+ *           type: number
+ *         description: The number of rows to skip in response.
  *     responses:
  *       200:
  *         description: Credentials retrieved successfully
@@ -510,28 +529,44 @@ router.post('/submit-signed-transaction', async (req, res) => {
  *                     type: object
  *                     properties:
  *                       id: { type: string }
- *                       name: { type: string }
- *                       mint: { type: string }
- *                       owner: { type: string }
- *                       didId: { type: string }
- *                       sasCredentialId: { type: string }
+ *                       wallet_address: { type: string }
+ *                       full_name: { type: string }
+ *                       date_of_birth: { type: string }
+ *                       profession: { type: string }
+ *                       email: { type: string }
+ *                       did_id: { type: string }
+ *                       sas_credential_id: { type: string }
+ *                       sas_credential_address: { type: string }
+ *                       mint_address: { type: string }
+ *                       transaction_signature: { type: string }
+ *                       badges_count: { type: string }
+ *                       created_at: { type: string }
  *       400:
  *         $ref: '#/components/schemas/Error'
  *       500:
  *         $ref: '#/components/schemas/Error'
  */
 router.get('/credentials', (req, res) => {
+  let { wallet, limit, offset } = req.query;
+
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 10, 100);
-    const offset = parseInt(req.query.offset) || 0;
-    
+    limit = Math.min(parseInt(limit) || 25, 100);
+    offset = parseInt(offset) || 0;
+
     if (limit < 1 || offset < 0) {
       return res.status(400).json({ error: 'Invalid limit or offset' });
     }
-    
-    const credentials = credentialDb.getAllCredentials(limit, offset);
-    const total = credentialDb.getCredentialCount();
-    
+
+    let credentials = [],
+        total = 0;
+    if (!!wallet && wallet.length) {
+      credentials = credentialDb.getCredentialsByWallet(wallet, limit, offset);
+      total = credentialDb.getCredentialCountByWallet(wallet);
+    } else {
+      credentials = credentialDb.getAllCredentials(limit, offset);
+      total = credentialDb.getCredentialCount();
+    }
+
     // Remove sensitive DID document from list view but include all on-chain fields
     const sanitized = credentials.map(c => ({
       id: c.id,
@@ -542,13 +577,13 @@ router.get('/credentials', (req, res) => {
       email: c.email,
       did_id: c.did_id,
       sas_credential_id: c.sas_credential_id,
+      sas_credential_address: c.sas_credential_address,
       mint_address: c.mint_address,
       transaction_signature: c.transaction_signature,
-      transaction_hash: c.transaction_hash,
       badges_count: 0, // Will be populated from badges table if needed
       created_at: c.created_at
     }));
-    
+
     res.status(200).json({
       credentials: sanitized,
       pagination: {
@@ -558,10 +593,10 @@ router.get('/credentials', (req, res) => {
         hasMore: offset + limit < total
       }
     });
-   } catch (error) {
-     log.error('Error fetching credentials', { error });
-     res.status(500).json({ error: 'Internal server error' });
-   }
+  } catch (error) {
+    log.error('Error fetching credentials', { error });
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 /**

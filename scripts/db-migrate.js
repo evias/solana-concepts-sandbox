@@ -679,6 +679,51 @@ try {
         }
       }
     },
+
+    // Migration 19: Create tw_invoices table
+    {
+      name: 'Create rwa_assets table',
+      up: (db) => {
+        try {
+          db.exec(`
+            CREATE TABLE rwa_assets (
+              id TEXT PRIMARY KEY,
+              identifier TEXT NOT NULL,
+
+              label TEXT NOT NULL,
+              rwa_type TEXT NOT NULL,
+              legal_type TEXT NOT NULL,
+
+              reg_signature TEXT NOT NULL,
+              registry_type TEXT NOT NULL,
+              registry_data TEXT NOT NULL,
+
+              issuer_address TEXT NOT NULL,
+              issuer_sas_address TEXT NOT NULL,
+              custodian_sas_address TEXT NOT NULL,
+              schema_sas_address TEXT NOT NULL,
+              token_mint_address TEXT NOT NULL,
+
+              created_at TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+
+              FOREIGN KEY (rwa_type) REFERENCES rwa_asset_classes(slug) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_assets_issuer ON rwa_assets(issuer_address);
+            CREATE INDEX IF NOT EXISTS idx_assets_identifier ON rwa_assets(identifier);
+            CREATE INDEX IF NOT EXISTS idx_assets_bymint ON rwa_assets(token_mint_address);
+          `);
+
+          return true;
+        } catch (error) {
+          if (error.message.includes('already exists')) {
+            return false;
+          }
+          throw error;
+        }
+      }
+    },
   ];
 
   console.log(`   Total migrations defined: ${migrations.length}`);
