@@ -26,7 +26,7 @@ Use at your own risk. See LICENSE for the complete terms and liability limitatio
 ## Quick Start
 
 ### Prerequisites
-- Node.js 16+
+- Node.js 22.23.4+
 - npm or yarn
 - Phantom wallet (or any Solana wallet supporting devnet)
 - ngrok (for local HTTPS testing)
